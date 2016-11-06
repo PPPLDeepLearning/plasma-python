@@ -1,10 +1,11 @@
 import plasma.models.targets as t
 from plasma.jet_signals import signals_dirs, signals_masks 
+import getpass
 #currently need to change above import when switching machines
 
 #paths#
 base_path = '/tigress'
-user_name = 'alexeys' #'jk7' #'jkatesha'
+user_name = getpass.getuser()
 output_path = base_path + "/" + user_name
 base_path = output_path #decentralized signal data on Tiger
 target = t.HingeTarget

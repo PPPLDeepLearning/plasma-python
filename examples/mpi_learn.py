@@ -30,6 +30,8 @@ from functools import partial
 import itertools
 import socket
 sys.setrecursionlimit(10000)
+import getpass
+username = getpass.getuser()
 
 #import keras sequentially because it otherwise reads from ~/.keras/keras.json with too many threads.
 #from mpi_launch_tensorflow import get_mpi_task_index 
@@ -49,8 +51,9 @@ if task_index == 0:
 from plasma.preprocessor.normalize import Normalizer
 from plasma.preprocessor.preprocess import Preprocessor
 
+
 if backend != 'tf' and backend != 'tensorflow':
-    base_compile_dir = '/scratch/kfelker/tmp/{}-{}'.format(socket.gethostname(),task_index) #kyle: username dependence here
+    base_compile_dir = '/scratch/'+username+'/tmp/{}-{}'.format(socket.gethostname(),task_index) #kyle: username dependence here
     os.environ['THEANO_FLAGS'] = 'device=gpu{},floatX=float32,base_compiledir={}'.format(MY_GPU,base_compile_dir)#,mode=NanGuardMode'
     import theano
 #import keras
@@ -77,16 +80,6 @@ elif conf['data']['normalizer'] == 'averagevar':
 else:
     print('unkown normalizer. exiting')
     exit(1)
-
-shot_list_dir = conf['paths']['shot_list_dir']
-shot_files = conf['paths']['shot_files']
-shot_files_test = conf['paths']['shot_files_test']
-train_frac = conf['training']['train_frac']
-stateful = conf['model']['stateful']
-# if stateful: 
-#     batch_size = conf['model']['length']
-# else:
-#     batch_size = conf['training']['batch_size_large']
 
 np.random.seed(task_index)
 random.seed(task_index)
