@@ -1,0 +1,4 @@
+pathos
+theano
+keras
+mpi4py
