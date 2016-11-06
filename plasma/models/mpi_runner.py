@@ -28,7 +28,6 @@ import itertools
 import socket
 sys.setrecursionlimit(10000)
 import getpass
-username = getpass.getuser()
 
 #import keras sequentially because it otherwise reads from ~/.keras/keras.json with too many threads.
 #from mpi_launch_tensorflow import get_mpi_task_index 
@@ -54,7 +53,7 @@ if backend == 'tf' or backend == 'tensorflow':
     os.environ['KERAS_BACKEND'] = 'tensorflow'
     import tensorflow
 else:
-    base_compile_dir = '/scratch/'+username+'/tmp/{}-{}'.format(socket.gethostname(),task_index) #kyle: username dependence here
+    base_compile_dir = '/scratch/{}/tmp/{}-{}'.format(getpass.getuser(),socket.gethostname(),task_index)
     os.environ['THEANO_FLAGS'] = 'device=gpu{},floatX=float32,base_compiledir={}'.format(MY_GPU,base_compile_dir)#,mode=NanGuardMode'
     import theano
 #import keras
