@@ -1,0 +1,19 @@
+nguage: python
+
+os:
+  - linux
+
+python:
+  - 2.7
+
+addons:
+  apt:
+    packages:
+      - python-numpy
+      - python-setuptools
+
+install:
+  - pip install --upgrade pip
+
+script:
+  python setup.py test
