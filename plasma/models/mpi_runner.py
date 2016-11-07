@@ -17,6 +17,7 @@ This work was supported by the DOE CSGF program.
 from __future__ import print_function
 import os
 import sys 
+import time
 import numpy as np
 
 import matplotlib
