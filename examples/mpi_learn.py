@@ -32,41 +32,12 @@ import socket
 sys.setrecursionlimit(10000)
 import getpass
 
-#import keras sequentially because it otherwise reads from ~/.keras/keras.json with too many threads.
-#from mpi_launch_tensorflow import get_mpi_task_index 
-from mpi4py import MPI
-comm = MPI.COMM_WORLD
-task_index = comm.Get_rank()
-num_workers = comm.Get_size()
-NUM_GPUS = 4
-MY_GPU = task_index % NUM_GPUS
-
-from plasma.models.mpi_runner import *
-from plasma.models.loader import Loader
 from plasma.conf import conf
 from pprint import pprint
-if task_index == 0:
-    pprint(conf)
+pprint(conf)
 from plasma.preprocessor.normalize import Normalizer
 from plasma.preprocessor.preprocess import Preprocessor
-
-
-if backend != 'tf' and backend != 'tensorflow':
-    base_compile_dir = '/scratch/{}/tmp/{}-{}'.format(getpass.getuser(),socket.gethostname(),task_index) #kyle: username dependence here
-    os.environ['THEANO_FLAGS'] = 'device=gpu{},floatX=float32,base_compiledir={}'.format(MY_GPU,base_compile_dir)#,mode=NanGuardMode'
-    import theano
-#import keras
-for i in range(num_workers):
-  comm.Barrier()
-  if i == task_index:
-    print('[{}] importing Keras'.format(task_index))
-    from keras import backend as K
-    from keras.layers import Input,Dense, Dropout
-    from keras.layers.recurrent import LSTM
-    from keras.layers.wrappers import TimeDistributed
-    from keras.models import Model
-    from keras.optimizers import SGD
-    from keras.utils.generic_utils import Progbar 
+from plasma.models.loader import Loader
 
 if conf['data']['normalizer'] == 'minmax':
     from plasma.preprocessor.normalize import MinMaxNormalizer as Normalizer
@@ -79,10 +50,6 @@ elif conf['data']['normalizer'] == 'averagevar':
 else:
     print('unkown normalizer. exiting')
     exit(1)
-
-np.random.seed(task_index)
-random.seed(task_index)
-
 
 #####################################################
 ####################PREPROCESSING####################
@@ -105,7 +72,7 @@ print('training: {} shots, {} disruptive'.format(len(shot_list_train),shot_list_
 print('testing: {} shots, {} disruptive'.format(len(shot_list_test),shot_list_test.num_disruptive()))
 print("...done")
 
-save_shotlists(conf,shot_list_train,shot_list_validate,shot_list_test)
+pp.save_shotlists(conf,shot_list_train,shot_list_validate,shot_list_test)
 
 #####################################################
 ####################Normalization####################
@@ -117,7 +84,40 @@ nn.train()
 loader = Loader(conf,nn)
 print("...done")
 
-shot_list_train,shot_list_validate,shot_list_test = load_shotlists(conf)
+
+
+#import keras sequentially because it otherwise reads from ~/.keras/keras.json with too many threads.
+#from mpi_launch_tensorflow import get_mpi_task_index 
+from mpi4py import MPI
+comm = MPI.COMM_WORLD
+task_index = comm.Get_rank()
+num_workers = comm.Get_size()
+NUM_GPUS = 4
+MY_GPU = task_index % NUM_GPUS
+
+from plasma.models.mpi_runner import *
+
+if backend != 'tf' and backend != 'tensorflow':
+    base_compile_dir = '/scratch/{}/tmp/{}-{}'.format(getpass.getuser(),socket.gethostname(),task_index) #kyle: username dependence here
+    os.environ['THEANO_FLAGS'] = 'device=gpu{},floatX=float32,base_compiledir={}'.format(MY_GPU,base_compile_dir)#,mode=NanGuardMode'
+    import theano
+#import keras
+for i in range(num_workers):
+  comm.Barrier()
+  if i == task_index:
+    print('[{}] importing Keras'.format(task_index))
+    from keras import backend as K
+    from keras.layers import Input,Dense, Dropout
+    from keras.layers.recurrent import LSTM
+    from keras.layers.wrappers import TimeDistributed
+    from keras.models import Model
+    from keras.optimizers import SGD
+    from keras.utils.generic_utils import Progbar 
+
+np.random.seed(task_index)
+random.seed(task_index)
+
+shot_list_train,shot_list_validate,shot_list_test = loader.load_shotlists(conf)
 
 mpi_train(conf,shot_list_train,shot_list_validate,loader)
 
