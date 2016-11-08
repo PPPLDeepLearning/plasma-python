@@ -2,3 +2,4 @@ pathos
 theano
 keras
 mpi4py
+h5py
