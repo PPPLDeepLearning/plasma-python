@@ -13,7 +13,7 @@ from tensorflow.examples.tutorials.mnist import input_data
 NUM_GPUS = 4
 debug = True
 data_dir = '/scratch/network/alexeys'
-from mpi_launch_tensorflow import get_mpi_cluster_server_jobname
+from plasma.utils.mpi_launch_tensorflow import get_mpi_cluster_server_jobname
 
 flags = tf.app.flags
 flags.DEFINE_string("data_dir", "/scratch/network/alexeys/",
