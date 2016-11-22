@@ -195,3 +195,11 @@ class Preprocessor(object):
             ttd = T_max*np.ones_like(tr)
         ttd = np.log10(ttd + 1.0*dt/10)
         return signals,ttd
+
+
+    def get_shot_list_path(self,conf):
+        return conf['paths']['base_path'] + '/normalization/shot_lists.npz'
+
+    def save_shotlists(self,conf,shot_list_train,shot_list_validate,shot_list_test):
+        path = self.get_shot_list_path(conf)
+        np.savez(path,shot_list_train=shot_list_train,shot_list_validate=shot_list_validate,shot_list_test=shot_list_test)
