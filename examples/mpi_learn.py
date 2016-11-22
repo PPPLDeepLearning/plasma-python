@@ -51,45 +51,45 @@ else:
     print('unkown normalizer. exiting')
     exit(1)
 
-#####################################################
-####################PREPROCESSING####################
-#####################################################
-
-print("preprocessing all shots",end='')
-pp = Preprocessor(conf)
-pp.clean_shot_lists()
-shot_list = pp.preprocess_all()
-sorted(shot_list)
-shot_list_train,shot_list_test = shot_list.split_train_test(conf)
-num_shots = len(shot_list_train) + len(shot_list_test)
-validation_frac = conf['training']['validation_frac']
-if validation_frac <= 0.0:
-    print('Setting validation to a minimum of 0.05')
-    validation_frac = 0.05
-shot_list_train,shot_list_validate = shot_list_train.split_direct(1.0-validation_frac,do_shuffle=True)
-print('validate: {} shots, {} disruptive'.format(len(shot_list_validate),shot_list_validate.num_disruptive()))
-print('training: {} shots, {} disruptive'.format(len(shot_list_train),shot_list_train.num_disruptive()))
-print('testing: {} shots, {} disruptive'.format(len(shot_list_test),shot_list_test.num_disruptive()))
-print("...done")
-
-pp.save_shotlists(conf,shot_list_train,shot_list_validate,shot_list_test)
-
-#####################################################
-####################Normalization####################
-#####################################################
-
-print("normalization",end='')
-nn = Normalizer(conf)
-nn.train()
-loader = Loader(conf,nn)
-print("...done")
-
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
 task_index = comm.Get_rank()
 num_workers = comm.Get_size()
 NUM_GPUS = 4
 MY_GPU = task_index % NUM_GPUS
+
+#####################################################
+####################PREPROCESSING####################
+#####################################################
+if task_index ==0:
+    print("preprocessing all shots",end='')
+    pp = Preprocessor(conf)
+    pp.clean_shot_lists()
+    shot_list = pp.preprocess_all()
+    sorted(shot_list)
+    shot_list_train,shot_list_test = shot_list.split_train_test(conf)
+    num_shots = len(shot_list_train) + len(shot_list_test)
+    validation_frac = conf['training']['validation_frac']
+    if validation_frac <= 0.0:
+        print('Setting validation to a minimum of 0.05')
+        validation_frac = 0.05
+    shot_list_train,shot_list_validate = shot_list_train.split_direct(1.0-validation_frac,do_shuffle=True)
+    print('validate: {} shots, {} disruptive'.format(len(shot_list_validate),shot_list_validate.num_disruptive()))
+    print('training: {} shots, {} disruptive'.format(len(shot_list_train),shot_list_train.num_disruptive()))
+    print('testing: {} shots, {} disruptive'.format(len(shot_list_test),shot_list_test.num_disruptive()))
+    print("...done")
+
+    pp.save_shotlists(conf,shot_list_train,shot_list_validate,shot_list_test)
+
+    #####################################################
+    ####################Normalization####################
+    #####################################################
+
+    print("normalization",end='')
+    nn = Normalizer(conf)
+    nn.train()
+    loader = Loader(conf,nn)
+    print("...done")
 
 from plasma.models.mpi_runner import *
 
