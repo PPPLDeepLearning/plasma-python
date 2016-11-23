@@ -42,8 +42,6 @@ backend = 'theano'
 
 
 from pprint import pprint
-if task_index == 0:
-    pprint(conf)
 
 if backend == 'tf' or backend == 'tensorflow':
     os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(MY_GPU)#,mode=NanGuardMode'
@@ -71,6 +69,9 @@ from plasma.conf import conf
 from plasma.utils.evaluation import get_loss_from_list
 from plasma.utils.processing import concatenate_sublists
 from plasma.utils.performance import PerformanceAnalyzer
+
+if task_index == 0:
+    pprint(conf)
 
 
 
