@@ -12,7 +12,6 @@ import random
 import tempfile
 
 NUM_GPUS = 4
-debug = True
 data_dir = '/scratch/network/alexeys'
 from plasma.utils.mpi_launch_tensorflow import get_mpi_cluster_server_jobname
 
@@ -155,7 +154,6 @@ def main(unused_argv):
     server.join()
 
   is_chief = (task_index == 0)
-  #FIXME num_gpus should be related to NUM_GPUS 
   if NUM_GPUS > 0:
     if NUM_GPUS < num_workers:
       raise ValueError("number of gpus is less than number of workers")
@@ -186,7 +184,6 @@ def main(unused_argv):
     seq_max_len = 20 # Sequence max length
     n_classes = 2 # linear sequence or not
 
-    #FIXME this is where data is
     trainset = ToySequenceData(n_samples=1000, max_seq_len=seq_max_len)
     testset = ToySequenceData(n_samples=500, max_seq_len=seq_max_len)
 
@@ -204,7 +201,6 @@ def main(unused_argv):
       'out': tf.Variable(tf.random_normal([n_classes]))
     }
 
-    #FIXME to be tested
     pred = dynamicRNN(x, seqlen, seq_max_len, FLAGS.hidden_units, weights, biases)
 
     # Define loss and optimizer
@@ -304,9 +300,6 @@ def main(unused_argv):
       now = time.time()
       print("%f: Worker %d: training step %d done (global step: %d)" %
             (now, task_index, local_step, step))
-      if debug:
-          with open("/home/alexeys/bla"+str(task_index)+".txt","w") as fff:
-              fff.write("SUCCESS")
 
       if step >= FLAGS.train_steps:
         break

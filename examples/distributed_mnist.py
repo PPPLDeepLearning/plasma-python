@@ -11,7 +11,6 @@ import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
 
 NUM_GPUS = 4
-debug = True
 data_dir = '/scratch/network/alexeys'
 from plasma.utils.mpi_launch_tensorflow import get_mpi_cluster_server_jobname
 
@@ -57,7 +56,6 @@ def main(unused_argv):
     server.join()
 
   is_chief = (task_index == 0)
-  #FIXME num_gpus should be related to NUM_GPUS 
   if NUM_GPUS > 0:
     if NUM_GPUS < num_workers:
       raise ValueError("number of gpus is less than number of workers")
@@ -197,9 +195,6 @@ def main(unused_argv):
       now = time.time()
       print("%f: Worker %d: training step %d done (global step: %d)" %
             (now, task_index, local_step, step))
-      if debug:
-          with open("/home/alexeys/bla"+str(task_index)+".txt","w") as fff:
-              fff.write("SUCCESS") 
 
       if step >= FLAGS.train_steps:
         break
