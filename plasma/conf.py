@@ -4,9 +4,9 @@ import getpass
 #currently need to change above import when switching machines
 
 #paths#
-base_path = '/tigress'
-user_name = getpass.getuser()
-output_path = base_path + "/" + user_name
+fs_path = '/tigress'
+user_name = 'jk7/data'#getpass.getuser()
+output_path = fs_path + "/" + user_name
 base_path = output_path #decentralized signal data on Tiger
 target = t.HingeTarget
 
@@ -74,6 +74,7 @@ conf = {
         'stateful' : True,
         'return_sequences' : True,
         'dropout_prob' : 0.3,
+	'warmup_steps' : 0, #only relevant if we want to do mpi training. The number of steps with a single replica
     },
 
     'training': {
