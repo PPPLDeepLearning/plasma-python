@@ -26,6 +26,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
+from pprint import pprint
 from functools import partial
 import itertools
 import socket
@@ -33,8 +34,6 @@ sys.setrecursionlimit(10000)
 import getpass
 
 from plasma.conf import conf
-from pprint import pprint
-pprint(conf)
 from plasma.models.loader import Loader
 from plasma.preprocessor.normalize import Normalizer
 from plasma.preprocessor.preprocess import Preprocessor
@@ -62,6 +61,8 @@ from plasma.models.mpi_runner import *
 
 np.random.seed(task_index)
 random.seed(task_index)
+if task_index == 0:
+    pprint(conf)
 
 #####################################################
 ####################Normalization####################
