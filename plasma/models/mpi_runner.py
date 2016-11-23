@@ -40,14 +40,10 @@ NUM_GPUS = 4
 MY_GPU = task_index % NUM_GPUS
 backend = 'theano'
 
-from plasma.models import builder
-from plasma.conf import conf
-from plasma.utils.evaluation import get_loss_from_list
+
 from pprint import pprint
 if task_index == 0:
     pprint(conf)
-from plasma.utils.processing import concatenate_sublists
-from plasma.utils.performance import PerformanceAnalyzer
 
 if backend == 'tf' or backend == 'tensorflow':
     os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(MY_GPU)#,mode=NanGuardMode'
@@ -69,6 +65,14 @@ for i in range(num_workers):
     from keras.models import Model
     from keras.optimizers import SGD
     from keras.utils.generic_utils import Progbar 
+
+from plasma.models import builder
+from plasma.conf import conf
+from plasma.utils.evaluation import get_loss_from_list
+from plasma.utils.processing import concatenate_sublists
+from plasma.utils.performance import PerformanceAnalyzer
+
+
 
 ###TODO add optimizers other than SGD
 
