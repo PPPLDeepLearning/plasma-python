@@ -48,7 +48,7 @@ if backend == 'tf' or backend == 'tensorflow':
     os.environ['KERAS_BACKEND'] = 'tensorflow'
     import tensorflow
 else:
-    base_compile_dir = '/scratch/{}/tmp/{}-{}'.format(getpass.getuser(),socket.gethostname(),task_index)
+    base_compile_dir = '/tigress/{}/tmp/{}-{}'.format(getpass.getuser(),socket.gethostname(),task_index)
     os.environ['THEANO_FLAGS'] = 'device=gpu{},floatX=float32,base_compiledir={}'.format(MY_GPU,base_compile_dir)#,mode=NanGuardMode'
     import theano
 #import keras
