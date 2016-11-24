@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -t 0-2:00
-#SBATCH -N 5
+#SBATCH -N 10 #how many nodes. The number of GPUs is this times 4.
 #SBATCH --ntasks-per-node=16
 #SBATCH --ntasks-per-socket=8
 #SBATCH --gres=gpu:4
