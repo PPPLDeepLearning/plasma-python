@@ -85,7 +85,7 @@ conf = {
         'batch_size' : 256, #100
         'max_patch_length' : 100000, #THIS WAS THE CULPRIT FOR NO TRAINING! Lower than 1000 performs very poorly
         'num_shots_at_once' : 200, #How many shots are we loading at once?
-        'num_epochs' : 1,
+        'num_epochs' : 3,
         'use_mock_data' : False,
         'data_parallel' : False,
    },
