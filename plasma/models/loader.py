@@ -22,20 +22,32 @@ class Loader(object):
         self.verbose = True
 
     def training_batch_generator(self,shot_list,loader):
+        """Iterates indefinitely over the data set and returns one batch of data at a time.
+        Can be inefficient during distributed training because one process loading data will
+        cause all other processes to stall."""
         batch_size = self.conf['training']['batch_size']
         num_at_once = self.conf['training']['num_shots_at_once']
         epoch = 0
         while True:
             num_so_far = 0
+            # the list of all shots
             shot_list.shuffle() 
+            # split the list into equal-length sublists (random shots will be reused to make them equal length).
             shot_sublists = shot_list.sublists(num_at_once,equal_size=True)
             num_total = len(shot_list)
             for (i,shot_sublist) in enumerate(shot_sublists):
+                #produce a list of equal-length chunks from this set of shots
                 X_list,y_list = loader.load_as_X_y_list(shot_sublist)
+                #Each chunk will be a multiple of the batch size
                 for j,(X,y) in enumerate(zip(X_list,y_list)):
                     num_examples = X.shape[0]
                     assert(num_examples % batch_size == 0)
                     num_chunks = num_examples/batch_size
+                    """produce batch-sized data X,y to feed during training.
+                    dimensions are (num_examples, num_timesteps, num_dimensions_of_data)
+                    also num_examples is divisible by the batch_size. The ith example and the
+                    (batchsize + 1)th example are consecutive in time, so we do not reset the
+                    RNN internal state unless we start a new chunk."""
                     for k in range(num_chunks):
                         epoch_end = (i == len(shot_sublists) - 1 and j == len(X_list) -1 and k == num_chunks - 1)
                         reset_states_now = (k == 0)
@@ -51,6 +63,8 @@ class Loader(object):
 
 
     def load_as_X_y_list(self,shot_list,verbose=False,prediction_mode=False):
+        """Turn a list of shots into a set of equal-sized chunks which contain a number of examples
+        that is a multiple of the batch size."""
         signals,results,total_length = self.get_signals_results_from_shotlist(shot_list) 
         sig_patches, res_patches = self.make_patches(signals,results)
 
