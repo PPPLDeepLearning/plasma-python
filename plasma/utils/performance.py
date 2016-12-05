@@ -569,8 +569,8 @@ class PerformanceAnalyzer():
         return self.roc_from_missed_fp(missed_range,fp_range)
 
     def roc_from_missed_fp(self,missed_range,fp_range):
-        print(fp_range)
-        print(missed_range)
+        #print(fp_range)
+        #print(missed_range)
         return -trapz(1-missed_range,x=fp_range)
 
 
