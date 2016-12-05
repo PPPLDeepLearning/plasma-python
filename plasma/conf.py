@@ -5,7 +5,7 @@ import getpass
 
 #paths#
 fs_path = '/tigress'
-user_name = 'jk7/data'#getpass.getuser()
+user_name = getpass.getuser()
 output_path = fs_path + "/" + user_name
 base_path = output_path #decentralized signal data on Tiger
 target = t.HingeTarget
