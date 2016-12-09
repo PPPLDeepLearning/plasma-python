@@ -3,6 +3,8 @@
 This file trains a deep learning model to predict
 disruptions on time series data from plasma discharges.
 
+Must run guarantee_preprocessed.py in order for this to work.
+
 Dependencies:
 conf.py: configuration of model,training,paths, and data
 model_builder.py: logic to construct the ML architecture
