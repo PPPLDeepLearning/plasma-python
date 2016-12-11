@@ -80,7 +80,8 @@ class Preprocessor(object):
         #empty
         used_shots = ShotList()
 
-        pool = mp.Pool()
+        total_cores = mp.cpu_count()
+        pool = mp.Pool(total_cores - 2)
         print('running in parallel on {} processes'.format(pool._processes))
         start_time = time.time()
         for (i,shot) in enumerate(pool.imap_unordered(self.preprocess_single_file,shot_list_picked)):
