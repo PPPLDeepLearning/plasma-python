@@ -63,7 +63,7 @@ class Loader(object):
 
 
     def load_as_X_y_list(self,shot_list,verbose=False,prediction_mode=False):
-        """Turn a list of shots into a set of equal-sized chunks which contain a number of examples
+        """Turn a list of shots into a set of equal-sized patches which contain a number of examples
         that is a multiple of the batch size."""
         signals,results,total_length = self.get_signals_results_from_shotlist(shot_list) 
         sig_patches, res_patches = self.make_patches(signals,results)
