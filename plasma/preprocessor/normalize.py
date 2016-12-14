@@ -17,7 +17,6 @@ import abc
 import itertools
 
 import numpy as np
-from scipy.interpolate import UnivariateSpline
 from scipy.signal import exponential,correlate
 import pathos.multiprocessing as mp
 
@@ -82,7 +81,8 @@ class Normalizer(object):
         shot_list_picked = shot_list.random_sublist(use_shots) 
 
         if recompute or not self.previously_saved_stats():
-            pool = mp.Pool()
+            use_cores = max(1,mp.cpu_count()-2)
+            pool = mp.Pool(use_cores)
             print('running in parallel on {} processes'.format(pool._processes))
             start_time = time.time()
 
