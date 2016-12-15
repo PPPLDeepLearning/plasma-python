@@ -214,7 +214,7 @@ class Loader(object):
         num_timesteps = self.conf['model']['pred_length']
         sig_patches = []
         res_patches = []
-        max_len = self.get_max_len(signals,length)
+        max_len = self.get_max_len(signals,num_timesteps)
         for sig,res in zip(signals,results):
             sig_patches.append(Loader.pad_array_to_length(sig,max_len))
             res_patches.append(Loader.pad_array_to_length(res,max_len))
