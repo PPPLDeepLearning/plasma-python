@@ -122,8 +122,11 @@ class ShotList(object):
             self.shuffle()
         for i in range(0,len(self),num):
             subl = self.shots[i:i+num]
-            while equal_size and len(subl) < num:
-                subl.append(rnd.choice(self.shots))
+            #take into account the case of small shot lists < num (e.g. if used for testing)
+            #do not expand the shot list with duplicate events, rather add random patches later on 
+            if len(self) >= num:
+                while equal_size and len(subl) < num:
+                    subl.append(rnd.choice(self.shots))
             lists.append(subl)
         return [ShotList(l) for l in lists]
 
