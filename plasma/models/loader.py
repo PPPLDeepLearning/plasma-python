@@ -49,7 +49,7 @@ class Loader(object):
                     (batchsize + 1)th example are consecutive in time, so we do not reset the
                     RNN internal state unless we start a new chunk."""
                     for k in range(num_chunks):
-                        epoch_end = (i == len(shot_sublists) - 1 and j == len(X_list) -1 and k == num_chunks - 1)
+                        #epoch_end = (i == len(shot_sublists) - 1 and j == len(X_list) -1 and k == num_chunks - 1)
                         reset_states_now = (k == 0)
                         start = k*batch_size
                         end = (k + 1)*batch_size
