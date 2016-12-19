@@ -21,7 +21,7 @@ class Loader(object):
         self.normalizer = normalizer
         self.verbose = True
 
-    def training_batch_generator(self,shot_list,loader):
+    def training_batch_generator(self,shot_list):
         """Iterates indefinitely over the data set and returns one batch of data at a time.
         Can be inefficient during distributed training because one process loading data will
         cause all other processes to stall."""
@@ -37,7 +37,7 @@ class Loader(object):
             num_total = len(shot_list)
             for (i,shot_sublist) in enumerate(shot_sublists):
                 #produce a list of equal-length chunks from this set of shots
-                X_list,y_list = loader.load_as_X_y_list(shot_sublist)
+                X_list,y_list = self.load_as_X_y_list(shot_sublist)
                 #Each chunk will be a multiple of the batch size
                 for j,(X,y) in enumerate(zip(X_list,y_list)):
                     num_examples = X.shape[0]
