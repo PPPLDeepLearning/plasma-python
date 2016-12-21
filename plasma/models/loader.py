@@ -281,12 +281,12 @@ class Loader(object):
         for chunk_idx in range(num_chunks):
             src_start = chunk_idx*num_timesteps
             src_end = (chunk_idx+1)*num_timesteps
-            for batch_idx in range(batch_size):
-                X[chunk_idx*batch_size + batch_idx,:,:] = sig_patches[batch_idx][src_start:src_end]
+            for patch_idx in range(batch_size):
+                X[chunk_idx*batch_size + patch_idx,:,:] = sig_patches[patch_idx][src_start:src_end]
                 if return_sequences:
-                    y[chunk_idx*batch_size + batch_idx,:,:] = res_patches[batch_idx][src_start:src_end]
+                    y[chunk_idx*batch_size + patch_idx,:,:] = res_patches[patch_idx][src_start:src_end]
                 else:
-                    y[chunk_idx*batch_size + batch_idx,:] = res_patches[batch_idx][src_end-1]
+                    y[chunk_idx*batch_size + patch_idx,:] = res_patches[patch_idx][src_end-1]
         return X,y
 
     def load_as_X_y(self,shot,verbose=False,prediction_mode=False):
