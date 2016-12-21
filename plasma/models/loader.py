@@ -134,10 +134,10 @@ class Loader(object):
         feature_size = output.shape[2]
 
         outs = []
-        for batch_idx in range(batch_size):
+        for patch_idx in range(batch_size):
             out = np.empty((num_chunks*num_timesteps,feature_size))
             for chunk in range(num_chunks):
-                out[chunk*num_timesteps:(chunk+1)*num_timesteps,:] = output[chunk*batch_size+batch_idx,:,:]
+                out[chunk*num_timesteps:(chunk+1)*num_timesteps,:] = output[chunk*batch_size+patch_idx,:,:]
             outs.append(out)
         return outs 
 
