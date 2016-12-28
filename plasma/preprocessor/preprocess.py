@@ -12,14 +12,9 @@ from __future__ import print_function
 from os import listdir,remove
 import time
 import sys
-import random as rnd
-import abc
-import itertools
 import os
 
 import numpy as np
-from scipy.interpolate import UnivariateSpline
-from scipy.signal import exponential,correlate
 import pathos.multiprocessing as mp
 
 from plasma.utils.processing import *
