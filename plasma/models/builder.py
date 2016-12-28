@@ -12,8 +12,6 @@ import re
 import os
 from copy import deepcopy
 
-from plasma.models.loader import Loader
-
 class LossHistory(Callback):
     def on_train_begin(self, logs={}):
         self.losses = []
