@@ -103,7 +103,7 @@ class ShotList(object):
         return self.shots.__iter__()
 
     def next(self):
-        return self.shots.next()
+        return self.__iter__().next()
 
     def __add__(self,other_list):
         return ShotList(self.shots + other_list.shots)
