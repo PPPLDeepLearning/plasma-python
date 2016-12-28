@@ -209,7 +209,7 @@ class Loader(object):
 
 
     def make_prediction_patches(self,signals,results):
-        total_num = self.conf['training']['batch_size'] 
+        #total_num = self.conf['training']['batch_size'] 
         num_timesteps = self.conf['model']['pred_length']
         sig_patches = []
         res_patches = []
@@ -236,7 +236,7 @@ class Loader(object):
         assert(len(sig_patches) % batch_size == 0) #fixed number of batches
         assert(len(sig_patches[0]) % num_timesteps == 0) #divisible by length of RNN sequence
         num_batches = len(sig_patches) / batch_size
-        patch_length = len(sig_patches[0])
+        #patch_length = len(sig_patches[0])
 
         zipped = zip(sig_patches,res_patches)
         np.random.shuffle(zipped)
