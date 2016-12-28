@@ -1,2 +1,4 @@
 mpi4py
 mkl-service
+matplotlib
+pylab
