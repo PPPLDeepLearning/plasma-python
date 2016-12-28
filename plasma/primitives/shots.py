@@ -11,10 +11,8 @@ This work was supported by the DOE CSGF program.
 from __future__ import print_function
 import os
 import random as rnd
-import itertools
 
 import numpy as np
-from scipy.interpolate import UnivariateSpline
 
 from plasma.utils.processing import train_test_split
 
