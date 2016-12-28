@@ -77,16 +77,8 @@ mpi_train(conf,shot_list_train,shot_list_validate,loader)
 #load last model for testing
 print('saving results')
 y_prime = []
-y_prime_test = []
-y_prime_train = []
-
 y_gold = []
-y_gold_test = []
-y_gold_train = []
-
 disruptive= []
-disruptive_train= []
-disruptive_test= []
 
 # y_prime_train,y_gold_train,disruptive_train = make_predictions(conf,shot_list_train,loader)
 # y_prime_test,y_gold_test,disruptive_test = make_predictions(conf,shot_list_test,loader)
