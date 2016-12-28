@@ -139,7 +139,7 @@ class Preprocessor(object):
             t_max = min(t_max,t[-1])
             if i == current_index:
                 #throw out shots that never reach curren threshold
-                if not (any(abs(sig) > current_thresh)):
+                if not (np.any(abs(sig) > current_thresh)):
                     valid = False
                     print('Shot {} does not exceed current threshold... invalid.'.format(shot))
                 else:
