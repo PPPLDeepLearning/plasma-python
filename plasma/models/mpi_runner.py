@@ -291,11 +291,6 @@ class MPIModel():
   def get_effective_batch_size(self,num_replicas):
     return self.batch_size*num_replicas
 
-  def train_epochs(self,warmup_steps=100,num_epochs=1):
-    for i in range(num_epochs):
-      self.train_epoch(warmup_steps)
-
-
   def calculate_speed(self,t0,t_after_deltas,t_after_update,num_replicas,verbose=False):
     effective_batch_size = self.get_effective_batch_size(num_replicas)
     t_calculate = t_after_deltas - t0
