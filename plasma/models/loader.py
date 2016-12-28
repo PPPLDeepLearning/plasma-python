@@ -9,7 +9,6 @@ This work was supported by the DOE CSGF program.
 '''
 
 from __future__ import print_function
-import itertools
 import numpy as np
 
 from plasma.primitives.shots import Shot
