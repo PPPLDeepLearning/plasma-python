@@ -41,7 +41,7 @@ class Preprocessor(object):
             #nondisruptive
             nd_times = -1.0*np.ones_like(data)
             data_two_column = np.vstack((data,nd_times)).transpose()
-            savetxt(new_path,data_two_column,fmt = '%d %f')
+            np.savetxt(new_path,data_two_column,fmt = '%d %f')
             print('created new file: {}'.format(new_path))
             print('deleting old file: {}'.format(path))
             os.remove(path)
