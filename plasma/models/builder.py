@@ -13,10 +13,10 @@ import os
 from copy import deepcopy
 
 class LossHistory(Callback):
-    def on_train_begin(self, logs={}):
+    def on_train_begin(self, logs=None):
         self.losses = []
 
-    def on_batch_end(self, batch, logs={}):
+    def on_batch_end(self, batch, logs=None):
         self.losses.append(logs.get('loss'))
 
 
