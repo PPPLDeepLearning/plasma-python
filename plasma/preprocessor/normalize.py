@@ -9,12 +9,9 @@ This work was supported by the DOE CSGF program.
 '''
 
 from __future__ import print_function
-from os import listdir,remove
 import os
 import time,sys
-import random as rnd
 import abc
-import itertools
 
 import numpy as np
 from scipy.signal import exponential,correlate
