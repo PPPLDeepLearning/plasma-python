@@ -26,19 +26,13 @@ import numpy as np
 
 import matplotlib
 matplotlib.use('Agg')
-import matplotlib.pyplot as plt
 
 from pprint import pprint
-from functools import partial
-import itertools
-import socket
 sys.setrecursionlimit(10000)
-import getpass
 
 from plasma.conf import conf
 from plasma.models.loader import Loader
 from plasma.preprocessor.normalize import Normalizer
-from plasma.preprocessor.preprocess import Preprocessor
 
 if conf['data']['normalizer'] == 'minmax':
     from plasma.preprocessor.normalize import MinMaxNormalizer as Normalizer
