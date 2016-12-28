@@ -23,11 +23,11 @@ def resample_signal(t,sig,tmin,tmax,dt):
     f = UnivariateSpline(t,sig,s=0,k=1,ext=0)
     sig_interp = f(tt)
 
-    if(any(np.isnan(sig_interp))):
+    if(np.any(np.isnan(sig_interp))):
         print("signals contains nan")
-    if(any(t[1:] - t[:-1] <= 0)):
+    if(np.any(t[1:] - t[:-1] <= 0)):
         print("non increasing")
-        idx = where(t[1:] - t[:-1] <= 0)[0][0]
+        idx = np.where(t[1:] - t[:-1] <= 0)[0][0]
         print(t[idx-10:idx+10])
 
     return tt,sig_interp
