@@ -39,8 +39,8 @@ class Preprocessor(object):
         new_path = append_to_filename(path,'_clear')
         if len(np.shape(data)) < 2:
             #nondisruptive
-            nd_times = -1.0*ones_like(data)
-            data_two_column = vstack((data,nd_times)).transpose()
+            nd_times = -1.0*np.ones_like(data)
+            data_two_column = np.vstack((data,nd_times)).transpose()
             savetxt(new_path,data_two_column,fmt = '%d %f')
             print('created new file: {}'.format(new_path))
             print('deleting old file: {}'.format(path))
