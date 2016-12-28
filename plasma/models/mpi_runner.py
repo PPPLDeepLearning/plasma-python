@@ -21,7 +21,6 @@ import time
 import numpy as np
 
 from functools import partial
-import itertools
 import socket
 sys.setrecursionlimit(10000)
 import getpass
