@@ -1,7 +1,7 @@
 from __future__ import print_function
 import matplotlib
 matplotlib.use('Agg')
-import pylab as pl
+import matplotlib.pyplot as plt
 
 import numpy as np
 from itertools import imap
@@ -109,13 +109,13 @@ def plot_losses(conf,losses_list,specific_builder,name=''):
         os.makedirs(savedir)
 
     save_path = os.path.join(savedir,'{}_loss_{}.png'.format(name,unique_id))
-    pl.figure()
+    plt.figure()
     for losses in losses_list:
-        pl.semilogy(losses)
-    pl.xlabel('Epoch')
-    pl.ylabel('Loss')
-    pl.grid()
-    pl.savefig(save_path)
+        plt.semilogy(losses)
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.grid()
+    plt.savefig(save_path)
 
 
 
