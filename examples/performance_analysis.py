@@ -1,8 +1,3 @@
-import matplotlib
-matplotlib.use('Agg')
-
-#from pylab import *
-from matplotlib import pyplot
 import os
 
 from plasma.utils.performance import *
