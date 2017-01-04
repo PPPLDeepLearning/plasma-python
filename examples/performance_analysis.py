@@ -1,4 +1,5 @@
 import os
+import numpy as np
 
 from plasma.utils.performance import *
 from plasma.conf import conf
@@ -37,7 +38,7 @@ analyzer.example_plots(P_thresh_opt,'test','late')
 alarms,disr_alarms,nondisr_alarms = analyzer.gather_first_alarms(P_thresh_opt,'test')
 analyzer.hist_alarms(disr_alarms,'disruptive alarms, P_thresh = {}'.format(P_thresh_opt),save_figure=save_figure)
 print('{} disruptive alarms'.format(len(disr_alarms)))
-print('{} seconds mean alarm time'.format(mean(disr_alarms[disr_alarms > 0])))
+print('{} seconds mean alarm time'.format(np.mean(disr_alarms[disr_alarms > 0])))
 analyzer.hist_alarms(nondisr_alarms,'nondisruptive alarms, P_thresh = {}'.format(P_thresh_opt))
 print('{} nondisruptive alarms'.format(len(nondisr_alarms)))
 
