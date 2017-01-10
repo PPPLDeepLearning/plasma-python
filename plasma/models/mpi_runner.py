@@ -35,7 +35,6 @@ NUM_GPUS = 4
 MY_GPU = task_index % NUM_GPUS
 backend = 'theano'
 
-
 from pprint import pprint
 
 if backend == 'tf' or backend == 'tensorflow':
@@ -138,7 +137,7 @@ class Averager(object):
 
 
 class MPIModel():
-  def __init__(self,model,optimizer,comm,batch_iterator,batch_size,num_replicas=None,warmup_steps=1000,lr=0.01):
+  def __init__(self,model,optimizer,comm,batch_size,num_replicas=None,warmup_steps=1000,lr=0.01):
     # random.seed(task_index)
     self.epoch = 0
     self.model = model
@@ -148,7 +147,7 @@ class MPIModel():
     self.max_lr = 0.1
     self.comm = comm
     self.batch_size = batch_size
-    self.batch_iterator = batch_iterator
+    #self.batch_iterator = batch_iterator
     self.warmup_steps=warmup_steps
     self.num_workers = comm.Get_size()
     self.task_index = comm.Get_rank()
@@ -240,12 +239,26 @@ class MPIModel():
 
 
 
-  def train_epoch(self):
+  def train_epoch(self,batch_iterator):
     verbose = False
     step = 0
     loss_averager = Averager()
     t_start = time.time()
-    for batch_xs,batch_ys,reset_states_now,num_so_far,num_total in self.batch_iterator():
+
+    batch_iterator_func = batch_iterator()
+    #for batch_xs,batch_ys,reset_states_now,num_so_far,num_total in self.batch_iterator():
+    num_so_far = 0
+    num_total = 1
+    t0 = 0 
+    t1 = 0 
+    t2 = 0
+    while num_so_far < num_total:
+      
+      try:
+          batch_xs,batch_ys,reset_states_now,num_so_far,num_total = batch_iterator_func.next()
+      except:
+          batch_iterator_func = batch_iterator()
+          batch_xs,batch_ys,reset_states_now,num_so_far,num_total = batch_iterator_func.next()
 
       if reset_states_now:
         self.model.reset_states()
@@ -254,7 +267,7 @@ class MPIModel():
       num_replicas = 1 if warmup_phase else self.num_replicas
 
       num_so_far = self.mpi_sum_scalars(num_so_far,num_replicas)
-      epoch_end = num_so_far >= num_total
+      #epoch_end = num_so_far >= num_total
 
       t0 = time.time()
       deltas,loss = self.get_deltas(batch_xs,batch_ys,verbose)
@@ -270,10 +283,9 @@ class MPIModel():
       write_str = '\r[{}] step: {} [ETA: {:.2f}s] [{:.2f}/{}], loss: {:.5f} [{:.5f}] | '.format(self.task_index,step,eta,1.0*num_so_far,num_total,ave_loss,curr_loss)
       print_unique(write_str + write_str_0)
       step += 1
-      if epoch_end:
-        self.epoch += 1
-        print_unique('\nEpoch {} finished in {:.2f} seconds.\n'.format(self.epoch,t2 - t_start))
-        break
+
+    self.epoch += 1
+    print_unique('\nEpoch {} finished in {:.2f} seconds.\n'.format(self.epoch,t2 - t_start))
 
 
   def estimate_remaining_time(self,time_so_far,work_so_far,work_total):
@@ -437,9 +449,10 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader):
     warmup_steps = conf['model']['warmup_steps']
     optimizer = MPIAdam(lr=lr)
     print('{} epochs left to go'.format(num_epochs - 1 - e))
+
     batch_generator = partial(loader.training_batch_generator,shot_list=shot_list_train)
 
-    mpi_model = MPIModel(train_model,optimizer,comm,batch_generator,batch_size,lr=lr,warmup_steps = warmup_steps)
+    mpi_model = MPIModel(train_model,optimizer,comm,batch_size,lr=lr,warmup_steps = warmup_steps)
     mpi_model.compile(loss=conf['data']['target'].loss)
 
 
@@ -448,7 +461,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader):
         mpi_model.set_lr(lr*lr_decay**e)
         print_unique('\nEpoch {}/{}'.format(e,num_epochs))
 
-        mpi_model.train_epoch()
+        mpi_model.train_epoch(batch_generator)
 
         loader.verbose=False#True during the first iteration
         if task_index == 0:
