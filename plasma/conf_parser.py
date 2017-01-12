@@ -63,7 +63,7 @@ def parameters(input_file):
         params['paths']['results_prepath'] = output_path + '/results/'
         params['paths']['model_save_path'] = output_path + '/model_checkpoints/'
 
-        params['data']['num_signals'] = sum([sum([1 for predicate in subl if predicate]) for subl in signals_masks]),
+        params['data']['num_signals'] = sum([sum([1 for predicate in subl if predicate]) for subl in signals_masks])
         if params['target'] == 'hinge':
             params['data']['target'] = t.HingeTarget
         elif params['target'] == 'binary':
