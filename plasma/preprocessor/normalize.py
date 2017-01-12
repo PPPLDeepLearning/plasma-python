@@ -106,6 +106,11 @@ class Normalizer(object):
         indices = np.concatenate([indices_sublist for i,indices_sublist in enumerate(self.get_indices_list()) if mask[i]])
         shot.signals = shot.signals[:,indices]
 
+    def apply_positivity_mask(self,shot):
+        mask = self.conf['paths']['positivity_mask']
+        mask = [np.array(subl) for subl in mask]
+        indices = np.concatenate([indices_sublist[mask[i]] for i,indices_sublist in enumerate(self.get_indices_list())])
+        shot.signals[:,indices] = np.clip(shot.signals[:,indices],0,np.Inf)
 
     def train_on_single_shot(self,shot):
         assert isinstance(shot,Shot), 'should be instance of shot'
@@ -171,6 +176,7 @@ class MeanVarNormalizer(Normalizer):
         for (i,indices) in enumerate(self.get_indices_list()):
             shot.signals[:,indices] = (shot.signals[:,indices] - means[i])/stds[i]
         shot.ttd = self.remapper(shot.ttd,self.conf['data']['T_warning'])
+        self.apply_positivity_mask(shot)
         self.cut_end_of_shot(shot)
         self.apply_mask(shot)
 
@@ -201,6 +207,7 @@ class VarNormalizer(MeanVarNormalizer):
         for (i,indices) in enumerate(self.get_indices_list()):
             shot.signals[:,indices] = (shot.signals[:,indices])/stds[i]
         shot.ttd = self.remapper(shot.ttd,self.conf['data']['T_warning'])
+        self.apply_positivity_mask(shot)
         self.cut_end_of_shot(shot)
         self.apply_mask(shot)
 
@@ -268,6 +275,7 @@ class MinMaxNormalizer(Normalizer):
         assert(self.minimums is not None and self.maximums is not None) 
         shot.signals = (shot.signals - self.minimums)/(self.maximums - self.minimums)
         shot.ttd = self.remapper(shot.ttd,self.conf['data']['T_warning'])
+        self.apply_positivity_mask(shot)
         self.cut_end_of_shot(shot)
         self.apply_mask(shot)
 
