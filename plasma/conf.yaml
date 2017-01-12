@@ -1,0 +1,73 @@
+#conf.py will parse the yaml and extract parameters based on what is specified
+
+fs_path: '/tigress'
+target: 'hinge'
+
+paths:
+    shot_files: ['CWall_clear.txt','CFC_unint.txt']
+    shot_files_test: ['BeWall_clear.txt','ILW_unint.txt']
+data:
+    T_min_warn: 30
+    recompute: False
+    recompute_normalization: False
+    #specifies which of the signals in the signals_dirs order contains the plasma current info
+    current_index: 0
+    plotting: False
+    #train/validate split
+    #how many shots to use
+    use_shots: 200000
+    #normalization timescale
+    dt: 0.001
+    #maximum TTD considered
+    T_max: 1000.0
+    #The shortest works best so far: less overfitting. log TTd prediction also works well. 0.5 better than 0.2
+    T_warning: 1.0
+    current_thresh: 750000
+    current_end_thresh: 10000
+    #the characteristic decay length of the decaying moving average window
+    window_decay: 2
+    #the width of the actual window
+    window_size: 10
+    #TODO optimize
+    normalizer: 'var'
+
+model:
+    #length of LSTM memory
+    pred_length: 200
+    pred_batch_size: 128
+    #TODO optimize
+    length: 128
+    skip: 1
+    #hidden layer size
+    #TODO optimize  
+    rnn_size: 300
+    #size 100 slight overfitting, size 20 no overfitting. 200 is not better than 100. Prediction much better with size 100, size 20 cannot capture the data.
+    rnn_type: 'LSTM'
+    #TODO optimize
+    rnn_layers: 3
+    #have not found a difference yet
+    optimizer: 'adam'
+    clipnorm: 10.0
+    regularization: 0.0
+    #1e-4 is too high, 5e-7 is too low. 5e-5 seems best at 256 batch size, full dataset and ~10 epochs, and lr decay of 0.90. 1e-4 also works well if we decay a lot (i.e ~0.7 or more)
+    lr: 0.00005
+    lr_decay: 0.9
+    stateful: True
+    return_sequences: True
+    dropout_prob: 0.3
+    #only relevant if we want to do mpi training. The number of steps with a single replica
+    warmup_steps: 0
+
+training:
+    as_array_of_shots: True
+    shuffle_training: True
+    train_frac: 0.5
+    validation_frac: 0.05
+    batch_size: 256
+    #THIS WAS THE CULPRIT FOR NO TRAINING! Lower than 1000 performs very poorly
+    max_patch_length: 100000
+    #How many shots are we loading at once?
+    num_shots_at_once: 200
+    num_epochs: 3
+    use_mock_data: False
+    data_parallel: False
