@@ -103,7 +103,8 @@ class Normalizer(object):
 
     def apply_mask(self,shot):
         mask = self.conf['paths']['signals_masks']
-        indices = np.concatenate([indices_sublist for i,indices_sublist in enumerate(self.get_indices_list()) if mask[i]])
+        mask = [np.array(subl) for subl in mask]
+        indices = np.concatenate([indices_sublist[mask[i]] for i,indices_sublist in enumerate(self.get_indices_list())])
         shot.signals = shot.signals[:,indices]
 
     def apply_positivity_mask(self,shot):
