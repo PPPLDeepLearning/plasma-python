@@ -137,7 +137,7 @@ class Averager(object):
 
 
 class MPIModel():
-  def __init__(self,model,optimizer,comm,batch_size,num_replicas=None,warmup_steps=1000,lr=0.01):
+  def __init__(self,model,optimizer,comm,batch_iterator,batch_size,num_replicas=None,warmup_steps=1000,lr=0.01):
     # random.seed(task_index)
     self.epoch = 0
     self.model = model
@@ -239,14 +239,13 @@ class MPIModel():
 
 
 
-  def train_epoch(self,batch_iterator):
+  def train_epoch(self):
     verbose = False
     step = 0
     loss_averager = Averager()
     t_start = time.time()
 
-    batch_iterator_func = batch_iterator()
-    #for batch_xs,batch_ys,reset_states_now,num_so_far,num_total in self.batch_iterator():
+    batch_iterator_func = self.batch_iterator()
     num_so_far = 0
     num_total = 1
     t0 = 0 
@@ -257,7 +256,7 @@ class MPIModel():
       try:
           batch_xs,batch_ys,reset_states_now,num_so_far,num_total = batch_iterator_func.next()
       except:
-          batch_iterator_func = batch_iterator()
+          batch_iterator_func = self.batch_iterator()
           batch_xs,batch_ys,reset_states_now,num_so_far,num_total = batch_iterator_func.next()
 
       if reset_states_now:
@@ -452,7 +451,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader):
 
     batch_generator = partial(loader.training_batch_generator,shot_list=shot_list_train)
 
-    mpi_model = MPIModel(train_model,optimizer,comm,batch_size,lr=lr,warmup_steps = warmup_steps)
+    mpi_model = MPIModel(train_model,optimizer,comm,batch_generator,batch_size,lr=lr,warmup_steps = warmup_steps)
     mpi_model.compile(loss=conf['data']['target'].loss)
 
 
@@ -461,7 +460,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader):
         mpi_model.set_lr(lr*lr_decay**e)
         print_unique('\nEpoch {}/{}'.format(e,num_epochs))
 
-        mpi_model.train_epoch(batch_generator)
+        mpi_model.train_epoch()
 
         loader.verbose=False#True during the first iteration
         if task_index == 0:
