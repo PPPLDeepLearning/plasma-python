@@ -135,7 +135,7 @@ def make_predictions(conf,shot_list,loader):
     y_gold = []
     disruptive = []
 
-    _,model = specific_builder.build_train_test_models()
+    model = specific_builder.build_model(True)
     specific_builder.load_model_weights(model)
     model_save_path = specific_builder.get_latest_save_path()
 
@@ -160,7 +160,7 @@ def make_predictions(conf,shot_list,loader):
 
 
 def make_single_prediction(shot,specific_builder,loader,model_save_path):
-    _,model = specific_builder.build_train_test_models()
+    model = specific_builder.build_model(True)
     model.load_weights(model_save_path)
     model.reset_states()
     X,y = loader.load_as_X_y(shot,prediction_mode=True)
@@ -190,7 +190,7 @@ def make_predictions_gpu(conf,shot_list,loader):
     y_gold = []
     disruptive = []
 
-    _,model = specific_builder.build_train_test_models()
+    model = specific_builder.build_model(True)
     specific_builder.load_model_weights(model)
     model.reset_states()
 
