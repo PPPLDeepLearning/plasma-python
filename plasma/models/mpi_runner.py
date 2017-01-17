@@ -354,7 +354,7 @@ def mpi_make_predictions(conf,shot_list,loader):
     y_gold = []
     disruptive = []
 
-    _,model = specific_builder.build_train_test_models()
+    model = specific_builder.build_model(True)
     specific_builder.load_model_weights(model)
     model.reset_states()
 
