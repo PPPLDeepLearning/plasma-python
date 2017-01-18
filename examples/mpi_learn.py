@@ -34,6 +34,9 @@ from plasma.conf import conf
 from plasma.models.loader import Loader
 from plasma.preprocessor.normalize import Normalizer
 
+#FIXME do we lose by adding it here?
+import keras.callbacks as cbks
+
 if conf['data']['normalizer'] == 'minmax':
     from plasma.preprocessor.normalize import MinMaxNormalizer as Normalizer
 elif conf['data']['normalizer'] == 'meanvar':
@@ -72,7 +75,19 @@ print("...done")
 
 shot_list_train,shot_list_validate,shot_list_test = loader.load_shotlists(conf)
 
-mpi_train(conf,shot_list_train,shot_list_validate,loader)
+#FIXME prepare callbacks to pass here
+#other possible Callbacks
+#callbacks += [cbks.ProgbarLogger() ModelCheckpoint RemoteMonitor LearningRateScheduler
+#https://github.com/fchollet/keras/blob/fbc9a18f0abc5784607cd4a2a3886558efa3f794/keras/callbacks.py
+
+mode = 'max'
+monitor = 'val_loss'
+patience = 1
+callbacks = [cbks.EarlyStopping(patience=patience, monitor=monitor, mode=mode)]
+callbacks += [cbks.BaseLogger()]
+callbacks += [cbks.CSVLogger('/tigress/alexeys/training.log')]
+
+mpi_train(conf,shot_list_train,shot_list_validate,loader,callbacks)
 
 #load last model for testing
 print('saving results')
