@@ -26,10 +26,10 @@ def parameters(input_file):
         base_path = output_path
 
         params['paths']['base_path'] = base_path
-        params['paths']['signal_prepath'] = base_path + '/signal_data/jet/'
+        params['paths']['signal_prepath'] = base_path + params['paths']['signal_prepath']
         params['paths']['signals_masks'] = signals_masks
         params['paths']['positivity_mask'] = positivity_mask
-        params['paths']['shot_list_dir'] = base_path + '/shot_lists/'
+        params['paths']['shot_list_dir'] = base_path + params['paths']['shot_list_dir']
         params['paths']['output_path'] = output_path
         params['paths']['processed_prepath'] = output_path +'/processed_shots/'
         params['paths']['normalizer_path'] = output_path + '/normalization/normalization.npz'
