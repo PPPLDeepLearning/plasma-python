@@ -75,17 +75,17 @@ print("...done")
 
 shot_list_train,shot_list_validate,shot_list_test = loader.load_shotlists(conf)
 
-#FIXME prepare callbacks to pass here
-#other possible Callbacks
-#callbacks += [cbks.ProgbarLogger() ModelCheckpoint RemoteMonitor LearningRateScheduler
+#prepare callbacks to pass here
+#other possible Callbacks to add: RemoteMonitor, LearningRateScheduler
 #https://github.com/fchollet/keras/blob/fbc9a18f0abc5784607cd4a2a3886558efa3f794/keras/callbacks.py
 
+#potentially move to conf.yaml
 mode = 'max'
 monitor = 'val_loss'
 patience = 1
 callbacks = [cbks.EarlyStopping(patience=patience, monitor=monitor, mode=mode)]
 callbacks += [cbks.BaseLogger()]
-callbacks += [cbks.CSVLogger("{}{}.log".format(conf['paths']['callback_save_path'],datetime.datetime.now())) 
+callbacks += [cbks.CSVLogger("{}callbacks-{}.log".format(conf['paths']['callback_save_path'],datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))) 
 
 mpi_train(conf,shot_list_train,shot_list_validate,loader,callbacks)
 
