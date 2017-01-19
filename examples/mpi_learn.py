@@ -85,7 +85,7 @@ monitor = 'val_loss'
 patience = 1
 callbacks = [cbks.EarlyStopping(patience=patience, monitor=monitor, mode=mode)]
 callbacks += [cbks.BaseLogger()]
-callbacks += [cbks.CSVLogger('/tigress/alexeys/training.log')]
+callbacks += [cbks.CSVLogger("{}{}.log".format(conf['paths']['callback_save_path'],datetime.datetime.now())) 
 
 mpi_train(conf,shot_list_train,shot_list_validate,loader,callbacks)
 
