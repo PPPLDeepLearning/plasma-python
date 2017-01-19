@@ -188,6 +188,8 @@ class Shot(object):
         return self.is_disruptive
 
     def save(self,prepath):
+        if not os.path.exists(prepath):
+            os.makedirs(prepath)
         save_path = self.get_save_path(prepath)
         np.savez(save_path,number=self.number,valid=self.valid,is_disruptive=self.is_disruptive,
             signals=self.signals,ttd=self.ttd)
