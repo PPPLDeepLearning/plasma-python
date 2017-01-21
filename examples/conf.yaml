@@ -90,3 +90,7 @@ training:
     num_epochs: 3
     use_mock_data: False
     data_parallel: False
+callbacks:
+    mode: 'max'
+    monitor: 'var_loss'
+    patience: 2
