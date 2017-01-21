@@ -240,7 +240,7 @@ class MPIModel():
     new_weights = self.comm.bcast(new_weights,root=0)
     self.model.set_weights(new_weights)
 
-    def build_callback(self,conf,callbacks_list):
+    def build_callbacks(self,conf,callbacks_list):
         #prepare callbacks to pass here
         #other possible Callbacks to add: RemoteMonitor, LearningRateScheduler
         #https://github.com/fchollet/keras/blob/fbc9a18f0abc5784607cd4a2a3886558efa3f794/keras/callbacks.py
@@ -253,13 +253,14 @@ class MPIModel():
 
         callbacks = [cbks.BaseLogger()]
         callbacks += [cbks.CSVLogger("{}callbacks-{}.log".format(callback_save_path,datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")))]
+        callbacks = callbacks + [self.history]
 
         if "earlystop" in callbacks_list: 
             callbacks += [cbks.EarlyStopping(patience=patience, monitor=monitor, mode=mode)]
         if "lr_scheduler" in callbacks_list: 
             pass
         
-        return callbacks
+        return cbks.CallbackList(callbacks)
 
 
   def train_epoch(self):
@@ -476,11 +477,10 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loaderi, callbacks_list=No
     mpi_model.compile(loss=conf['data']['target'].loss)
 
     callbacks = mpi_model.build_callbacks(conf,callbacks_list)
-    callback_metrics = ['val_loss','val_roc','train_loss']
-    callbacks = callbacks + [mpi_model.history]
-    callbacks = cbks.CallbackList(callbacks)
 
     callbacks._set_model(mpi_model.model)
+    callback_metrics = conf['callbacks']['metrics']
+
     callbacks._set_params({
         'nb_epoch': num_epochs,
         'metrics': callback_metrics,
