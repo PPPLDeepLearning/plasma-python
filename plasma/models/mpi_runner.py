@@ -240,27 +240,27 @@ class MPIModel():
     new_weights = self.comm.bcast(new_weights,root=0)
     self.model.set_weights(new_weights)
 
-    def build_callbacks(self,conf,callbacks_list):
-        #prepare callbacks to pass here
-        #other possible Callbacks to add: RemoteMonitor, LearningRateScheduler
-        #https://github.com/fchollet/keras/blob/fbc9a18f0abc5784607cd4a2a3886558efa3f794/keras/callbacks.py
+  def build_callbacks(self,conf,callbacks_list):
+      #prepare callbacks to pass here
+      #other possible Callbacks to add: RemoteMonitor, LearningRateScheduler
+      #https://github.com/fchollet/keras/blob/fbc9a18f0abc5784607cd4a2a3886558efa3f794/keras/callbacks.py
 
-        #potentially move to conf.yaml
-        mode = conf['callbacks']['mode']
-        monitor = conf['callbacks']['monitor']
-        patience = conf['callbacks']['patience']
-        callback_save_path = conf['paths']['callback_save_path']
+      #potentially move to conf.yaml
+      mode = conf['callbacks']['mode']
+      monitor = conf['callbacks']['monitor']
+      patience = conf['callbacks']['patience']
+      callback_save_path = conf['paths']['callback_save_path']
 
-        callbacks = [cbks.BaseLogger()]
-        callbacks += [cbks.CSVLogger("{}callbacks-{}.log".format(callback_save_path,datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")))]
-        callbacks = callbacks + [self.history]
+      callbacks = [cbks.BaseLogger()]
+      callbacks += [cbks.CSVLogger("{}callbacks-{}.log".format(callback_save_path,datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")))]
+      callbacks = callbacks + [self.history]
 
-        if "earlystop" in callbacks_list: 
-            callbacks += [cbks.EarlyStopping(patience=patience, monitor=monitor, mode=mode)]
-        if "lr_scheduler" in callbacks_list: 
-            pass
-        
-        return cbks.CallbackList(callbacks)
+      if "earlystop" in callbacks_list: 
+          callbacks += [cbks.EarlyStopping(patience=patience, monitor=monitor, mode=mode)]
+      if "lr_scheduler" in callbacks_list: 
+          pass
+      
+      return cbks.CallbackList(callbacks)
 
 
   def train_epoch(self):
