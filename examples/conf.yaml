@@ -92,6 +92,7 @@ training:
     data_parallel: False
 callbacks:
     list: ['earlystop']
+    metrics: ['val_loss','val_roc','train_loss']
     mode: 'max'
     monitor: 'var_loss'
     patience: 2
