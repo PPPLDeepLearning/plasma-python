@@ -18,6 +18,7 @@ from __future__ import print_function
 import os
 import sys 
 import time
+import datetime
 import numpy as np
 
 from functools import partial
@@ -239,6 +240,26 @@ class MPIModel():
     new_weights = self.comm.bcast(new_weights,root=0)
     self.model.set_weights(new_weights)
 
+    def build_callback(self,conf,callbacks_list):
+        #prepare callbacks to pass here
+        #other possible Callbacks to add: RemoteMonitor, LearningRateScheduler
+        #https://github.com/fchollet/keras/blob/fbc9a18f0abc5784607cd4a2a3886558efa3f794/keras/callbacks.py
+
+        #potentially move to conf.yaml
+        mode = conf['callbacks']['mode']
+        monitor = conf['callbacks']['monitor']
+        patience = conf['callbacks']['patience']
+        callback_save_path = conf['paths']['callback_save_path']
+
+        callbacks = [cbks.BaseLogger()]
+        callbacks += [cbks.CSVLogger("{}callbacks-{}.log".format(callback_save_path,datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")))]
+
+        if "earlystop" in callbacks_list: 
+            callbacks += [cbks.EarlyStopping(patience=patience, monitor=monitor, mode=mode)]
+        if "lr_scheduler" in callbacks_list: 
+            pass
+        
+        return callbacks
 
 
   def train_epoch(self):
@@ -433,14 +454,7 @@ def mpi_make_predictions_and_evaluate(conf,shot_list,loader):
     return roc_area,loss
 
 
-
-
-def mpi_train(conf,shot_list_train,shot_list_validate,loader,callbacks=None):   
-
-    #FIXME deprecated 
-    validation_losses = []
-    validation_roc = []
-    training_losses = []
+def mpi_train(conf,shot_list_train,shot_list_validate,loaderi, callbacks_list=None):   
 
     specific_builder = builder.ModelBuilder(conf)
     train_model,test_model = specific_builder.build_train_test_models()
@@ -461,7 +475,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader,callbacks=None):
     mpi_model = MPIModel(train_model,optimizer,comm,batch_generator,batch_size,lr=lr,warmup_steps = warmup_steps)
     mpi_model.compile(loss=conf['data']['target'].loss)
 
-    #FIXME perhaps it is better to pass from driver or derive a class from History or Callbacks
+    callbacks = mpi_model.build_callbacks(conf,callbacks_list)
     callback_metrics = ['val_loss','val_roc','train_loss']
     callbacks = callbacks + [mpi_model.history]
     callbacks = cbks.CallbackList(callbacks)
@@ -479,7 +493,6 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader,callbacks=None):
         mpi_model.set_lr(lr*lr_decay**e)
         print_unique('\nEpoch {}/{}'.format(e,num_epochs))
 
-        #FIXME make it return some stats over epoch
         (step,ave_loss,curr_loss,num_so_far) = mpi_model.train_epoch()
 
         loader.verbose=False #True during the first iteration
@@ -489,9 +502,9 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader,callbacks=None):
         epoch_logs = {}
         roc_area,loss = mpi_make_predictions_and_evaluate(conf,shot_list_validate,loader)
 
-        validation_losses.append(loss)
-        validation_roc.append(roc_area)
-        training_losses.append(ave_loss)
+        #validation_losses.append(loss)
+        #validation_roc.append(roc_area)
+        #training_losses.append(ave_loss)
 
         epoch_logs['val_roc'] = roc_area 
         epoch_logs['val_loss'] = loss
@@ -499,11 +512,10 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader,callbacks=None):
 
         if task_index == 0:
             print('=========Summary======== for epoch{}'.format(step))
-            print('Training Loss: {:.3e}'.format(training_losses[-1]))
-            print('Validation Loss: {:.3e}'.format(validation_losses[-1]))
-            print('Validation ROC: {:.4f}'.format(validation_roc[-1]))
+            print('Training Loss: {:.3e}'.format(ave_loss))
+            print('Validation Loss: {:.3e}'.format(loss))
+            print('Validation ROC: {:.4f}'.format(roc_area))
 
             callbacks.on_epoch_end(e, epoch_logs)
 
-    #FIXME
     mpi_model.callbacks.on_train_end()
