@@ -455,7 +455,7 @@ def mpi_make_predictions_and_evaluate(conf,shot_list,loader):
     return roc_area,loss
 
 
-def mpi_train(conf,shot_list_train,shot_list_validate,loaderi, callbacks_list=None):   
+def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=None):   
 
     specific_builder = builder.ModelBuilder(conf)
     train_model,test_model = specific_builder.build_train_test_models()
