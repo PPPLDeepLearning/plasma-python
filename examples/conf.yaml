@@ -91,6 +91,7 @@ training:
     use_mock_data: False
     data_parallel: False
 callbacks:
+    list: ['earlystop']
     mode: 'max'
     monitor: 'var_loss'
     patience: 2
