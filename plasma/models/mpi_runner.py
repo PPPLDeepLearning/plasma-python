@@ -26,8 +26,6 @@ import socket
 sys.setrecursionlimit(10000)
 import getpass
 
-import pdb
-
 #import keras sequentially because it otherwise reads from ~/.keras/keras.json with too many threads.
 #from mpi_launch_tensorflow import get_mpi_task_index 
 from mpi4py import MPI
@@ -476,7 +474,6 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
 
     batch_generator = partial(loader.training_batch_generator,shot_list=shot_list_train)
 
-    pdb.set_trace()
     mpi_model = MPIModel(train_model,optimizer,comm,batch_generator,batch_size,lr=lr,warmup_steps = warmup_steps)
     mpi_model.compile(loss=conf['data']['target'].loss)
 
