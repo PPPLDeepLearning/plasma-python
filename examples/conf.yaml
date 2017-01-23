@@ -4,8 +4,8 @@ fs_path: '/tigress'
 target: 'hinge'
 
 paths:
-    shot_files: ['short_list.txt'] #['CWall_clear.txt','CFC_unint.txt']
-    shot_files_test: ['short_list.txt'] #['BeWall_clear.txt','ILW_unint.txt']
+    shot_files: ['CWall_clear.txt','CFC_unint.txt']
+    shot_files_test: ['BeWall_clear.txt','ILW_unint.txt']
     signals_dirs: [['jpf/da/c2-ipla'], # Plasma Current [A]
                 ['jpf/da/c2-loca'], # Mode Lock Amplitude [A]
                 ['jpf/db/b5r-ptot>out'], #Radiated Power [W]
@@ -22,6 +22,9 @@ paths:
                  'jpf/df/g1r-lid:006',
                  'jpf/df/g1r-lid:007',
                  'jpf/df/g1r-lid:008']]
+    signal_prepath: '/signal_data/jet/'
+    shot_list_dir: '/shot_lists/'
+
 data:
     T_min_warn: 30
     recompute: False
@@ -87,3 +90,9 @@ training:
     num_epochs: 3
     use_mock_data: False
     data_parallel: False
+callbacks:
+    list: ['earlystop']
+    metrics: ['val_loss','val_roc','train_loss']
+    mode: 'max'
+    monitor: 'val_loss'
+    patience: 2

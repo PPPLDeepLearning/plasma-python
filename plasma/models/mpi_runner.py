@@ -18,6 +18,7 @@ from __future__ import print_function
 import os
 import sys 
 import time
+import datetime
 import numpy as np
 
 from functools import partial
@@ -34,7 +35,6 @@ num_workers = comm.Get_size()
 NUM_GPUS = 4
 MY_GPU = task_index % NUM_GPUS
 backend = 'theano'
-
 
 from pprint import pprint
 
@@ -58,6 +58,7 @@ for i in range(num_workers):
     from keras.models import Model
     from keras.optimizers import SGD
     from keras.utils.generic_utils import Progbar 
+    import keras.callbacks as cbks
 
 from plasma.models import builder
 from plasma.conf import conf
@@ -152,6 +153,7 @@ class MPIModel():
     self.warmup_steps=warmup_steps
     self.num_workers = comm.Get_size()
     self.task_index = comm.Get_rank()
+    self.history = cbks.History()
     if num_replicas is None or num_replicas < 1 or num_replicas > self.num_workers:
       self.num_replicas = num_workers
     else:
@@ -238,6 +240,28 @@ class MPIModel():
     new_weights = self.comm.bcast(new_weights,root=0)
     self.model.set_weights(new_weights)
 
+  def build_callbacks(self,conf,callbacks_list):
+      #prepare callbacks to pass here
+      #other possible Callbacks to add: RemoteMonitor, LearningRateScheduler
+      #https://github.com/fchollet/keras/blob/fbc9a18f0abc5784607cd4a2a3886558efa3f794/keras/callbacks.py
+
+      #potentially move to conf.yaml
+      mode = conf['callbacks']['mode']
+      monitor = conf['callbacks']['monitor']
+      patience = conf['callbacks']['patience']
+      callback_save_path = conf['paths']['callback_save_path']
+      callbacks_list = conf['callbacks']['list']
+
+      callbacks = [cbks.BaseLogger()]
+      callbacks += [self.history]
+      callbacks += [cbks.CSVLogger("{}callbacks-{}.log".format(callback_save_path,datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")))]
+
+      if "earlystop" in callbacks_list: 
+          callbacks += [cbks.EarlyStopping(patience=patience, monitor=monitor, mode=mode)]
+      if "lr_scheduler" in callbacks_list: 
+          pass
+      
+      return cbks.CallbackList(callbacks)
 
 
   def train_epoch(self):
@@ -245,7 +269,23 @@ class MPIModel():
     step = 0
     loss_averager = Averager()
     t_start = time.time()
-    for batch_xs,batch_ys,reset_states_now,num_so_far,num_total in self.batch_iterator():
+
+    batch_iterator_func = self.batch_iterator()
+    num_so_far = 0
+    num_total = 1
+    ave_loss = -1
+    curr_loss = -1
+    t0 = 0 
+    t1 = 0 
+    t2 = 0
+
+    while num_so_far < num_total:
+
+      try:
+          batch_xs,batch_ys,reset_states_now,num_so_far,num_total = batch_iterator_func.next()
+      except:
+          batch_iterator_func = self.batch_iterator()
+          batch_xs,batch_ys,reset_states_now,num_so_far,num_total = batch_iterator_func.next()
 
       if reset_states_now:
         self.model.reset_states()
@@ -254,8 +294,7 @@ class MPIModel():
       num_replicas = 1 if warmup_phase else self.num_replicas
 
       num_so_far = self.mpi_sum_scalars(num_so_far,num_replicas)
-      epoch_end = num_so_far >= num_total
-
+      
       t0 = time.time()
       deltas,loss = self.get_deltas(batch_xs,batch_ys,verbose)
       t1 = time.time()
@@ -270,10 +309,10 @@ class MPIModel():
       write_str = '\r[{}] step: {} [ETA: {:.2f}s] [{:.2f}/{}], loss: {:.5f} [{:.5f}] | '.format(self.task_index,step,eta,1.0*num_so_far,num_total,ave_loss,curr_loss)
       print_unique(write_str + write_str_0)
       step += 1
-      if epoch_end:
-        self.epoch += 1
-        print_unique('\nEpoch {} finished in {:.2f} seconds.\n'.format(self.epoch,t2 - t_start))
-        break
+
+    self.epoch += 1
+    print_unique('\nEpoch {} finished in {:.2f} seconds.\n'.format(self.epoch,t2 - t_start))
+    return (step,ave_loss,curr_loss,num_so_far)
 
 
   def estimate_remaining_time(self,time_so_far,work_so_far,work_total):
@@ -417,12 +456,7 @@ def mpi_make_predictions_and_evaluate(conf,shot_list,loader):
     return roc_area,loss
 
 
-
-
-def mpi_train(conf,shot_list_train,shot_list_validate,loader):
-    validation_losses = []
-    validation_roc = []
-    # training_losses = []
+def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=None):   
 
     specific_builder = builder.ModelBuilder(conf)
     train_model,test_model = specific_builder.build_train_test_models()
@@ -437,35 +471,52 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader):
     warmup_steps = conf['model']['warmup_steps']
     optimizer = MPIAdam(lr=lr)
     print('{} epochs left to go'.format(num_epochs - 1 - e))
+
     batch_generator = partial(loader.training_batch_generator,shot_list=shot_list_train)
 
     mpi_model = MPIModel(train_model,optimizer,comm,batch_generator,batch_size,lr=lr,warmup_steps = warmup_steps)
     mpi_model.compile(loss=conf['data']['target'].loss)
 
+    callbacks = mpi_model.build_callbacks(conf,callbacks_list)
+
+    callbacks._set_model(mpi_model.model)
+    callback_metrics = conf['callbacks']['metrics']
+
+    callbacks._set_params({
+        'nb_epoch': num_epochs,
+        'metrics': callback_metrics,
+    })
+    callbacks.on_train_begin()
 
     while e < num_epochs-1:
+        callbacks.on_epoch_begin(e)
         e += 1
         mpi_model.set_lr(lr*lr_decay**e)
         print_unique('\nEpoch {}/{}'.format(e,num_epochs))
 
-        mpi_model.train_epoch()
+        (step,ave_loss,curr_loss,num_so_far) = mpi_model.train_epoch()
 
-        loader.verbose=False#True during the first iteration
+        loader.verbose=False #True during the first iteration
         if task_index == 0:
             specific_builder.save_model_weights(train_model,e)
 
-
+        epoch_logs = {}
         roc_area,loss = mpi_make_predictions_and_evaluate(conf,shot_list_validate,loader)
 
-        validation_losses.append(loss)
-        validation_roc.append(roc_area)
+        #validation_losses.append(loss)
+        #validation_roc.append(roc_area)
+        #training_losses.append(ave_loss)
+
+        epoch_logs['val_roc'] = roc_area 
+        epoch_logs['val_loss'] = loss
+        epoch_logs['train_loss'] = ave_loss
 
         if task_index == 0:
-            print('=========Summary========')
-            # print('Training Loss: {:.3e}'.format(training_losses[-1]))
-            print('Validation Loss: {:.3e}'.format(validation_losses[-1]))
-            print('Validation ROC: {:.4f}'.format(validation_roc[-1]))
+            print('=========Summary======== for epoch{}'.format(step))
+            print('Training Loss: {:.3e}'.format(ave_loss))
+            print('Validation Loss: {:.3e}'.format(loss))
+            print('Validation ROC: {:.4f}'.format(roc_area))
 
-#mpi_train(conf,shot_list_train,shot_list_validate,loader)
+            callbacks.on_epoch_end(e, epoch_logs)
 
-#load last model for testing
+    mpi_model.callbacks.on_train_end()
