@@ -26,6 +26,8 @@ import socket
 sys.setrecursionlimit(10000)
 import getpass
 
+import pdb
+
 #import keras sequentially because it otherwise reads from ~/.keras/keras.json with too many threads.
 #from mpi_launch_tensorflow import get_mpi_task_index 
 from mpi4py import MPI
@@ -250,10 +252,11 @@ class MPIModel():
       monitor = conf['callbacks']['monitor']
       patience = conf['callbacks']['patience']
       callback_save_path = conf['paths']['callback_save_path']
+      callbacks_list = conf['callbacks']['list']
 
       callbacks = [cbks.BaseLogger()]
+      callbacks += [self.history]
       callbacks += [cbks.CSVLogger("{}callbacks-{}.log".format(callback_save_path,datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")))]
-      callbacks = callbacks + [self.history]
 
       if "earlystop" in callbacks_list: 
           callbacks += [cbks.EarlyStopping(patience=patience, monitor=monitor, mode=mode)]
@@ -473,6 +476,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
 
     batch_generator = partial(loader.training_batch_generator,shot_list=shot_list_train)
 
+    pdb.set_trace()
     mpi_model = MPIModel(train_model,optimizer,comm,batch_generator,batch_size,lr=lr,warmup_steps = warmup_steps)
     mpi_model.compile(loss=conf['data']['target'].loss)
 
