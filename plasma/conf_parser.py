@@ -5,18 +5,18 @@ import yaml
 def parameters(input_file):
     """Parse yaml file of configuration parameters."""
 
+ 
     signals_dirs = yaml.load(open(input_file, 'r'))['paths']['signals_dirs']
 
     #signal masks
-    signals_masks = [[True]*len(sig_list) for sig_list in signals_dirs]
-    signals_masks[4] = [True]
-    signals_masks[7] = [False]*len(signals_dirs[7])
-    signals_masks[7][1] = True
+    to_mask = yaml.load(open(input_file, 'r'))['paths']['signals_masks'] 
+    to_mask = [item for sublist in to_mask for item in sublist]
+    signals_masks = [[True for sig in group if sig not in to_mask] for group in signals_dirs]
 
     #positivity masks
-    positivity_mask = [[True]*len(sig_list) for sig_list in signals_dirs]
-    positivity_mask[0] = [False]
-    positivity_mask[4] = [False]
+    to_positivity_mask = yaml.load(open(input_file, 'r'))['paths']['positivity_masks']
+    to_positivity_mask = [item for sublist in to_positivity_mask for item in sublist]
+    positivity_mask = [[True for sig in group if sig not in to_positivity_mask] for group in signals_dirs]
 
     with open(input_file, 'r') as yaml_file:
         params = yaml.load(yaml_file)
