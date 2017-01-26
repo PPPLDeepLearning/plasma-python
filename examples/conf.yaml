@@ -24,6 +24,14 @@ paths:
                  'jpf/df/g1r-lid:008']]
     signal_prepath: '/signal_data/jet/'
     shot_list_dir: '/shot_lists/'
+    signals_masks: [['jpf/df/g1r-lid:003',
+                 'jpf/df/g1r-lid:004',
+                 'jpf/df/g1r-lid:005',
+                 'jpf/df/g1r-lid:006',
+                 'jpf/df/g1r-lid:007',
+                 'jpf/df/g1r-lid:008']]
+    positivity_mask: [['jpf/da/c2-ipla'], 
+                     ['jpf/gs/bl-fdwdt<s']]
 
 data:
     T_min_warn: 30
