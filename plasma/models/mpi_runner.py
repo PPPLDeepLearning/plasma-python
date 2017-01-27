@@ -519,4 +519,4 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
 
             callbacks.on_epoch_end(e, epoch_logs)
 
-    mpi_model.callbacks.on_train_end()
+    callbacks.on_train_end()
