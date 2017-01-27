@@ -5,21 +5,20 @@ import yaml
 def parameters(input_file):
     """Parse yaml file of configuration parameters."""
 
- 
-    signals_dirs = yaml.load(open(input_file, 'r'))['paths']['signals_dirs']
-
-    #signal masks
-    to_mask = yaml.load(open(input_file, 'r'))['paths']['signals_masks'] 
-    to_mask = [item for sublist in to_mask for item in sublist]
-    signals_masks = [[True for sig in group if sig not in to_mask] for group in signals_dirs]
-
-    #positivity masks
-    to_positivity_mask = yaml.load(open(input_file, 'r'))['paths']['positivity_masks']
-    to_positivity_mask = [item for sublist in to_positivity_mask for item in sublist]
-    positivity_mask = [[True for sig in group if sig not in to_positivity_mask] for group in signals_dirs]
-
     with open(input_file, 'r') as yaml_file:
         params = yaml.load(yaml_file)
+
+        signals_dirs = params['paths']['signals_dirs']
+
+        #signal masks
+        to_mask = params['paths']['signals_masks']
+        to_mask = [item for sublist in to_mask for item in sublist]
+        signals_masks = [[True if sig not in to_mask else False for sig in group] for group in signals_dirs]
+
+        #positivity masks
+        to_positivity_mask = params['paths']['positivity_mask']
+        to_positivity_mask = [item for sublist in to_positivity_mask for item in sublist]
+        positivity_mask = [[True if sig not in to_positivity_mask else False for sig in group] for group in signals_dirs]
 
         params['user_name'] = getpass.getuser()
         output_path = params['fs_path'] + "/" + params['user_name']
