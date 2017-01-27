@@ -37,13 +37,14 @@ MY_GPU = task_index % NUM_GPUS
 backend = 'theano'
 
 from pprint import pprint
+from plasma.conf import conf
 
 if backend == 'tf' or backend == 'tensorflow':
     os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(MY_GPU)#,mode=NanGuardMode'
     os.environ['KERAS_BACKEND'] = 'tensorflow'
     import tensorflow
 else:
-    base_compile_dir = '/tigress/{}/tmp/{}-{}'.format(getpass.getuser(),socket.gethostname(),task_index)
+    base_compile_dir = '{}/tmp/{}-{}'.format(conf['paths']['output_path'],socket.gethostname(),task_index)
     os.environ['THEANO_FLAGS'] = 'device=gpu{},floatX=float32,base_compiledir={}'.format(MY_GPU,base_compile_dir)#,mode=NanGuardMode'
     import theano
 #import keras
@@ -61,7 +62,6 @@ for i in range(num_workers):
     import keras.callbacks as cbks
 
 from plasma.models import builder
-from plasma.conf import conf
 from plasma.utils.evaluation import get_loss_from_list
 from plasma.utils.processing import concatenate_sublists
 from plasma.utils.performance import PerformanceAnalyzer
