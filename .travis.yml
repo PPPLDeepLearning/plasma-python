@@ -1,4 +1,4 @@
-nguage: python
+language: python
 
 os:
   - linux
