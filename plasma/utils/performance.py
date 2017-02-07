@@ -4,9 +4,7 @@ from pprint import pprint
 import numpy as np
 
 from plasma.preprocessor.normalize import VarNormalizer as Normalizer 
-from plasma.jet_signals import signals_dirs, signals_masks, plot_masks, group_labels
-#currently need to change above import when switching machines
-
+from plasma.conf import conf
 
 class PerformanceAnalyzer():
     def __init__(self,results_dir=None,shots_dir=None,i = 0,T_min_warn = 0,T_max_warn = 1000, verbose = False,pred_ttd=False,conf=None):
@@ -18,7 +16,6 @@ class PerformanceAnalyzer():
         self.i = i
         self.pred_ttd = pred_ttd
         self.conf = conf
-
 
         self.pred_train = None
         self.truth_train = None
@@ -477,7 +474,10 @@ class PerformanceAnalyzer():
 
             labels = []
             signals_index = 0
-            for i, group in enumerate(signals_dirs):
+            signals_masks = conf['paths']['signals_masks']
+            plot_masks = conf['plots']['plot_masks']
+            group_labels = conf['plots']['group_labels']
+            for i, group in enumerate(conf['paths']['signals_dirs']):
                 for j,signal_name in enumerate(group):
                     if signals_masks[i][j]: #signal was used in training/testing
                         if plot_masks[i][j]: #subset of signals to be plotted
