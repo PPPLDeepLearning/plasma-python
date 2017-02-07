@@ -104,3 +104,30 @@ callbacks:
     mode: 'max'
     monitor: 'val_loss'
     patience: 2
+
+plots:
+    #LaTeX strings for performance analysis, sorted in lists by signal_group
+    group_labels: [[' $I_{plasma}$ [A]'],
+              [' Mode L. A. [A]'],
+              [' $P_{radiated}$ [W]'],
+              [' $P_{radiated}$ [W]'],
+              [' $\rho_{plasma}$ [m^-2]'],
+              [' $L_{plasma,internal}$'],
+              ['$\frac{d}{dt} E_{D}$ [W]'],
+              [' $P_{input}$ [W]'],
+              ['$E_{D}$'],
+                #ppf signal labels
+              ['ECE unit?']]
+
+    plot_masks: [['jpf/da/c2-loca'], # Mode Lock Amplitude [A]
+                ['jpf/db/b5r-ptot>out'], #Radiated Power [W]
+                ['jpf/gs/bl-li<s'], #Plasma Internal Inductance
+                ['jpf/gs/bl-fdwdt<s'], #Stored Diamagnetic Energy (time derivative) [W] Might cause a lot of false positives!
+                ['jpf/gs/bl-ptot<s'], #total input power [W]
+                ['jpf/df/g1r-lid:002',
+                 'jpf/df/g1r-lid:003',
+                 'jpf/df/g1r-lid:004',
+                 'jpf/df/g1r-lid:005',
+                 'jpf/df/g1r-lid:006',
+                 'jpf/df/g1r-lid:007',
+                 'jpf/df/g1r-lid:008']]

@@ -20,6 +20,11 @@ def parameters(input_file):
         to_positivity_mask = [item for sublist in to_positivity_mask for item in sublist]
         positivity_mask = [[True if sig not in to_positivity_mask else False for sig in group] for group in signals_dirs]
 
+        #plot masks
+        to_plot_mask = params['plots']['plot_masks']
+        to_plot_mask = [item for sublist in to_plot_mask for item in sublist]
+        plot_mask = [[True if sig not in to_plot_mask else False for sig in group] for group in signals_dirs]
+
         params['user_name'] = getpass.getuser()
         output_path = params['fs_path'] + "/" + params['user_name']
         base_path = output_path
@@ -48,6 +53,8 @@ def parameters(input_file):
         else:
             print('Unkown type of target. Exiting')
             exit(1)
+
+        params['plots']['plot_masks'] = plot_mask
  
         #params['model']['output_activation'] = params['data']['target'].activation
         #binary crossentropy performs slightly better?
