@@ -1,0 +1,180 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>plasma.utils.processing &#8212; plasma 0.0.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.0.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for plasma.utils.processing</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">#########################################################</span>
+<span class="sd">This file containts classes to handle data processing</span>
+
+<span class="sd">Author: Julian Kates-Harbeck, jkatesharbeck@g.harvard.edu</span>
+
+<span class="sd">This work was supported by the DOE CSGF program.</span>
+<span class="sd">#########################################################</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy.interpolate</span> <span class="k">import</span> <span class="n">UnivariateSpline</span>
+
+
+<div class="viewcode-block" id="resample_signal"><a class="viewcode-back" href="../../../plasma.utils.processing.resample_signal.html#plasma.utils.processing.resample_signal">[docs]</a><span class="k">def</span> <span class="nf">resample_signal</span><span class="p">(</span><span class="n">t</span><span class="p">,</span><span class="n">sig</span><span class="p">,</span><span class="n">tmin</span><span class="p">,</span><span class="n">tmax</span><span class="p">,</span><span class="n">dt</span><span class="p">):</span>
+    <span class="n">order</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="n">order</span><span class="p">]</span>
+    <span class="n">sig</span> <span class="o">=</span> <span class="n">sig</span><span class="p">[</span><span class="n">order</span><span class="p">]</span>
+    <span class="n">tt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">tmin</span><span class="p">,</span><span class="n">tmax</span><span class="p">,</span><span class="n">dt</span><span class="p">)</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="n">UnivariateSpline</span><span class="p">(</span><span class="n">t</span><span class="p">,</span><span class="n">sig</span><span class="p">,</span><span class="n">s</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">ext</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">sig_interp</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">tt</span><span class="p">)</span>
+
+    <span class="k">if</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">sig_interp</span><span class="p">))):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;signals contains nan&quot;</span><span class="p">)</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">-</span> <span class="n">t</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;non increasing&quot;</span><span class="p">)</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">-</span> <span class="n">t</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="n">idx</span><span class="o">-</span><span class="mi">10</span><span class="p">:</span><span class="n">idx</span><span class="o">+</span><span class="mi">10</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">tt</span><span class="p">,</span><span class="n">sig_interp</span></div>
+
+<div class="viewcode-block" id="cut_signal"><a class="viewcode-back" href="../../../plasma.utils.processing.cut_signal.html#plasma.utils.processing.cut_signal">[docs]</a><span class="k">def</span> <span class="nf">cut_signal</span><span class="p">(</span><span class="n">t</span><span class="p">,</span><span class="n">sig</span><span class="p">,</span><span class="n">tmin</span><span class="p">,</span><span class="n">tmax</span><span class="p">):</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">t</span> <span class="o">&gt;=</span> <span class="n">tmin</span><span class="p">,</span>  <span class="n">t</span> <span class="o">&lt;=</span> <span class="n">tmax</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">t</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span><span class="n">sig</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="cut_and_resample_signal"><a class="viewcode-back" href="../../../plasma.utils.processing.cut_and_resample_signal.html#plasma.utils.processing.cut_and_resample_signal">[docs]</a><span class="k">def</span> <span class="nf">cut_and_resample_signal</span><span class="p">(</span><span class="n">t</span><span class="p">,</span><span class="n">sig</span><span class="p">,</span><span class="n">tmin</span><span class="p">,</span><span class="n">tmax</span><span class="p">,</span><span class="n">dt</span><span class="p">):</span>
+    <span class="n">t</span><span class="p">,</span><span class="n">sig</span> <span class="o">=</span> <span class="n">cut_signal</span><span class="p">(</span><span class="n">t</span><span class="p">,</span><span class="n">sig</span><span class="p">,</span><span class="n">tmin</span><span class="p">,</span><span class="n">tmax</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">resample_signal</span><span class="p">(</span><span class="n">t</span><span class="p">,</span><span class="n">sig</span><span class="p">,</span><span class="n">tmin</span><span class="p">,</span><span class="n">tmax</span><span class="p">,</span><span class="n">dt</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="get_individual_shot_file"><a class="viewcode-back" href="../../../plasma.utils.processing.get_individual_shot_file.html#plasma.utils.processing.get_individual_shot_file">[docs]</a><span class="k">def</span> <span class="nf">get_individual_shot_file</span><span class="p">(</span><span class="n">prepath</span><span class="p">,</span><span class="n">shot_num</span><span class="p">,</span><span class="n">ext</span><span class="o">=</span><span class="s1">&#39;.txt&#39;</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">prepath</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">shot_num</span><span class="p">)</span> <span class="o">+</span> <span class="n">ext</span> </div>
+
+<div class="viewcode-block" id="append_to_filename"><a class="viewcode-back" href="../../../plasma.utils.processing.append_to_filename.html#plasma.utils.processing.append_to_filename">[docs]</a><span class="k">def</span> <span class="nf">append_to_filename</span><span class="p">(</span><span class="n">path</span><span class="p">,</span><span class="n">to_append</span><span class="p">):</span>
+    <span class="n">ending_idx</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">rfind</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span>
+    <span class="n">new_path</span> <span class="o">=</span> <span class="n">path</span><span class="p">[:</span><span class="n">ending_idx</span><span class="p">]</span> <span class="o">+</span> <span class="n">to_append</span> <span class="o">+</span> <span class="n">path</span><span class="p">[</span><span class="n">ending_idx</span><span class="p">:]</span>
+    <span class="k">return</span> <span class="n">new_path</span></div>
+
+<div class="viewcode-block" id="train_test_split"><a class="viewcode-back" href="../../../plasma.utils.processing.train_test_split.html#plasma.utils.processing.train_test_split">[docs]</a><span class="k">def</span> <span class="nf">train_test_split</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">frac</span><span class="p">,</span><span class="n">do_shuffle</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">train_test_split_robust</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">frac</span><span class="p">,</span><span class="n">do_shuffle</span><span class="p">)</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)))</span> <span class="o">&lt;</span> <span class="n">frac</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">do_shuffle</span><span class="p">:</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">x</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span><span class="n">x</span><span class="p">[</span><span class="o">~</span><span class="n">mask</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="train_test_split_robust"><a class="viewcode-back" href="../../../plasma.utils.processing.train_test_split_robust.html#plasma.utils.processing.train_test_split_robust">[docs]</a><span class="k">def</span> <span class="nf">train_test_split_robust</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">frac</span><span class="p">,</span><span class="n">do_shuffle</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)))</span> <span class="o">&lt;</span> <span class="n">frac</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">do_shuffle</span><span class="p">:</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>
+    <span class="n">train</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">test</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">_x</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">mask</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+            <span class="n">train</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_x</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">test</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_x</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">train</span><span class="p">,</span><span class="n">test</span></div>
+
+<div class="viewcode-block" id="train_test_split_all"><a class="viewcode-back" href="../../../plasma.utils.processing.train_test_split_all.html#plasma.utils.processing.train_test_split_all">[docs]</a><span class="k">def</span> <span class="nf">train_test_split_all</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">frac</span><span class="p">,</span><span class="n">do_shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="n">groups</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">length</span><span class="p">))</span> <span class="o">&lt;</span> <span class="n">frac</span><span class="o">*</span><span class="n">length</span>
+    <span class="k">if</span> <span class="n">do_shuffle</span><span class="p">:</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">x</span><span class="p">:</span>
+        <span class="n">groups</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">item</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span><span class="n">item</span><span class="p">[</span><span class="o">~</span><span class="n">mask</span><span class="p">]))</span>
+    <span class="k">return</span> <span class="n">groups</span></div>
+
+
+<div class="viewcode-block" id="concatenate_sublists"><a class="viewcode-back" href="../../../plasma.utils.processing.concatenate_sublists.html#plasma.utils.processing.concatenate_sublists">[docs]</a><span class="k">def</span> <span class="nf">concatenate_sublists</span><span class="p">(</span><span class="n">superlist</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">chain</span><span class="o">.</span><span class="n">from_iterable</span><span class="p">(</span><span class="n">superlist</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="get_signal_slices"><a class="viewcode-back" href="../../../plasma.utils.processing.get_signal_slices.html#plasma.utils.processing.get_signal_slices">[docs]</a><span class="k">def</span> <span class="nf">get_signal_slices</span><span class="p">(</span><span class="n">signals_superlist</span><span class="p">):</span>
+    <span class="n">indices_superlist</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">signals_so_far</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">sublist</span> <span class="ow">in</span> <span class="n">signals_superlist</span><span class="p">:</span>
+        <span class="n">indices_sublist</span> <span class="o">=</span> <span class="n">signals_so_far</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sublist</span><span class="p">)))</span>
+        <span class="n">signals_so_far</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">sublist</span><span class="p">)</span>
+        <span class="n">indices_superlist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">indices_sublist</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">indices_superlist</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Julian Kates-Harbeck, Alexey Svyatkovskiy.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

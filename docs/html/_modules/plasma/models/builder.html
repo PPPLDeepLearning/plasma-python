@@ -1,0 +1,247 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>plasma.models.builder &#8212; plasma 0.0.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.0.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for plasma.models.builder</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">keras.models</span> <span class="k">import</span> <span class="n">Sequential</span>
+<span class="kn">from</span> <span class="nn">keras.layers.core</span> <span class="k">import</span> <span class="n">Dense</span><span class="p">,</span> <span class="n">Activation</span><span class="p">,</span> <span class="n">Dropout</span>
+<span class="kn">from</span> <span class="nn">keras.layers.recurrent</span> <span class="k">import</span> <span class="n">LSTM</span><span class="p">,</span> <span class="n">SimpleRNN</span>
+<span class="kn">from</span> <span class="nn">keras.utils.data_utils</span> <span class="k">import</span> <span class="n">get_file</span>
+<span class="kn">from</span> <span class="nn">keras.layers.wrappers</span> <span class="k">import</span> <span class="n">TimeDistributed</span>
+<span class="kn">from</span> <span class="nn">keras.callbacks</span> <span class="k">import</span> <span class="n">Callback</span>
+<span class="kn">from</span> <span class="nn">keras.optimizers</span> <span class="k">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">keras.regularizers</span> <span class="k">import</span> <span class="n">l1</span><span class="p">,</span><span class="n">l2</span><span class="p">,</span><span class="n">l1l2</span>
+
+<span class="kn">import</span> <span class="nn">dill</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="k">import</span> <span class="n">deepcopy</span>
+
+<div class="viewcode-block" id="LossHistory"><a class="viewcode-back" href="../../../plasma.models.builder.LossHistory.html#plasma.models.builder.LossHistory">[docs]</a><span class="k">class</span> <span class="nc">LossHistory</span><span class="p">(</span><span class="n">Callback</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">on_train_begin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">logs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">losses</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span> <span class="nf">on_batch_end</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch</span><span class="p">,</span> <span class="n">logs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">logs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;loss&#39;</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="ModelBuilder"><a class="viewcode-back" href="../../../plasma.models.builder.ModelBuilder.html#plasma.models.builder.ModelBuilder">[docs]</a><span class="k">class</span> <span class="nc">ModelBuilder</span><span class="p">():</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">conf</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">conf</span> <span class="o">=</span> <span class="n">conf</span>
+
+	<span class="k">def</span> <span class="nf">get_unique_id</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="n">num_epochs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;training&#39;</span><span class="p">][</span><span class="s1">&#39;num_epochs&#39;</span><span class="p">]</span>
+		<span class="n">this_conf</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">)</span>
+		<span class="c1">#don&#39;t make hash dependent on number of epochs.</span>
+		<span class="n">this_conf</span><span class="p">[</span><span class="s1">&#39;training&#39;</span><span class="p">][</span><span class="s1">&#39;num_epochs&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+		<span class="n">unique_id</span> <span class="o">=</span>  <span class="nb">hash</span><span class="p">(</span><span class="n">dill</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">this_conf</span><span class="p">))</span>
+		<span class="k">return</span> <span class="n">unique_id</span>
+
+
+	<span class="k">def</span> <span class="nf">build_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">predict</span><span class="p">,</span><span class="n">custom_batch_size</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+		<span class="n">conf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span>
+		<span class="n">model_conf</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">]</span>
+		<span class="n">rnn_size</span> <span class="o">=</span> <span class="n">model_conf</span><span class="p">[</span><span class="s1">&#39;rnn_size&#39;</span><span class="p">]</span>
+		<span class="n">rnn_type</span> <span class="o">=</span> <span class="n">model_conf</span><span class="p">[</span><span class="s1">&#39;rnn_type&#39;</span><span class="p">]</span>
+		<span class="n">optimizer</span> <span class="o">=</span> <span class="n">model_conf</span><span class="p">[</span><span class="s1">&#39;optimizer&#39;</span><span class="p">]</span>
+		<span class="n">lr</span> <span class="o">=</span> <span class="n">model_conf</span><span class="p">[</span><span class="s1">&#39;lr&#39;</span><span class="p">]</span>
+		<span class="n">clipnorm</span> <span class="o">=</span> <span class="n">model_conf</span><span class="p">[</span><span class="s1">&#39;clipnorm&#39;</span><span class="p">]</span>
+		<span class="n">regularization</span> <span class="o">=</span> <span class="n">model_conf</span><span class="p">[</span><span class="s1">&#39;regularization&#39;</span><span class="p">]</span>
+
+		<span class="k">if</span> <span class="n">optimizer</span> <span class="o">==</span> <span class="s1">&#39;sgd&#39;</span><span class="p">:</span>
+			<span class="n">optimizer_class</span> <span class="o">=</span> <span class="n">SGD</span>
+		<span class="k">elif</span> <span class="n">optimizer</span> <span class="o">==</span> <span class="s1">&#39;adam&#39;</span><span class="p">:</span>
+			<span class="n">optimizer_class</span> <span class="o">=</span> <span class="n">Adam</span>
+		<span class="k">elif</span> <span class="n">optimizer</span> <span class="o">==</span> <span class="s1">&#39;rmsprop&#39;</span><span class="p">:</span>
+			<span class="n">optimizer_class</span> <span class="o">=</span> <span class="n">RMSprop</span> 
+		<span class="k">elif</span> <span class="n">optimizer</span> <span class="o">==</span> <span class="s1">&#39;nadam&#39;</span><span class="p">:</span>
+			<span class="n">optimizer_class</span> <span class="o">=</span> <span class="n">Nadam</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="n">optimizer</span> <span class="o">=</span> <span class="n">optimizer</span>
+
+		<span class="k">if</span> <span class="n">lr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">clipnorm</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+			<span class="n">optimizer</span> <span class="o">=</span> <span class="n">optimizer_class</span><span class="p">(</span><span class="n">lr</span> <span class="o">=</span> <span class="n">lr</span><span class="p">,</span><span class="n">clipnorm</span><span class="o">=</span><span class="n">clipnorm</span><span class="p">)</span>
+
+		<span class="n">loss_fn</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][</span><span class="s1">&#39;target&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">loss</span><span class="c1">#model_conf[&#39;loss&#39;]</span>
+		<span class="n">dropout_prob</span> <span class="o">=</span> <span class="n">model_conf</span><span class="p">[</span><span class="s1">&#39;dropout_prob&#39;</span><span class="p">]</span>
+		<span class="n">length</span> <span class="o">=</span> <span class="n">model_conf</span><span class="p">[</span><span class="s1">&#39;length&#39;</span><span class="p">]</span>
+		<span class="n">pred_length</span> <span class="o">=</span> <span class="n">model_conf</span><span class="p">[</span><span class="s1">&#39;pred_length&#39;</span><span class="p">]</span>
+		<span class="n">skip</span> <span class="o">=</span> <span class="n">model_conf</span><span class="p">[</span><span class="s1">&#39;skip&#39;</span><span class="p">]</span>
+		<span class="n">stateful</span> <span class="o">=</span> <span class="n">model_conf</span><span class="p">[</span><span class="s1">&#39;stateful&#39;</span><span class="p">]</span>
+		<span class="n">return_sequences</span> <span class="o">=</span> <span class="n">model_conf</span><span class="p">[</span><span class="s1">&#39;return_sequences&#39;</span><span class="p">]</span>
+		<span class="n">output_activation</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][</span><span class="s1">&#39;target&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">activation</span><span class="c1">#model_conf[&#39;output_activation&#39;]</span>
+		<span class="n">num_signals</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][</span><span class="s1">&#39;num_signals&#39;</span><span class="p">]</span>
+
+
+		<span class="n">batch_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;training&#39;</span><span class="p">][</span><span class="s1">&#39;batch_size&#39;</span><span class="p">]</span>
+		<span class="k">if</span> <span class="n">predict</span><span class="p">:</span>
+			<span class="n">batch_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;pred_batch_size&#39;</span><span class="p">]</span>
+		    <span class="c1">#so we can predict with one time point at a time!</span>
+			<span class="k">if</span> <span class="n">return_sequences</span><span class="p">:</span>
+				<span class="n">length</span> <span class="o">=</span><span class="n">pred_length</span>
+			<span class="k">else</span><span class="p">:</span>
+				<span class="n">length</span> <span class="o">=</span> <span class="mi">1</span>
+
+		<span class="k">if</span> <span class="n">custom_batch_size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+			<span class="n">batch_size</span> <span class="o">=</span> <span class="n">custom_batch_size</span>
+
+		<span class="k">if</span> <span class="n">rnn_type</span> <span class="o">==</span> <span class="s1">&#39;LSTM&#39;</span><span class="p">:</span>
+			<span class="n">rnn_model</span> <span class="o">=</span> <span class="n">LSTM</span>
+		<span class="k">elif</span> <span class="n">rnn_type</span> <span class="o">==</span> <span class="s1">&#39;SimpleRNN&#39;</span><span class="p">:</span>
+			<span class="n">rnn_model</span> <span class="o">=</span><span class="n">SimpleRNN</span> 
+		<span class="k">else</span><span class="p">:</span>
+			<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Unkown Model Type, exiting.&#39;</span><span class="p">)</span>
+			<span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+		
+		<span class="n">batch_input_shape</span><span class="o">=</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span><span class="n">length</span><span class="p">,</span> <span class="n">num_signals</span><span class="p">)</span>
+		<span class="n">model</span> <span class="o">=</span> <span class="n">Sequential</span><span class="p">()</span>
+                <span class="c1">#Create layer for 7 density channels</span>
+<span class="c1">#                num_density_channels = 7</span>
+ <span class="c1">#               model.add(TimeDistributed(Dense(num_density_channels,bias=True),batch_input_shape=batch_input_shape))</span>
+		<span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">model_conf</span><span class="p">[</span><span class="s1">&#39;rnn_layers&#39;</span><span class="p">]):</span>
+			<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">rnn_model</span><span class="p">(</span><span class="n">rnn_size</span><span class="p">,</span> <span class="n">return_sequences</span><span class="o">=</span><span class="n">return_sequences</span><span class="p">,</span><span class="n">batch_input_shape</span><span class="o">=</span><span class="n">batch_input_shape</span><span class="p">,</span>
+			 <span class="n">stateful</span><span class="o">=</span><span class="n">stateful</span><span class="p">,</span><span class="n">W_regularizer</span><span class="o">=</span><span class="n">l2</span><span class="p">(</span><span class="n">regularization</span><span class="p">),</span><span class="n">U_regularizer</span><span class="o">=</span><span class="n">l2</span><span class="p">(</span><span class="n">regularization</span><span class="p">),</span>
+			 <span class="n">b_regularizer</span><span class="o">=</span><span class="n">l2</span><span class="p">(</span><span class="n">regularization</span><span class="p">),</span><span class="n">dropout_W</span><span class="o">=</span><span class="n">dropout_prob</span><span class="p">,</span><span class="n">dropout_U</span><span class="o">=</span><span class="n">dropout_prob</span><span class="p">))</span>
+			<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Dropout</span><span class="p">(</span><span class="n">dropout_prob</span><span class="p">))</span>
+		<span class="k">if</span> <span class="n">return_sequences</span><span class="p">:</span>
+			<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">TimeDistributed</span><span class="p">(</span><span class="n">Dense</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">activation</span><span class="o">=</span><span class="n">output_activation</span><span class="p">)))</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Dense</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">activation</span><span class="o">=</span><span class="n">output_activation</span><span class="p">))</span>
+		<span class="n">model</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="n">loss_fn</span><span class="p">,</span> <span class="n">optimizer</span><span class="o">=</span><span class="n">optimizer</span><span class="p">)</span>
+		<span class="n">model</span><span class="o">.</span><span class="n">reset_states</span><span class="p">()</span>
+		<span class="c1">#model.compile(loss=&#39;mean_squared_error&#39;, optimizer=&#39;sgd&#39;) #for numerical output</span>
+		<span class="k">return</span> <span class="n">model</span>
+
+	<span class="k">def</span> <span class="nf">build_train_test_models</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">build_model</span><span class="p">(</span><span class="kc">False</span><span class="p">),</span><span class="bp">self</span><span class="o">.</span><span class="n">build_model</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+	<span class="k">def</span> <span class="nf">save_model_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">model</span><span class="p">,</span><span class="n">epoch</span><span class="p">):</span>
+		<span class="n">save_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_save_path</span><span class="p">(</span><span class="n">epoch</span><span class="p">)</span>
+		<span class="n">model</span><span class="o">.</span><span class="n">save_weights</span><span class="p">(</span><span class="n">save_path</span><span class="p">,</span><span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+	<span class="k">def</span> <span class="nf">get_save_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">epoch</span><span class="p">):</span>
+		<span class="n">unique_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_unique_id</span><span class="p">()</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;paths&#39;</span><span class="p">][</span><span class="s1">&#39;model_save_path&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;model.</span><span class="si">{}</span><span class="s1">._epoch_.</span><span class="si">{}</span><span class="s1">.h5&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">unique_id</span><span class="p">,</span><span class="n">epoch</span><span class="p">)</span>
+
+
+	<span class="k">def</span> <span class="nf">load_model_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">model</span><span class="p">):</span>
+		<span class="n">epochs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_all_saved_files</span><span class="p">()</span>
+		<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">epochs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+			<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;no previous checkpoint found&#39;</span><span class="p">)</span>
+			<span class="k">return</span> <span class="o">-</span><span class="mi">1</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="n">max_epoch</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;training&#39;</span><span class="p">][</span><span class="s1">&#39;num_epochs&#39;</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="nb">max</span><span class="p">(</span><span class="n">epochs</span><span class="p">))</span>
+			<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;loading from epoch </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_epoch</span><span class="p">))</span>
+			<span class="n">model</span><span class="o">.</span><span class="n">load_weights</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_save_path</span><span class="p">(</span><span class="n">max_epoch</span><span class="p">))</span>
+			<span class="k">return</span> <span class="n">max_epoch</span>
+
+	<span class="k">def</span> <span class="nf">get_latest_save_path</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="n">epochs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_all_saved_files</span><span class="p">()</span>
+		<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">epochs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+			<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;no previous checkpoint found&#39;</span><span class="p">)</span>
+			<span class="k">return</span> <span class="s1">&#39;&#39;</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="n">max_epoch</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;training&#39;</span><span class="p">][</span><span class="s1">&#39;num_epochs&#39;</span><span class="p">],</span><span class="nb">max</span><span class="p">(</span><span class="n">epochs</span><span class="p">))</span>
+			<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;loading from epoch </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_epoch</span><span class="p">))</span>
+			<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_save_path</span><span class="p">(</span><span class="n">max_epoch</span><span class="p">)</span>
+
+
+	<span class="k">def</span> <span class="nf">extract_id_and_epoch_from_filename</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">filename</span><span class="p">):</span>
+		<span class="n">regex</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s1">r&#39;-?\d+&#39;</span><span class="p">)</span>
+		<span class="n">numbers</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">regex</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="n">filename</span><span class="p">)]</span>
+		<span class="k">assert</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">numbers</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">)</span> <span class="c1">#id,epoch number and extension</span>
+		<span class="k">assert</span><span class="p">(</span><span class="n">numbers</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="mi">5</span><span class="p">)</span> <span class="c1">#.h5 extension</span>
+		<span class="k">return</span> <span class="n">numbers</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">numbers</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+
+	<span class="k">def</span> <span class="nf">get_all_saved_files</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="n">unique_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_unique_id</span><span class="p">()</span>
+		<span class="n">filenames</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;paths&#39;</span><span class="p">][</span><span class="s1">&#39;model_save_path&#39;</span><span class="p">])</span>
+		<span class="n">epochs</span> <span class="o">=</span> <span class="p">[]</span>
+		<span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">filenames</span><span class="p">:</span>
+			<span class="n">curr_id</span><span class="p">,</span><span class="n">epoch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">extract_id_and_epoch_from_filename</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+			<span class="k">if</span> <span class="n">curr_id</span> <span class="o">==</span> <span class="n">unique_id</span><span class="p">:</span>
+				<span class="n">epochs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">epoch</span><span class="p">)</span>
+		<span class="k">return</span> <span class="n">epochs</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Julian Kates-Harbeck, Alexey Svyatkovskiy.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

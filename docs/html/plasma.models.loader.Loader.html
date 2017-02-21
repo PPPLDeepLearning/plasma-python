@@ -1,0 +1,118 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>plasma.models.loader.Loader &#8212; plasma 0.0.2 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.0.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="plasma-models-loader-loader">
+<h1>plasma.models.loader.Loader<a class="headerlink" href="#plasma-models-loader-loader" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="plasma.models.loader.Loader">
+<em class="property">class </em><code class="descclassname">plasma.models.loader.</code><code class="descname">Loader</code><span class="sig-paren">(</span><em>conf</em>, <em>normalizer=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/plasma/models/loader.html#Loader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plasma.models.loader.Loader" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<dl class="method">
+<dt id="plasma.models.loader.Loader.load_as_X_y_list">
+<code class="descname">load_as_X_y_list</code><span class="sig-paren">(</span><em>shot_list</em>, <em>verbose=False</em>, <em>prediction_mode=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/plasma/models/loader.html#Loader.load_as_X_y_list"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plasma.models.loader.Loader.load_as_X_y_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Turn a list of shots into a set of equal-sized patches which contain a number of examples
+that is a multiple of the batch size.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plasma.models.loader.Loader.training_batch_generator">
+<code class="descname">training_batch_generator</code><span class="sig-paren">(</span><em>shot_list</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/plasma/models/loader.html#Loader.training_batch_generator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plasma.models.loader.Loader.training_batch_generator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Iterates indefinitely over the data set and returns one batch of data at a time.
+Can be inefficient during distributed training because one process loading data will
+cause all other processes to stall.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/plasma.models.loader.Loader.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Julian Kates-Harbeck, Alexey Svyatkovskiy.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      
+      |
+      <a href="_sources/plasma.models.loader.Loader.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
