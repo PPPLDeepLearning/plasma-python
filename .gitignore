@@ -68,8 +68,6 @@ instance/
 .scrapy
 
 # Sphinx documentation
-docs/_build/
-histogrammar.*.rst
 
 # PyBuilder
 target/
