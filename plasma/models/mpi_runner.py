@@ -139,7 +139,7 @@ class Averager(object):
 
 
 class MPIModel():
-  def __init__(self,model,optimizer,comm,batch_iterator,batch_size,num_replicas=None,warmup_steps=1000,lr=0.01):
+  def __init__(self,model,optimizer,comm,batch_iterator,batch_size,num_replicas=None,warmup_steps=1000,lr=0.01,custom_num_workers=0):
     # random.seed(task_index)
     self.epoch = 0
     self.model = model
@@ -151,7 +151,12 @@ class MPIModel():
     self.batch_size = batch_size
     self.batch_iterator = batch_iterator
     self.warmup_steps=warmup_steps
-    self.num_workers = comm.Get_size()
+    if custom_num_workers:
+        if custom_num_workers < comm.Get_size():
+            self.num_workers = custom_num_workers
+        else: self.num_workers = comm.Get_size()
+    else:
+        self.num_workers = comm.Get_size()
     self.task_index = comm.Get_rank()
     self.history = cbks.History()
     if num_replicas is None or num_replicas < 1 or num_replicas > self.num_workers:
