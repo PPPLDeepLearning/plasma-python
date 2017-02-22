@@ -160,7 +160,7 @@ class MPIModel():
     self.task_index = comm.Get_rank()
     self.history = cbks.History()
     if num_replicas is None or num_replicas < 1 or num_replicas > self.num_workers:
-      self.num_replicas = num_workers
+      self.num_replicas = self.num_workers
     else:
       self.num_replicas = num_replicas
 
