@@ -178,6 +178,26 @@ class HyperRunner(object):
             'Dropout': hp.uniform('Dropout', 0, 1),
         }
 
+    def frnn_minimize(self, algo, max_evals, trials, rseed=1337):
+	from hyperopt import fmin
+
+        best_run = fmin(self.keras_fmin_fnct,
+                    space=self.get_space(),
+                    algo=algo,
+                    max_evals=max_evals,
+                    trials=trials,
+                    rstate=np.random.RandomState(rseed))
+
+        best_model = None
+        for trial in trials:
+            vals = trial.get('misc').get('vals')
+            for key in vals.keys():
+                vals[key] = vals[key][0]
+            if trial.get('misc').get('vals') == best_run and 'model' in trial.get('result').keys():
+                best_model = trial.get('result').get('model')
+
+        return best_run, best_model
+
 def plot_losses(conf,losses_list,specific_builder,name=''):
     unique_id = specific_builder.get_unique_id()
     savedir = 'losses'
