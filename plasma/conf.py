@@ -8,5 +8,7 @@ elif os.path.exists('./conf.yaml'):
     conf = parameters('./conf.yaml')
 elif os.path.exists('./examples/conf.yaml'):
     conf = parameters('./examples/conf.yaml')
+elif os.path.exists('../examples/conf.yaml'):
+    conf = parameters('../examples/conf.yaml')    
 else:
     raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), 'conf.yaml')
