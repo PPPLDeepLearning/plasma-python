@@ -6,6 +6,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from itertools import imap
 
+from hyperopt import hp, STATUS_OK
+from hyperas.distributions import conditional
+
 import time
 import sys
 import os
@@ -16,7 +19,6 @@ from plasma.conf import conf
 from plasma.models.loader import Loader
 from plasma.utils.performance import PerformanceAnalyzer
 from plasma.utils.evaluation import *
-
 
 def train(conf,shot_list_train,loader):
 
@@ -99,8 +101,102 @@ def train(conf,shot_list_train,loader):
         plot_losses(conf,[training_losses,validation_losses,validation_roc],specific_builder,name='training_validation_roc')
     print('...done')
 
+class HyperRunner(object):
+    def __init__(self,conf,loader,shot_list):
+        self.loader = loader
+        self.shot_list = shot_list
+        self.conf = conf
+
+    #FIXME setup for hyperas search
+    def keras_fmin_fnct(self,space):
+        from plasma.models import builder
+
+        specific_builder = builder.ModelBuilder(self.conf)
+
+        train_model, test_model = specific_builder.hyper_build_model(space,False), specific_builder.hyper_build_model(space,True)
+
+        np.random.seed(1)
+        validation_losses = []
+        validation_roc = []
+        training_losses = []
+        shot_list_train,shot_list_validate = self.shot_list.split_direct(1.0-conf['training']['validation_frac'],do_shuffle=True)
+        os.environ['THEANO_FLAGS'] = 'device=gpu,floatX=float32'
+	import theano
+	from keras.utils.generic_utils import Progbar
+	from keras import backend as K
 
 
+        num_epochs = self.conf['training']['num_epochs']
+        num_at_once = self.conf['training']['num_shots_at_once']
+        lr_decay = self.conf['model']['lr_decay']
+        lr = self.conf['model']['lr']
+
+        resulting_dict = {'loss':None,'status':STATUS_OK,'model':None}
+
+        e = -1
+        #print("Current num_epochs {}".format(e))
+        while e < num_epochs-1:
+            e += 1
+            pbar =  Progbar(len(shot_list_train))
+
+            shot_list_train.shuffle()
+            shot_sublists = shot_list_train.sublists(num_at_once)[:1]
+            training_losses_tmp = []
+
+            K.set_value(train_model.optimizer.lr, lr*lr_decay**(e))
+            for (i,shot_sublist) in enumerate(shot_sublists):
+                X_list,y_list = self.loader.load_as_X_y_list(shot_sublist)
+                for j,(X,y) in enumerate(zip(X_list,y_list)):
+                    history = builder.LossHistory()
+                    train_model.fit(X,y,
+                        batch_size=Loader.get_batch_size(self.conf['training']['batch_size'],prediction_mode=False),
+                        nb_epoch=1,shuffle=False,verbose=0,
+                        validation_split=0.0,callbacks=[history])
+                    train_model.reset_states()
+                    train_loss = np.mean(history.losses)
+                    training_losses_tmp.append(train_loss)
+
+                    pbar.add(1.0*len(shot_sublist)/len(X_list), values=[("train loss", train_loss)])
+                    self.loader.verbose=False
+            sys.stdout.flush()
+            training_losses.append(np.mean(training_losses_tmp))
+            specific_builder.save_model_weights(train_model,e)
+
+            roc_area,loss = make_predictions_and_evaluate_gpu(self.conf,shot_list_validate,self.loader)
+            print("Epoch: {}, loss: {}, validation_losses_size: {}".format(e,loss,len(validation_losses)))
+            validation_losses.append(loss)
+            validation_roc.append(roc_area)
+            resulting_dict['loss'] = loss
+            resulting_dict['model'] = train_model
+            #print("Results {}, before {}".format(resulting_dict,id(resulting_dict)))
+
+        #print("Results {}, after {}".format(resulting_dict,id(resulting_dict)))
+        return resulting_dict
+
+    def get_space(self):
+        return {
+            'Dropout': hp.uniform('Dropout', 0, 1),
+        }
+
+    def frnn_minimize(self, algo, max_evals, trials, rseed=1337):
+	from hyperopt import fmin
+
+        best_run = fmin(self.keras_fmin_fnct,
+                    space=self.get_space(),
+                    algo=algo,
+                    max_evals=max_evals,
+                    trials=trials,
+                    rstate=np.random.RandomState(rseed))
+
+        best_model = None
+        for trial in trials:
+            vals = trial.get('misc').get('vals')
+            for key in vals.keys():
+                vals[key] = vals[key][0]
+            if trial.get('misc').get('vals') == best_run and 'model' in trial.get('result').keys():
+                best_model = trial.get('result').get('model')
+
+        return best_run, best_model
 
 def plot_losses(conf,losses_list,specific_builder,name=''):
     unique_id = specific_builder.get_unique_id()
@@ -140,7 +236,8 @@ def make_predictions(conf,shot_list,loader):
     model_save_path = specific_builder.get_latest_save_path()
 
     start_time = time.time()
-    pool = mp.Pool()
+    use_cores = max(1,mp.cpu_count()-2)
+    pool = mp.Pool(use_cores)
     fn = partial(make_single_prediction,builder=specific_builder,loader=loader,model_save_path=model_save_path)
 
     print('running in parallel on {} processes'.format(pool._processes))
