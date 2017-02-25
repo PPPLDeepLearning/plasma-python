@@ -1,0 +1,557 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>plasma.models.loader &#8212; FRNN 0.0.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.0.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">FRNN 0.0.2 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for plasma.models.loader</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">#########################################################</span>
+<span class="sd">This file containts classes to handle data processing</span>
+
+<span class="sd">Author: Julian Kates-Harbeck, jkatesharbeck@g.harvard.edu</span>
+
+<span class="sd">This work was supported by the DOE CSGF program.</span>
+<span class="sd">#########################################################</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">plasma.primitives.shots</span> <span class="k">import</span> <span class="n">Shot</span>
+
+<div class="viewcode-block" id="Loader"><a class="viewcode-back" href="../../../plasma.models.loader.Loader.html#plasma.models.loader.Loader">[docs]</a><span class="k">class</span> <span class="nc">Loader</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">conf</span><span class="p">,</span><span class="n">normalizer</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conf</span> <span class="o">=</span> <span class="n">conf</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stateful</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;stateful&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">normalizer</span> <span class="o">=</span> <span class="n">normalizer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="kc">True</span>
+
+<div class="viewcode-block" id="Loader.training_batch_generator"><a class="viewcode-back" href="../../../plasma.models.loader.Loader.html#plasma.models.loader.Loader.training_batch_generator">[docs]</a>    <span class="k">def</span> <span class="nf">training_batch_generator</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">shot_list</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Iterates indefinitely over the data set and returns one batch of data at a time.</span>
+<span class="sd">        Can be inefficient during distributed training because one process loading data will</span>
+<span class="sd">        cause all other processes to stall.&quot;&quot;&quot;</span>
+        <span class="n">batch_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;training&#39;</span><span class="p">][</span><span class="s1">&#39;batch_size&#39;</span><span class="p">]</span>
+        <span class="n">num_at_once</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;training&#39;</span><span class="p">][</span><span class="s1">&#39;num_shots_at_once&#39;</span><span class="p">]</span>
+        <span class="n">epoch</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">num_so_far</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="c1"># the list of all shots</span>
+            <span class="n">shot_list</span><span class="o">.</span><span class="n">shuffle</span><span class="p">()</span> 
+            <span class="c1"># split the list into equal-length sublists (random shots will be reused to make them equal length).</span>
+            <span class="n">shot_sublists</span> <span class="o">=</span> <span class="n">shot_list</span><span class="o">.</span><span class="n">sublists</span><span class="p">(</span><span class="n">num_at_once</span><span class="p">,</span><span class="n">equal_size</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">num_total</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">shot_list</span><span class="p">)</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">shot_sublist</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">shot_sublists</span><span class="p">):</span>
+                <span class="c1">#produce a list of equal-length chunks from this set of shots</span>
+                <span class="n">X_list</span><span class="p">,</span><span class="n">y_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_as_X_y_list</span><span class="p">(</span><span class="n">shot_sublist</span><span class="p">)</span>
+                <span class="c1">#Each chunk will be a multiple of the batch size</span>
+                <span class="k">for</span> <span class="n">j</span><span class="p">,(</span><span class="n">X</span><span class="p">,</span><span class="n">y</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">X_list</span><span class="p">,</span><span class="n">y_list</span><span class="p">)):</span>
+                    <span class="n">num_examples</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="k">assert</span><span class="p">(</span><span class="n">num_examples</span> <span class="o">%</span> <span class="n">batch_size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+                    <span class="n">num_chunks</span> <span class="o">=</span> <span class="n">num_examples</span><span class="o">/</span><span class="n">batch_size</span>
+                    <span class="sd">&quot;&quot;&quot;produce batch-sized data X,y to feed during training.</span>
+<span class="sd">                    dimensions are (num_examples, num_timesteps, num_dimensions_of_data)</span>
+<span class="sd">                    also num_examples is divisible by the batch_size. The ith example and the</span>
+<span class="sd">                    (batchsize + 1)th example are consecutive in time, so we do not reset the</span>
+<span class="sd">                    RNN internal state unless we start a new chunk.&quot;&quot;&quot;</span>
+                    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_chunks</span><span class="p">):</span>
+                        <span class="c1">#epoch_end = (i == len(shot_sublists) - 1 and j == len(X_list) -1 and k == num_chunks - 1)</span>
+                        <span class="n">reset_states_now</span> <span class="o">=</span> <span class="p">(</span><span class="n">k</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+                        <span class="n">start</span> <span class="o">=</span> <span class="n">k</span><span class="o">*</span><span class="n">batch_size</span>
+                        <span class="n">end</span> <span class="o">=</span> <span class="p">(</span><span class="n">k</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">batch_size</span>
+                        <span class="k">yield</span> <span class="n">X</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">],</span><span class="n">y</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">],</span><span class="n">reset_states_now</span><span class="p">,</span><span class="n">num_so_far</span><span class="p">,</span><span class="n">num_total</span>
+                        <span class="n">num_so_far</span> <span class="o">+=</span> <span class="mf">1.0</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">shot_sublist</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">X_list</span><span class="p">)</span><span class="o">*</span><span class="n">num_chunks</span><span class="p">)</span>
+            <span class="n">epoch</span> <span class="o">+=</span> <span class="mi">1</span></div>
+
+
+
+
+
+
+<div class="viewcode-block" id="Loader.load_as_X_y_list"><a class="viewcode-back" href="../../../plasma.models.loader.Loader.html#plasma.models.loader.Loader.load_as_X_y_list">[docs]</a>    <span class="k">def</span> <span class="nf">load_as_X_y_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">shot_list</span><span class="p">,</span><span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span><span class="n">prediction_mode</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Turn a list of shots into a set of equal-sized patches which contain a number of examples</span>
+<span class="sd">        that is a multiple of the batch size.&quot;&quot;&quot;</span>
+        <span class="n">signals</span><span class="p">,</span><span class="n">results</span><span class="p">,</span><span class="n">total_length</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_signals_results_from_shotlist</span><span class="p">(</span><span class="n">shot_list</span><span class="p">)</span> 
+        <span class="n">sig_patches</span><span class="p">,</span> <span class="n">res_patches</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_patches</span><span class="p">(</span><span class="n">signals</span><span class="p">,</span><span class="n">results</span><span class="p">)</span>
+
+        <span class="n">X_list</span><span class="p">,</span><span class="n">y_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">arange_patches</span><span class="p">(</span><span class="n">sig_patches</span><span class="p">,</span><span class="n">res_patches</span><span class="p">)</span>
+
+        <span class="n">effective_length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">res_patches</span><span class="p">)</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">res_patches</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;multiplication factor: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="mf">1.0</span><span class="o">*</span><span class="n">effective_length</span><span class="o">/</span><span class="n">total_length</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;effective/total length : </span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">effective_length</span><span class="p">,</span><span class="n">total_length</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;patch length: </span><span class="si">{}</span><span class="s1"> num patches: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">res_patches</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span><span class="nb">len</span><span class="p">(</span><span class="n">res_patches</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="n">X_list</span><span class="p">,</span><span class="n">y_list</span></div>
+
+    <span class="k">def</span> <span class="nf">load_as_X_y_pred</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">shot_list</span><span class="p">,</span><span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span><span class="n">custom_batch_size</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">signals</span><span class="p">,</span><span class="n">results</span><span class="p">,</span><span class="n">shot_lengths</span><span class="p">,</span><span class="n">disruptive</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_signals_results_from_shotlist</span><span class="p">(</span><span class="n">shot_list</span><span class="p">,</span><span class="n">prediction_mode</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> 
+        <span class="n">sig_patches</span><span class="p">,</span> <span class="n">res_patches</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_prediction_patches</span><span class="p">(</span><span class="n">signals</span><span class="p">,</span><span class="n">results</span><span class="p">)</span>
+        <span class="n">X</span><span class="p">,</span><span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">arange_patches_single</span><span class="p">(</span><span class="n">sig_patches</span><span class="p">,</span><span class="n">res_patches</span><span class="p">,</span><span class="n">prediction_mode</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span><span class="n">custom_batch_size</span><span class="o">=</span><span class="n">custom_batch_size</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">X</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">shot_lengths</span><span class="p">,</span><span class="n">disruptive</span>
+
+
+    <span class="k">def</span> <span class="nf">get_signals_results_from_shotlist</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">shot_list</span><span class="p">,</span><span class="n">prediction_mode</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">prepath</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;paths&#39;</span><span class="p">][</span><span class="s1">&#39;processed_prepath&#39;</span><span class="p">]</span>
+        <span class="n">signals</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">disruptive</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">shot_lengths</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">total_length</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">shot</span> <span class="ow">in</span> <span class="n">shot_list</span><span class="p">:</span>
+            <span class="k">assert</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">shot</span><span class="p">,</span><span class="n">Shot</span><span class="p">))</span>
+            <span class="k">assert</span><span class="p">(</span><span class="n">shot</span><span class="o">.</span><span class="n">valid</span><span class="p">)</span>
+            <span class="n">shot</span><span class="o">.</span><span class="n">restore</span><span class="p">(</span><span class="n">prepath</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalizer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">normalizer</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">shot</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Warning, no normalization. Training data may be poorly conditioned&#39;</span><span class="p">)</span>
+
+
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;training&#39;</span><span class="p">][</span><span class="s1">&#39;use_mock_data&#39;</span><span class="p">]:</span>
+                <span class="n">sig</span><span class="p">,</span><span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_mock_data</span><span class="p">()</span>
+                <span class="n">shot</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="n">sig</span>
+                <span class="n">shot</span><span class="o">.</span><span class="n">ttd</span> <span class="o">=</span> <span class="n">res</span>
+
+            <span class="n">total_length</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">shot</span><span class="o">.</span><span class="n">ttd</span><span class="p">)</span>
+            <span class="n">signals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">shot</span><span class="o">.</span><span class="n">signals</span><span class="p">)</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="n">shot</span><span class="o">.</span><span class="n">ttd</span>
+            <span class="n">shot_lengths</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">shot</span><span class="o">.</span><span class="n">ttd</span><span class="p">))</span>
+            <span class="n">disruptive</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">shot</span><span class="o">.</span><span class="n">is_disruptive</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">res</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">shot</span><span class="o">.</span><span class="n">ttd</span><span class="p">)</span>
+            <span class="n">shot</span><span class="o">.</span><span class="n">make_light</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">prediction_mode</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">signals</span><span class="p">,</span><span class="n">results</span><span class="p">,</span><span class="n">total_length</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">signals</span><span class="p">,</span><span class="n">results</span><span class="p">,</span><span class="n">shot_lengths</span><span class="p">,</span><span class="n">disruptive</span>
+
+
+
+    <span class="k">def</span> <span class="nf">batch_output_to_array</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">output</span><span class="p">,</span><span class="n">batch_size</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">batch_size</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">batch_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;pred_batch_size&#39;</span><span class="p">]</span>
+        <span class="k">assert</span><span class="p">(</span><span class="n">output</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">%</span> <span class="n">batch_size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">num_chunks</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">batch_size</span>
+        <span class="n">num_timesteps</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">feature_size</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+        <span class="n">outs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">patch_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">batch_size</span><span class="p">):</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">num_chunks</span><span class="o">*</span><span class="n">num_timesteps</span><span class="p">,</span><span class="n">feature_size</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_chunks</span><span class="p">):</span>
+                <span class="n">out</span><span class="p">[</span><span class="n">chunk</span><span class="o">*</span><span class="n">num_timesteps</span><span class="p">:(</span><span class="n">chunk</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">num_timesteps</span><span class="p">,:]</span> <span class="o">=</span> <span class="n">output</span><span class="p">[</span><span class="n">chunk</span><span class="o">*</span><span class="n">batch_size</span><span class="o">+</span><span class="n">patch_idx</span><span class="p">,:,:]</span>
+            <span class="n">outs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">outs</span> 
+
+
+    <span class="k">def</span> <span class="nf">make_deterministic_patches</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">signals</span><span class="p">,</span><span class="n">results</span><span class="p">):</span>
+        <span class="n">num_timesteps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;length&#39;</span><span class="p">]</span>
+        <span class="n">sig_patches</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">res_patches</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">min_len</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_min_len</span><span class="p">(</span><span class="n">signals</span><span class="p">,</span><span class="n">num_timesteps</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">sig</span><span class="p">,</span><span class="n">res</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">signals</span><span class="p">,</span><span class="n">results</span><span class="p">):</span>
+            <span class="n">sig_patch</span><span class="p">,</span> <span class="n">res_patch</span> <span class="o">=</span>  <span class="bp">self</span><span class="o">.</span><span class="n">make_deterministic_patches_from_single_array</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span><span class="n">res</span><span class="p">,</span><span class="n">min_len</span><span class="p">)</span>
+            <span class="n">sig_patches</span> <span class="o">+=</span> <span class="n">sig_patch</span>
+            <span class="n">res_patches</span> <span class="o">+=</span> <span class="n">res_patch</span>
+        <span class="k">return</span> <span class="n">sig_patches</span><span class="p">,</span> <span class="n">res_patches</span>
+
+    <span class="k">def</span> <span class="nf">make_deterministic_patches_from_single_array</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sig</span><span class="p">,</span><span class="n">res</span><span class="p">,</span><span class="n">min_len</span><span class="p">):</span>
+        <span class="n">sig_patches</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">res_patches</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">assert</span><span class="p">(</span><span class="n">min_len</span> <span class="o">&lt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">sig</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">start</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">sig</span><span class="p">)</span><span class="o">-</span><span class="n">min_len</span><span class="p">,</span><span class="n">min_len</span><span class="p">):</span>
+            <span class="n">sig_patches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sig</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">start</span><span class="o">+</span><span class="n">min_len</span><span class="p">])</span>
+            <span class="n">res_patches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">res</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">start</span><span class="o">+</span><span class="n">min_len</span><span class="p">])</span>
+        <span class="n">sig_patches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sig</span><span class="p">[</span><span class="o">-</span><span class="n">min_len</span><span class="p">:])</span>
+        <span class="n">res_patches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">res</span><span class="p">[</span><span class="o">-</span><span class="n">min_len</span><span class="p">:])</span>
+        <span class="k">return</span> <span class="n">sig_patches</span><span class="p">,</span><span class="n">res_patches</span>
+
+    <span class="k">def</span> <span class="nf">make_random_patches</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">signals</span><span class="p">,</span><span class="n">results</span><span class="p">,</span><span class="n">num</span><span class="p">):</span>
+        <span class="n">num_timesteps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;length&#39;</span><span class="p">]</span>
+        <span class="n">sig_patches</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">res_patches</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">min_len</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_min_len</span><span class="p">(</span><span class="n">signals</span><span class="p">,</span><span class="n">num_timesteps</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num</span><span class="p">):</span>
+            <span class="n">idx</span><span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">signals</span><span class="p">))</span>
+            <span class="n">sig_patch</span><span class="p">,</span> <span class="n">res_patch</span> <span class="o">=</span>  <span class="bp">self</span><span class="o">.</span><span class="n">make_random_patch_from_array</span><span class="p">(</span><span class="n">signals</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span><span class="n">results</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span><span class="n">min_len</span><span class="p">)</span>
+            <span class="n">sig_patches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sig_patch</span><span class="p">)</span>
+            <span class="n">res_patches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">res_patch</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">sig_patches</span><span class="p">,</span><span class="n">res_patches</span>
+
+    <span class="k">def</span> <span class="nf">make_random_patch_from_array</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sig</span><span class="p">,</span><span class="n">res</span><span class="p">,</span><span class="n">min_len</span><span class="p">):</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sig</span><span class="p">)</span> <span class="o">-</span> <span class="n">min_len</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">sig</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">start</span><span class="o">+</span><span class="n">min_len</span><span class="p">],</span><span class="n">res</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">start</span><span class="o">+</span><span class="n">min_len</span><span class="p">]</span>
+        
+
+    <span class="k">def</span> <span class="nf">get_min_len</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">arrs</span><span class="p">,</span><span class="n">length</span><span class="p">):</span>
+        <span class="n">min_len</span> <span class="o">=</span> <span class="nb">min</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">arrs</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;training&#39;</span><span class="p">][</span><span class="s1">&#39;max_patch_length&#39;</span><span class="p">]])</span>
+        <span class="n">min_len</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">min_len</span> <span class="o">//</span> <span class="n">length</span><span class="p">)</span> <span class="o">*</span> <span class="n">length</span> 
+        <span class="k">return</span> <span class="n">min_len</span>
+
+
+    <span class="k">def</span> <span class="nf">get_max_len</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">arrs</span><span class="p">,</span><span class="n">length</span><span class="p">):</span>
+        <span class="n">max_len</span> <span class="o">=</span> <span class="nb">max</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">arrs</span><span class="p">])</span>
+        <span class="n">max_len</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="mf">1.0</span><span class="o">*</span><span class="n">max_len</span> <span class="o">/</span> <span class="n">length</span><span class="p">)</span> <span class="o">*</span> <span class="n">length</span> <span class="p">)</span>
+        <span class="k">return</span> <span class="n">max_len</span>
+
+    <span class="k">def</span> <span class="nf">make_patches</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">signals</span><span class="p">,</span><span class="n">results</span><span class="p">):</span>
+        <span class="n">total_num</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;training&#39;</span><span class="p">][</span><span class="s1">&#39;batch_size&#39;</span><span class="p">]</span> 
+        <span class="n">sig_patches_det</span><span class="p">,</span><span class="n">res_patches_det</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_deterministic_patches</span><span class="p">(</span><span class="n">signals</span><span class="p">,</span><span class="n">results</span><span class="p">)</span>
+        <span class="n">num_already</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">sig_patches_det</span><span class="p">)</span>
+        
+        <span class="n">total_num</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">*</span> <span class="n">num_already</span> <span class="o">/</span> <span class="n">total_num</span><span class="p">))</span> <span class="o">*</span> <span class="n">total_num</span>
+        
+        
+        <span class="n">num_additional</span> <span class="o">=</span> <span class="n">total_num</span> <span class="o">-</span> <span class="n">num_already</span>
+        <span class="k">assert</span><span class="p">(</span><span class="n">num_additional</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">sig_patches_rand</span><span class="p">,</span><span class="n">res_patches_rand</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_random_patches</span><span class="p">(</span><span class="n">signals</span><span class="p">,</span><span class="n">results</span><span class="p">,</span><span class="n">num_additional</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;random to deterministic ratio: </span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">num_additional</span><span class="p">,</span><span class="n">num_already</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">sig_patches_det</span> <span class="o">+</span> <span class="n">sig_patches_rand</span><span class="p">,</span><span class="n">res_patches_det</span> <span class="o">+</span> <span class="n">res_patches_rand</span> 
+
+
+
+    <span class="k">def</span> <span class="nf">make_prediction_patches</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">signals</span><span class="p">,</span><span class="n">results</span><span class="p">):</span>
+        <span class="c1">#total_num = self.conf[&#39;training&#39;][&#39;batch_size&#39;] </span>
+        <span class="n">num_timesteps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;pred_length&#39;</span><span class="p">]</span>
+        <span class="n">sig_patches</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">res_patches</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">max_len</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_max_len</span><span class="p">(</span><span class="n">signals</span><span class="p">,</span><span class="n">num_timesteps</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">sig</span><span class="p">,</span><span class="n">res</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">signals</span><span class="p">,</span><span class="n">results</span><span class="p">):</span>
+            <span class="n">sig_patches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Loader</span><span class="o">.</span><span class="n">pad_array_to_length</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span><span class="n">max_len</span><span class="p">))</span>
+            <span class="n">res_patches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Loader</span><span class="o">.</span><span class="n">pad_array_to_length</span><span class="p">(</span><span class="n">res</span><span class="p">,</span><span class="n">max_len</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">sig_patches</span><span class="p">,</span> <span class="n">res_patches</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">pad_array_to_length</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span><span class="n">length</span><span class="p">):</span>
+        <span class="n">dlength</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">length</span> <span class="o">-</span> <span class="n">arr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">tuples</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span><span class="n">dlength</span><span class="p">)]</span>
+        <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">arr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+            <span class="n">tuples</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span><span class="n">tuples</span><span class="p">,</span><span class="n">mode</span><span class="o">=</span><span class="s1">&#39;constant&#39;</span><span class="p">,</span><span class="n">constant_values</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+
+
+
+    <span class="k">def</span> <span class="nf">arange_patches</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sig_patches</span><span class="p">,</span><span class="n">res_patches</span><span class="p">):</span>
+        <span class="n">num_timesteps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;length&#39;</span><span class="p">]</span>
+        <span class="n">batch_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;training&#39;</span><span class="p">][</span><span class="s1">&#39;batch_size&#39;</span><span class="p">]</span>
+        <span class="k">assert</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sig_patches</span><span class="p">)</span> <span class="o">%</span> <span class="n">batch_size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="c1">#fixed number of batches</span>
+        <span class="k">assert</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sig_patches</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">%</span> <span class="n">num_timesteps</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="c1">#divisible by length of RNN sequence</span>
+        <span class="n">num_batches</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">sig_patches</span><span class="p">)</span> <span class="o">/</span> <span class="n">batch_size</span>
+        <span class="c1">#patch_length = len(sig_patches[0])</span>
+
+        <span class="n">zipped</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="n">sig_patches</span><span class="p">,</span><span class="n">res_patches</span><span class="p">)</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">zipped</span><span class="p">)</span>
+        <span class="n">sig_patches</span><span class="p">,</span> <span class="n">res_patches</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">zipped</span><span class="p">)</span> 
+        <span class="n">X_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">y_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_batches</span><span class="p">):</span>
+            <span class="n">X</span><span class="p">,</span><span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">arange_patches_single</span><span class="p">(</span><span class="n">sig_patches</span><span class="p">[</span><span class="n">i</span><span class="o">*</span><span class="n">batch_size</span><span class="p">:(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">batch_size</span><span class="p">],</span>
+                                        <span class="n">res_patches</span><span class="p">[</span><span class="n">i</span><span class="o">*</span><span class="n">batch_size</span><span class="p">:(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">batch_size</span><span class="p">])</span>
+            <span class="n">X_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+            <span class="n">y_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">X_list</span><span class="p">,</span><span class="n">y_list</span>
+
+    <span class="k">def</span> <span class="nf">arange_patches_single</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sig_patches</span><span class="p">,</span><span class="n">res_patches</span><span class="p">,</span><span class="n">prediction_mode</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span><span class="n">custom_batch_size</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">prediction_mode</span><span class="p">:</span>
+            <span class="n">num_timesteps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;pred_length&#39;</span><span class="p">]</span>
+            <span class="n">batch_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;pred_batch_size&#39;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">num_timesteps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;length&#39;</span><span class="p">]</span>
+            <span class="n">batch_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;training&#39;</span><span class="p">][</span><span class="s1">&#39;batch_size&#39;</span><span class="p">]</span>
+        <span class="n">return_sequences</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;return_sequences&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">custom_batch_size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">batch_size</span> <span class="o">=</span> <span class="n">custom_batch_size</span>
+
+        <span class="k">assert</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sig_patches</span><span class="p">)</span> <span class="o">==</span> <span class="n">batch_size</span><span class="p">)</span>
+        <span class="k">assert</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sig_patches</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">%</span> <span class="n">num_timesteps</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">num_chunks</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">sig_patches</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="n">num_timesteps</span>
+        <span class="n">num_dimensions_of_data</span> <span class="o">=</span> <span class="n">sig_patches</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">res_patches</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">num_answers</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">num_answers</span> <span class="o">=</span> <span class="n">res_patches</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        
+        <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">num_chunks</span><span class="o">*</span><span class="n">batch_size</span><span class="p">,</span><span class="n">num_timesteps</span><span class="p">,</span><span class="n">num_dimensions_of_data</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">return_sequences</span><span class="p">:</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">num_chunks</span><span class="o">*</span><span class="n">batch_size</span><span class="p">,</span><span class="n">num_timesteps</span><span class="p">,</span><span class="n">num_answers</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">num_chunks</span><span class="o">*</span><span class="n">batch_size</span><span class="p">,</span><span class="n">num_answers</span><span class="p">))</span>
+
+        
+        <span class="k">for</span> <span class="n">chunk_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_chunks</span><span class="p">):</span>
+            <span class="n">src_start</span> <span class="o">=</span> <span class="n">chunk_idx</span><span class="o">*</span><span class="n">num_timesteps</span>
+            <span class="n">src_end</span> <span class="o">=</span> <span class="p">(</span><span class="n">chunk_idx</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">num_timesteps</span>
+            <span class="k">for</span> <span class="n">patch_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">batch_size</span><span class="p">):</span>
+                <span class="n">X</span><span class="p">[</span><span class="n">chunk_idx</span><span class="o">*</span><span class="n">batch_size</span> <span class="o">+</span> <span class="n">patch_idx</span><span class="p">,:,:]</span> <span class="o">=</span> <span class="n">sig_patches</span><span class="p">[</span><span class="n">patch_idx</span><span class="p">][</span><span class="n">src_start</span><span class="p">:</span><span class="n">src_end</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">return_sequences</span><span class="p">:</span>
+                    <span class="n">y</span><span class="p">[</span><span class="n">chunk_idx</span><span class="o">*</span><span class="n">batch_size</span> <span class="o">+</span> <span class="n">patch_idx</span><span class="p">,:,:]</span> <span class="o">=</span> <span class="n">res_patches</span><span class="p">[</span><span class="n">patch_idx</span><span class="p">][</span><span class="n">src_start</span><span class="p">:</span><span class="n">src_end</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">y</span><span class="p">[</span><span class="n">chunk_idx</span><span class="o">*</span><span class="n">batch_size</span> <span class="o">+</span> <span class="n">patch_idx</span><span class="p">,:]</span> <span class="o">=</span> <span class="n">res_patches</span><span class="p">[</span><span class="n">patch_idx</span><span class="p">][</span><span class="n">src_end</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">X</span><span class="p">,</span><span class="n">y</span>
+
+    <span class="k">def</span> <span class="nf">load_as_X_y</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">shot</span><span class="p">,</span><span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span><span class="n">prediction_mode</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="k">assert</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">shot</span><span class="p">,</span><span class="n">Shot</span><span class="p">))</span>
+        <span class="k">assert</span><span class="p">(</span><span class="n">shot</span><span class="o">.</span><span class="n">valid</span><span class="p">)</span>
+        <span class="n">prepath</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;paths&#39;</span><span class="p">][</span><span class="s1">&#39;processed_prepath&#39;</span><span class="p">]</span>
+        <span class="n">return_sequences</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;return_sequences&#39;</span><span class="p">]</span>
+        <span class="n">shot</span><span class="o">.</span><span class="n">restore</span><span class="p">(</span><span class="n">prepath</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalizer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">normalizer</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">shot</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Warning, no normalization. Training data may be poorly conditioned&#39;</span><span class="p">)</span>
+
+        <span class="n">signals</span> <span class="o">=</span> <span class="n">shot</span><span class="o">.</span><span class="n">signals</span>
+        <span class="n">ttd</span> <span class="o">=</span> <span class="n">shot</span><span class="o">.</span><span class="n">ttd</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;training&#39;</span><span class="p">][</span><span class="s1">&#39;use_mock_data&#39;</span><span class="p">]:</span>
+            <span class="n">signals</span><span class="p">,</span><span class="n">ttd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_mock_data</span><span class="p">()</span>
+
+        <span class="c1"># if not self.stateful:</span>
+        <span class="c1">#     X,y = self.array_to_path_and_external_pred(signals,ttd)</span>
+        <span class="c1"># else:</span>
+        <span class="n">X</span><span class="p">,</span><span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">array_to_path_and_external_pred_cut</span><span class="p">(</span><span class="n">signals</span><span class="p">,</span><span class="n">ttd</span><span class="p">,</span>
+                <span class="n">return_sequences</span><span class="o">=</span><span class="n">return_sequences</span><span class="p">,</span><span class="n">prediction_mode</span><span class="o">=</span><span class="n">prediction_mode</span><span class="p">)</span>
+
+        <span class="n">shot</span><span class="o">.</span><span class="n">make_light</span><span class="p">()</span>
+        <span class="k">return</span>  <span class="n">X</span><span class="p">,</span><span class="n">y</span><span class="c1">#X,y</span>
+
+    <span class="k">def</span> <span class="nf">get_mock_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">signals</span> <span class="o">=</span> <span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">4</span><span class="o">*</span><span class="n">pi</span><span class="p">,</span><span class="mi">10000</span><span class="p">)</span>
+        <span class="n">rand_idx</span> <span class="o">=</span> <span class="n">randint</span><span class="p">(</span><span class="mi">6000</span><span class="p">)</span>
+        <span class="n">lgth</span> <span class="o">=</span> <span class="n">randint</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span><span class="mi">3000</span><span class="p">)</span>
+        <span class="n">signals</span> <span class="o">=</span> <span class="n">signals</span><span class="p">[</span><span class="n">rand_idx</span><span class="p">:</span><span class="n">rand_idx</span><span class="o">+</span><span class="n">lgth</span><span class="p">]</span>
+        <span class="c1">#ttd[-100:] = 1</span>
+        <span class="n">signals</span> <span class="o">=</span> <span class="n">vstack</span><span class="p">([</span><span class="n">signals</span><span class="p">]</span><span class="o">*</span><span class="mi">8</span><span class="p">)</span>
+        <span class="n">signals</span> <span class="o">=</span> <span class="n">signals</span><span class="o">.</span><span class="n">T</span>
+        <span class="n">signals</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">+</span> <span class="mf">0.5</span><span class="o">*</span><span class="n">sin</span><span class="p">(</span><span class="n">signals</span><span class="p">[:,</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">signals</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span><span class="c1"># + 0.5*cos(signals[:,1])</span>
+        <span class="n">signals</span><span class="p">[:,</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">+</span> <span class="mf">0.5</span><span class="o">*</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">signals</span><span class="p">[:,</span><span class="mi">2</span><span class="p">])</span>
+        <span class="n">signals</span><span class="p">[:,</span><span class="mi">3</span><span class="p">:]</span> <span class="o">*=</span> <span class="mi">0</span>
+        <span class="n">offset</span> <span class="o">=</span> <span class="mi">100</span>
+        <span class="n">ttd</span> <span class="o">=</span> <span class="mf">0.0</span><span class="o">*</span><span class="n">signals</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">ttd</span><span class="p">[</span><span class="n">offset</span><span class="p">:]</span> <span class="o">=</span> <span class="mf">1.0</span><span class="o">*</span><span class="n">signals</span><span class="p">[:</span><span class="o">-</span><span class="n">offset</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">ttd</span> <span class="o">&gt;</span> <span class="n">mean</span><span class="p">(</span><span class="n">ttd</span><span class="p">)</span>
+        <span class="n">ttd</span><span class="p">[</span><span class="o">~</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1">#mean(signals[:,:2],1)</span>
+        <span class="k">return</span> <span class="n">signals</span><span class="p">,</span><span class="n">ttd</span>
+
+    <span class="k">def</span> <span class="nf">array_to_path_and_external_pred_cut</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">arr</span><span class="p">,</span><span class="n">res</span><span class="p">,</span><span class="n">return_sequences</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span><span class="n">prediction_mode</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">num_timesteps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;length&#39;</span><span class="p">]</span>
+        <span class="n">skip</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;skip&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">prediction_mode</span><span class="p">:</span>
+            <span class="n">num_timesteps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;pred_length&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">return_sequences</span><span class="p">:</span>
+                <span class="n">num_timesteps</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">skip</span> <span class="o">=</span> <span class="n">num_timesteps</span> <span class="c1">#batchsize = 1!</span>
+        <span class="k">assert</span><span class="p">(</span><span class="n">shape</span><span class="p">(</span><span class="n">arr</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">shape</span><span class="p">(</span><span class="n">res</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">num_chunks</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span> <span class="o">//</span> <span class="n">num_timesteps</span>
+        <span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[</span><span class="o">-</span><span class="n">num_chunks</span><span class="o">*</span><span class="n">num_timesteps</span><span class="p">:]</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">res</span><span class="p">[</span><span class="o">-</span><span class="n">num_chunks</span><span class="o">*</span><span class="n">num_timesteps</span><span class="p">:]</span>
+        <span class="k">assert</span><span class="p">(</span><span class="n">shape</span><span class="p">(</span><span class="n">arr</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">shape</span><span class="p">(</span><span class="n">res</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">chunk_range</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_chunks</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">i_range</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">num_timesteps</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="n">skip</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">prediction_mode</span><span class="p">:</span>
+            <span class="n">chunk_range</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_chunks</span><span class="p">)</span>
+            <span class="n">i_range</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+
+        <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">chunk_range</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">i_range</span><span class="p">:</span>
+                <span class="n">start</span> <span class="o">=</span> <span class="n">chunk</span><span class="o">*</span><span class="n">num_timesteps</span> <span class="o">+</span> <span class="n">i</span>
+                <span class="k">assert</span><span class="p">(</span><span class="n">start</span> <span class="o">+</span> <span class="n">num_timesteps</span> <span class="o">&lt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">arr</span><span class="p">))</span>
+                <span class="n">X</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">arr</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">start</span><span class="o">+</span><span class="n">num_timesteps</span><span class="p">,:])</span>
+                <span class="k">if</span> <span class="n">return_sequences</span><span class="p">:</span>
+                    <span class="n">y</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">res</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">start</span><span class="o">+</span><span class="n">num_timesteps</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">y</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">res</span><span class="p">[</span><span class="n">start</span><span class="o">+</span><span class="n">num_timesteps</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span><span class="n">start</span><span class="o">+</span><span class="n">num_timesteps</span><span class="p">])</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">array</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">array</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">shape</span><span class="p">(</span><span class="n">X</span><span class="p">))</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">X</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">shape</span><span class="p">(</span><span class="n">X</span><span class="p">)))</span>
+        <span class="k">if</span> <span class="n">return_sequences</span><span class="p">:</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">shape</span><span class="p">(</span><span class="n">y</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="n">X</span><span class="p">,</span><span class="n">y</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_batch_size</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span><span class="n">prediction_mode</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">prediction_mode</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">batch_size</span><span class="c1">#Loader.get_num_skips(length,skip)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_num_skips</span><span class="p">(</span><span class="n">length</span><span class="p">,</span><span class="n">skip</span><span class="p">):</span>
+        <span class="k">return</span> <span class="mi">1</span> <span class="o">+</span> <span class="p">(</span><span class="n">length</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">//</span><span class="n">skip</span>
+
+    <span class="k">def</span> <span class="nf">load_shotlists</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">conf</span><span class="p">):</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;paths&#39;</span><span class="p">][</span><span class="s1">&#39;base_path&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;/normalization/shot_lists.npz&#39;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">shot_list_train</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;shot_list_train&#39;</span><span class="p">][()]</span>
+        <span class="n">shot_list_validate</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;shot_list_validate&#39;</span><span class="p">][()]</span>
+        <span class="n">shot_list_test</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;shot_list_test&#39;</span><span class="p">][()]</span>
+        <span class="k">return</span> <span class="n">shot_list_train</span><span class="p">,</span><span class="n">shot_list_validate</span><span class="p">,</span><span class="n">shot_list_test</span></div>
+
+    <span class="c1"># def produce_indices(signals_list):</span>
+    <span class="c1">#     indices_list = []</span>
+    <span class="c1">#     for xx in signals_list:</span>
+    <span class="c1">#         indices_list.append(arange(len(xx)))</span>
+    <span class="c1">#     return indices_list</span>
+
+
+
+    <span class="c1"># def array_to_path_and_external_pred(self,arr,res,return_sequences=False):</span>
+    <span class="c1">#     length = self.conf[&#39;model&#39;][&#39;length&#39;]</span>
+    <span class="c1">#     skip = self.conf[&#39;model&#39;][&#39;skip&#39;]</span>
+    <span class="c1">#     assert(shape(arr)[0] == shape(res)[0])</span>
+    <span class="c1">#     X = []</span>
+    <span class="c1">#     y = []</span>
+    <span class="c1">#     i = 0</span>
+    <span class="c1">#     while True:</span>
+    <span class="c1">#         pred = i+length</span>
+    <span class="c1">#         if pred &gt; len(arr):</span>
+    <span class="c1">#             break</span>
+    <span class="c1">#         X.append(arr[i:i+length,:])</span>
+    <span class="c1">#         if return_sequences:</span>
+    <span class="c1">#             y.append(res[i:i+length])</span>
+    <span class="c1">#         else:</span>
+    <span class="c1">#             y.append(res[i+length-1])</span>
+    <span class="c1">#         i += skip</span>
+    <span class="c1">#     X = array(X)</span>
+    <span class="c1">#     y = array(y)</span>
+    <span class="c1">#     if len(shape(X)) == 1:</span>
+    <span class="c1">#         X = np.expand_dims(X,axis=len(shape(X)))</span>
+    <span class="c1">#     if return_sequences and len(shape(y)) == 1:</span>
+    <span class="c1">#         y = np.expand_dims(y,axis=len(shape(y)))</span>
+    <span class="c1">#     return X,y</span>
+
+   
+    <span class="c1"># def array_to_path_and_next(self,arr):</span>
+    <span class="c1">#     length = self.conf[&#39;model&#39;][&#39;length&#39;]</span>
+    <span class="c1">#     skip = self.conf[&#39;model&#39;][&#39;skip&#39;]</span>
+    <span class="c1">#     X = []</span>
+    <span class="c1">#     y = []</span>
+    <span class="c1">#     i = 0</span>
+    <span class="c1">#     while True:</span>
+    <span class="c1">#         pred = i+length</span>
+    <span class="c1">#         if pred &gt;= len(arr):</span>
+    <span class="c1">#             break</span>
+    <span class="c1">#         X.append(arr[i:i+length])</span>
+    <span class="c1">#         y.append(arr[i+length])</span>
+    <span class="c1">#         i += skip</span>
+    <span class="c1">#     X = array(X)</span>
+    <span class="c1">#     X = np.expand_dims(X,axis=len(shape(X)))</span>
+    <span class="c1">#     return X,array(y)</span>
+
+    
+    <span class="c1"># def array_to_path(self,arr):</span>
+    <span class="c1">#     length = self.conf[&#39;model&#39;][&#39;length&#39;]</span>
+    <span class="c1">#     skip = self.conf[&#39;model&#39;][&#39;skip&#39;]</span>
+    <span class="c1">#     X = []</span>
+    <span class="c1">#     i = 0</span>
+    <span class="c1">#     while True:</span>
+    <span class="c1">#         pred = i+length</span>
+    <span class="c1">#         if pred &gt; len(arr):</span>
+    <span class="c1">#             break</span>
+    <span class="c1">#         X.append(arr[i:i+length,:])</span>
+    <span class="c1">#         i += skip</span>
+    <span class="c1">#     X = array(X)</span>
+    <span class="c1">#     if len(shape(X)) == 1:</span>
+    <span class="c1">#         X = np.expand_dims(X,axis=len(shape(X)))</span>
+    <span class="c1">#     return X</span>
+
+    
+    <span class="c1">#unused: handling sequences of shots        </span>
+    <span class="c1"># def load_shots_as_X_y(conf,shots,verbose=False,stateful=True,prediction_mode=False):</span>
+    <span class="c1">#     X,y = zip(*[load_shot_as_X_y(conf,shot,verbose,stateful,prediction_mode) for shot in shots])</span>
+    <span class="c1">#     return vstack(X),hstack(y)</span>
+
+    <span class="c1"># def load_shots_as_X_y_list(conf,shots,verbose=False,stateful=True,prediction_mode=False):</span>
+    <span class="c1">#     return [load_shot_as_X_y(conf,shot,verbose,stateful,prediction_mode) for shot in shots]</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">FRNN 0.0.2 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, FRNN group.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.2.
+    </div>
+  </body>
+</html>

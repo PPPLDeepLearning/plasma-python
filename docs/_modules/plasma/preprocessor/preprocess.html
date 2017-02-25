@@ -1,0 +1,285 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>plasma.preprocessor.preprocess &#8212; FRNN 0.0.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.0.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">FRNN 0.0.2 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for plasma.preprocessor.preprocess</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">#########################################################</span>
+<span class="sd">This file containts classes to handle data processing</span>
+
+<span class="sd">Author: Julian Kates-Harbeck, jkatesharbeck@g.harvard.edu</span>
+
+<span class="sd">This work was supported by the DOE CSGF program.</span>
+<span class="sd">#########################################################</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
+<span class="kn">from</span> <span class="nn">os</span> <span class="k">import</span> <span class="n">listdir</span><span class="p">,</span><span class="n">remove</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pathos.multiprocessing</span> <span class="k">as</span> <span class="nn">mp</span>
+
+<span class="kn">from</span> <span class="nn">plasma.utils.processing</span> <span class="k">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">plasma.primitives.shots</span> <span class="k">import</span> <span class="n">ShotList</span>
+
+<div class="viewcode-block" id="Preprocessor"><a class="viewcode-back" href="../../../plasma.preprocessor.preprocess.Preprocessor.html#plasma.preprocessor.preprocess.Preprocessor">[docs]</a><span class="k">class</span> <span class="nc">Preprocessor</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">conf</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conf</span> <span class="o">=</span> <span class="n">conf</span>
+
+
+    <span class="k">def</span> <span class="nf">clean_shot_lists</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">shot_list_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;paths&#39;</span><span class="p">][</span><span class="s1">&#39;shot_list_dir&#39;</span><span class="p">]</span>
+        <span class="n">paths</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">shot_list_dir</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">listdir</span><span class="p">(</span><span class="n">shot_list_dir</span><span class="p">)</span> <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">shot_list_dir</span><span class="p">,</span> <span class="n">f</span><span class="p">))]</span>
+        <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">clean_shot_list</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">clean_shot_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">path</span><span class="p">):</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">ending_idx</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">rfind</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span>
+        <span class="n">new_path</span> <span class="o">=</span> <span class="n">append_to_filename</span><span class="p">(</span><span class="n">path</span><span class="p">,</span><span class="s1">&#39;_clear&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">data</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="c1">#nondisruptive</span>
+            <span class="n">nd_times</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="n">data_two_column</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">data</span><span class="p">,</span><span class="n">nd_times</span><span class="p">))</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">new_path</span><span class="p">,</span><span class="n">data_two_column</span><span class="p">,</span><span class="n">fmt</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%d</span><span class="s1"> </span><span class="si">%f</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;created new file: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">new_path</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;deleting old file: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">preprocess_all</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">conf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span>
+        <span class="n">shot_files_train</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;paths&#39;</span><span class="p">][</span><span class="s1">&#39;shot_files&#39;</span><span class="p">]</span>
+        <span class="n">shot_files_test</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;paths&#39;</span><span class="p">][</span><span class="s1">&#39;shot_files_test&#39;</span><span class="p">]</span>
+        <span class="n">shot_list_dir</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;paths&#39;</span><span class="p">][</span><span class="s1">&#39;shot_list_dir&#39;</span><span class="p">]</span>
+        <span class="n">use_shots</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][</span><span class="s1">&#39;use_shots&#39;</span><span class="p">]</span>
+        <span class="n">train_frac</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;training&#39;</span><span class="p">][</span><span class="s1">&#39;train_frac&#39;</span><span class="p">]</span>
+        <span class="n">use_shots_train</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">train_frac</span><span class="o">*</span><span class="n">use_shots</span><span class="p">))</span>
+        <span class="n">use_shots_test</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">((</span><span class="mi">1</span><span class="o">-</span><span class="n">train_frac</span><span class="p">)</span><span class="o">*</span><span class="n">use_shots</span><span class="p">))</span>
+<span class="c1">#        print(use_shots_train)</span>
+<span class="c1">#        print(use_shots_test) #each print out 100,000</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">shot_files_test</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">preprocess_from_files</span><span class="p">(</span><span class="n">shot_list_dir</span><span class="p">,</span><span class="n">shot_files_train</span><span class="p">,</span><span class="n">use_shots_train</span><span class="p">)</span> <span class="o">+</span> \
+               <span class="bp">self</span><span class="o">.</span><span class="n">preprocess_from_files</span><span class="p">(</span><span class="n">shot_list_dir</span><span class="p">,</span><span class="n">shot_files_test</span><span class="p">,</span><span class="n">use_shots_test</span><span class="p">)</span>
+    	<span class="k">else</span><span class="p">:</span>
+    	    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">preprocess_from_files</span><span class="p">(</span><span class="n">shot_list_dir</span><span class="p">,</span><span class="n">shot_files_train</span><span class="p">,</span><span class="n">use_shots_train</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">preprocess_from_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">shot_list_dir</span><span class="p">,</span><span class="n">shot_files</span><span class="p">,</span><span class="n">use_shots</span><span class="p">):</span>
+        <span class="c1">#all shots, including invalid ones</span>
+        <span class="n">shot_list</span> <span class="o">=</span> <span class="n">ShotList</span><span class="p">()</span>
+        <span class="n">shot_list</span><span class="o">.</span><span class="n">load_from_files</span><span class="p">(</span><span class="n">shot_list_dir</span><span class="p">,</span><span class="n">shot_files</span><span class="p">)</span>
+
+        <span class="n">shot_list_picked</span> <span class="o">=</span> <span class="n">shot_list</span><span class="o">.</span><span class="n">random_sublist</span><span class="p">(</span><span class="n">use_shots</span><span class="p">)</span>
+
+        <span class="c1">#empty</span>
+        <span class="n">used_shots</span> <span class="o">=</span> <span class="n">ShotList</span><span class="p">()</span>
+
+        <span class="n">use_cores</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">mp</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">pool</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">Pool</span><span class="p">(</span><span class="n">use_cores</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;running in parallel on </span><span class="si">{}</span><span class="s1"> processes&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pool</span><span class="o">.</span><span class="n">_processes</span><span class="p">))</span>
+        <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">shot</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">pool</span><span class="o">.</span><span class="n">imap_unordered</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">preprocess_single_file</span><span class="p">,</span><span class="n">shot_list_picked</span><span class="p">)):</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\r</span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">shot_list_picked</span><span class="p">)))</span>
+            <span class="n">used_shots</span><span class="o">.</span><span class="n">append_if_valid</span><span class="p">(</span><span class="n">shot</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Finished Preprocessing </span><span class="si">{}</span><span class="s1"> files in </span><span class="si">{}</span><span class="s1"> seconds&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">shot_list_picked</span><span class="p">),</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="o">-</span><span class="n">start_time</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Omitted </span><span class="si">{}</span><span class="s1"> shots of </span><span class="si">{}</span><span class="s1"> total.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">shot_list_picked</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">used_shots</span><span class="p">),</span><span class="nb">len</span><span class="p">(</span><span class="n">shot_list_picked</span><span class="p">)))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1"> disruptive shots&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">used_shots</span><span class="o">.</span><span class="n">num_disruptive</span><span class="p">(),</span><span class="nb">len</span><span class="p">(</span><span class="n">used_shots</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="n">used_shots</span> 
+
+    <span class="k">def</span> <span class="nf">preprocess_single_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">shot</span><span class="p">):</span>
+        <span class="n">processed_prepath</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;paths&#39;</span><span class="p">][</span><span class="s1">&#39;processed_prepath&#39;</span><span class="p">]</span>
+        <span class="n">recompute</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][</span><span class="s1">&#39;recompute&#39;</span><span class="p">]</span>
+        <span class="c1"># print(&#39;({}/{}): &#39;.format(num_processed,use_shots))</span>
+        <span class="k">if</span> <span class="n">recompute</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">shot</span><span class="o">.</span><span class="n">previously_saved</span><span class="p">(</span><span class="n">processed_prepath</span><span class="p">):</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\r</span><span class="s1">recomputing </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">shot</span><span class="o">.</span><span class="n">number</span><span class="p">))</span>
+          <span class="c1">#get minmax times</span>
+            <span class="n">signals</span><span class="p">,</span><span class="n">times</span><span class="p">,</span><span class="n">t_min</span><span class="p">,</span><span class="n">t_max</span><span class="p">,</span><span class="n">t_thresh</span><span class="p">,</span><span class="n">valid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_signals_and_times_from_file</span><span class="p">(</span><span class="n">shot</span><span class="o">.</span><span class="n">number</span><span class="p">,</span><span class="n">shot</span><span class="o">.</span><span class="n">t_disrupt</span><span class="p">)</span> 
+            <span class="c1">#cut and resample</span>
+            <span class="n">signals</span><span class="p">,</span><span class="n">ttd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cut_and_resample_signals</span><span class="p">(</span><span class="n">times</span><span class="p">,</span><span class="n">signals</span><span class="p">,</span><span class="n">t_min</span><span class="p">,</span><span class="n">t_max</span><span class="p">,</span><span class="n">shot</span><span class="o">.</span><span class="n">is_disruptive</span><span class="p">)</span>
+
+            <span class="n">shot</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="n">signals</span>
+            <span class="n">shot</span><span class="o">.</span><span class="n">ttd</span> <span class="o">=</span> <span class="n">ttd</span>
+            <span class="n">shot</span><span class="o">.</span><span class="n">valid</span> <span class="o">=</span> <span class="n">valid</span>
+            <span class="n">shot</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">processed_prepath</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">shot</span><span class="o">.</span><span class="n">restore</span><span class="p">(</span><span class="n">processed_prepath</span><span class="p">,</span><span class="n">light</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\r</span><span class="si">{}</span><span class="s1"> exists.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">shot</span><span class="o">.</span><span class="n">number</span><span class="p">))</span>
+        <span class="n">shot</span><span class="o">.</span><span class="n">make_light</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">shot</span> 
+
+
+    <span class="k">def</span> <span class="nf">get_individual_channel_dirs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">signals_dirs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;paths&#39;</span><span class="p">][</span><span class="s1">&#39;signals_dirs&#39;</span><span class="p">]</span>
+
+
+    <span class="k">def</span> <span class="nf">get_signals_and_times_from_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">shot</span><span class="p">,</span><span class="n">t_disrupt</span><span class="p">):</span>
+        <span class="n">valid</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">t_min</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">t_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">Inf</span>
+        <span class="n">t_thresh</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">signals</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">times</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">conf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span>
+
+        <span class="n">disruptive</span> <span class="o">=</span> <span class="n">t_disrupt</span> <span class="o">&gt;=</span> <span class="mi">0</span>
+
+        <span class="n">signal_prepath</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;paths&#39;</span><span class="p">][</span><span class="s1">&#39;signal_prepath&#39;</span><span class="p">]</span>
+        <span class="n">signals_dirs</span> <span class="o">=</span> <span class="n">concatenate_sublists</span><span class="p">(</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;paths&#39;</span><span class="p">][</span><span class="s1">&#39;signals_dirs&#39;</span><span class="p">])</span>
+        <span class="n">current_index</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][</span><span class="s1">&#39;current_index&#39;</span><span class="p">]</span>
+        <span class="n">current_thresh</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][</span><span class="s1">&#39;current_thresh&#39;</span><span class="p">]</span>
+        <span class="n">current_end_thresh</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][</span><span class="s1">&#39;current_end_thresh&#39;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">dirname</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">signals_dirs</span><span class="p">):</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">get_individual_shot_file</span><span class="p">(</span><span class="n">signal_prepath</span><span class="o">+</span><span class="n">dirname</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span><span class="p">,</span><span class="n">shot</span><span class="p">))</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="n">data</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">sig</span> <span class="o">=</span> <span class="n">data</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">t_min</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">t_min</span><span class="p">,</span><span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">t_max</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">t_max</span><span class="p">,</span><span class="n">t</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">current_index</span><span class="p">:</span>
+                <span class="c1">#throw out shots that never reach curren threshold</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">sig</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">current_thresh</span><span class="p">)):</span>
+                    <span class="n">valid</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Shot </span><span class="si">{}</span><span class="s1"> does not exceed current threshold... invalid.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">shot</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1">#begin shot once current reaches threshold</span>
+                    <span class="n">index_thresh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">sig</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">current_thresh</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="n">t_thresh</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="n">index_thresh</span><span class="p">]</span>
+                    <span class="c1">#end shot once current drops below current_end_thresh</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">disruptive</span><span class="p">:</span>
+                        <span class="n">acceptable_region</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+                        <span class="n">acceptable_region</span><span class="p">[</span><span class="n">index_thresh</span><span class="p">:]</span> <span class="o">=</span> <span class="kc">True</span>
+                        <span class="n">index_end_thresh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">sig</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">current_end_thresh</span><span class="p">,</span><span class="n">acceptable_region</span><span class="p">))[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="n">t_end_thresh</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="n">index_end_thresh</span><span class="p">]</span>
+                        <span class="k">assert</span><span class="p">(</span><span class="n">t_thresh</span> <span class="o">&lt;</span> <span class="n">t_end_thresh</span> <span class="o">&lt;</span> <span class="n">t_max</span><span class="p">)</span>
+                        <span class="n">t_max</span> <span class="o">=</span> <span class="n">t_end_thresh</span>
+            <span class="n">signals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sig</span><span class="p">)</span>
+            <span class="n">times</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">valid</span><span class="p">:</span>
+            <span class="n">t_thresh</span> <span class="o">=</span> <span class="n">t_min</span>
+        <span class="k">assert</span><span class="p">(</span><span class="n">t_thresh</span> <span class="o">&gt;=</span> <span class="n">t_min</span><span class="p">)</span>
+        <span class="k">assert</span><span class="p">(</span><span class="n">t_disrupt</span> <span class="o">&lt;=</span> <span class="n">t_max</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">disruptive</span><span class="p">:</span>
+            <span class="k">assert</span><span class="p">(</span><span class="n">t_thresh</span> <span class="o">&lt;</span> <span class="n">t_disrupt</span><span class="p">)</span>
+            <span class="n">t_max</span> <span class="o">=</span> <span class="n">t_disrupt</span>
+        <span class="n">t_min</span> <span class="o">=</span> <span class="n">t_thresh</span>
+
+        <span class="k">return</span> <span class="n">signals</span><span class="p">,</span><span class="n">times</span><span class="p">,</span><span class="n">t_min</span><span class="p">,</span><span class="n">t_max</span><span class="p">,</span><span class="n">t_thresh</span><span class="p">,</span><span class="n">valid</span>
+
+
+
+    <span class="k">def</span> <span class="nf">cut_and_resample_signals</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">times</span><span class="p">,</span><span class="n">signals</span><span class="p">,</span><span class="n">t_min</span><span class="p">,</span><span class="n">t_max</span><span class="p">,</span><span class="n">is_disruptive</span><span class="p">):</span>
+        <span class="n">dt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][</span><span class="s1">&#39;dt&#39;</span><span class="p">]</span>
+        <span class="n">T_max</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][</span><span class="s1">&#39;T_max&#39;</span><span class="p">]</span>
+
+        <span class="c1">#resample signals</span>
+        <span class="n">signals_processed</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">assert</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">signals</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">times</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">signals</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">tr</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">signals</span><span class="p">)):</span>
+            <span class="n">tr</span><span class="p">,</span><span class="n">sigr</span> <span class="o">=</span> <span class="n">cut_and_resample_signal</span><span class="p">(</span><span class="n">times</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">signals</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">t_min</span><span class="p">,</span><span class="n">t_max</span><span class="p">,</span><span class="n">dt</span><span class="p">)</span>
+            <span class="n">signals_processed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sigr</span><span class="p">)</span>
+
+        <span class="n">signals</span> <span class="o">=</span> <span class="n">signals_processed</span>
+        <span class="n">signals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">(</span><span class="n">signals</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">is_disruptive</span><span class="p">:</span>
+            <span class="n">ttd</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">tr</span><span class="p">)</span> <span class="o">-</span> <span class="n">tr</span>
+            <span class="n">ttd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">ttd</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="n">T_max</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ttd</span> <span class="o">=</span> <span class="n">T_max</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">tr</span><span class="p">)</span>
+        <span class="n">ttd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">ttd</span> <span class="o">+</span> <span class="mf">1.0</span><span class="o">*</span><span class="n">dt</span><span class="o">/</span><span class="mi">10</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">signals</span><span class="p">,</span><span class="n">ttd</span>
+
+
+    <span class="k">def</span> <span class="nf">get_shot_list_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">conf</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;paths&#39;</span><span class="p">][</span><span class="s1">&#39;base_path&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;/normalization/shot_lists.npz&#39;</span>
+
+    <span class="k">def</span> <span class="nf">save_shotlists</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">conf</span><span class="p">,</span><span class="n">shot_list_train</span><span class="p">,</span><span class="n">shot_list_validate</span><span class="p">,</span><span class="n">shot_list_test</span><span class="p">):</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_shot_list_path</span><span class="p">(</span><span class="n">conf</span><span class="p">)</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">savez</span><span class="p">(</span><span class="n">path</span><span class="p">,</span><span class="n">shot_list_train</span><span class="o">=</span><span class="n">shot_list_train</span><span class="p">,</span><span class="n">shot_list_validate</span><span class="o">=</span><span class="n">shot_list_validate</span><span class="p">,</span><span class="n">shot_list_test</span><span class="o">=</span><span class="n">shot_list_test</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">FRNN 0.0.2 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, FRNN group.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.2.
+    </div>
+  </body>
+</html>

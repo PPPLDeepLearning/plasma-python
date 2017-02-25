@@ -1,0 +1,606 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>plasma.models.mpi_runner &#8212; FRNN 0.0.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.0.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">FRNN 0.0.2 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for plasma.models.mpi_runner</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">#########################################################</span>
+<span class="sd">This file trains a deep learning model to predict</span>
+<span class="sd">disruptions on time series data from plasma discharges.</span>
+
+<span class="sd">Dependencies:</span>
+<span class="sd">conf.py: configuration of model,training,paths, and data</span>
+<span class="sd">model_builder.py: logic to construct the ML architecture</span>
+<span class="sd">data_processing.py: classes to handle data processing</span>
+
+<span class="sd">Author: Julian Kates-Harbeck, jkatesharbeck@g.harvard.edu</span>
+
+<span class="sd">This work was supported by the DOE CSGF program.</span>
+<span class="sd">#########################################################</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span> 
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">functools</span> <span class="k">import</span> <span class="n">partial</span>
+<span class="kn">import</span> <span class="nn">socket</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">setrecursionlimit</span><span class="p">(</span><span class="mi">10000</span><span class="p">)</span>
+<span class="kn">import</span> <span class="nn">getpass</span>
+
+<span class="c1">#import keras sequentially because it otherwise reads from ~/.keras/keras.json with too many threads.</span>
+<span class="c1">#from mpi_launch_tensorflow import get_mpi_task_index </span>
+<span class="kn">from</span> <span class="nn">mpi4py</span> <span class="k">import</span> <span class="n">MPI</span>
+<span class="n">comm</span> <span class="o">=</span> <span class="n">MPI</span><span class="o">.</span><span class="n">COMM_WORLD</span>
+<span class="n">task_index</span> <span class="o">=</span> <span class="n">comm</span><span class="o">.</span><span class="n">Get_rank</span><span class="p">()</span>
+<span class="n">num_workers</span> <span class="o">=</span> <span class="n">comm</span><span class="o">.</span><span class="n">Get_size</span><span class="p">()</span>
+<span class="n">NUM_GPUS</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="n">MY_GPU</span> <span class="o">=</span> <span class="n">task_index</span> <span class="o">%</span> <span class="n">NUM_GPUS</span>
+<span class="n">backend</span> <span class="o">=</span> <span class="s1">&#39;theano&#39;</span>
+
+<span class="kn">from</span> <span class="nn">pprint</span> <span class="k">import</span> <span class="n">pprint</span>
+<span class="kn">from</span> <span class="nn">plasma.conf</span> <span class="k">import</span> <span class="n">conf</span>
+
+<span class="k">if</span> <span class="n">backend</span> <span class="o">==</span> <span class="s1">&#39;tf&#39;</span> <span class="ow">or</span> <span class="n">backend</span> <span class="o">==</span> <span class="s1">&#39;tensorflow&#39;</span><span class="p">:</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;CUDA_VISIBLE_DEVICES&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">MY_GPU</span><span class="p">)</span><span class="c1">#,mode=NanGuardMode&#39;</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;KERAS_BACKEND&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;tensorflow&#39;</span>
+    <span class="kn">import</span> <span class="nn">tensorflow</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">base_compile_dir</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">/tmp/</span><span class="si">{}</span><span class="s1">-</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;paths&#39;</span><span class="p">][</span><span class="s1">&#39;output_path&#39;</span><span class="p">],</span><span class="n">socket</span><span class="o">.</span><span class="n">gethostname</span><span class="p">(),</span><span class="n">task_index</span><span class="p">)</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;THEANO_FLAGS&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;device=gpu</span><span class="si">{}</span><span class="s1">,floatX=float32,base_compiledir=</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">MY_GPU</span><span class="p">,</span><span class="n">base_compile_dir</span><span class="p">)</span><span class="c1">#,mode=NanGuardMode&#39;</span>
+    <span class="kn">import</span> <span class="nn">theano</span>
+<span class="c1">#import keras</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_workers</span><span class="p">):</span>
+  <span class="n">comm</span><span class="o">.</span><span class="n">Barrier</span><span class="p">()</span>
+  <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">task_index</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;[</span><span class="si">{}</span><span class="s1">] importing Keras&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">task_index</span><span class="p">))</span>
+    <span class="kn">from</span> <span class="nn">keras</span> <span class="k">import</span> <span class="n">backend</span> <span class="k">as</span> <span class="n">K</span>
+    <span class="kn">from</span> <span class="nn">keras.layers</span> <span class="k">import</span> <span class="n">Input</span><span class="p">,</span><span class="n">Dense</span><span class="p">,</span> <span class="n">Dropout</span>
+    <span class="kn">from</span> <span class="nn">keras.layers.recurrent</span> <span class="k">import</span> <span class="n">LSTM</span>
+    <span class="kn">from</span> <span class="nn">keras.layers.wrappers</span> <span class="k">import</span> <span class="n">TimeDistributed</span>
+    <span class="kn">from</span> <span class="nn">keras.models</span> <span class="k">import</span> <span class="n">Model</span>
+    <span class="kn">from</span> <span class="nn">keras.optimizers</span> <span class="k">import</span> <span class="n">SGD</span>
+    <span class="kn">from</span> <span class="nn">keras.utils.generic_utils</span> <span class="k">import</span> <span class="n">Progbar</span> 
+    <span class="kn">import</span> <span class="nn">keras.callbacks</span> <span class="k">as</span> <span class="nn">cbks</span>
+
+<span class="kn">from</span> <span class="nn">plasma.models</span> <span class="k">import</span> <span class="n">builder</span>
+<span class="kn">from</span> <span class="nn">plasma.utils.evaluation</span> <span class="k">import</span> <span class="n">get_loss_from_list</span>
+<span class="kn">from</span> <span class="nn">plasma.utils.processing</span> <span class="k">import</span> <span class="n">concatenate_sublists</span>
+<span class="kn">from</span> <span class="nn">plasma.utils.performance</span> <span class="k">import</span> <span class="n">PerformanceAnalyzer</span>
+
+<span class="k">if</span> <span class="n">task_index</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="n">pprint</span><span class="p">(</span><span class="n">conf</span><span class="p">)</span>
+
+
+
+<span class="c1">###TODO add optimizers other than SGD</span>
+
+
+<div class="viewcode-block" id="MPIOptimizer"><a class="viewcode-back" href="../../../plasma.models.mpi_runner.MPIOptimizer.html#plasma.models.mpi_runner.MPIOptimizer">[docs]</a><span class="k">class</span> <span class="nc">MPIOptimizer</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">lr</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">lr</span> <span class="o">=</span> <span class="n">lr</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">iterations</span> <span class="o">=</span> <span class="mi">0</span>
+
+  <span class="k">def</span> <span class="nf">get_deltas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">raw_deltas</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+
+  <span class="k">def</span> <span class="nf">set_lr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">lr</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">lr</span> <span class="o">=</span> <span class="n">lr</span></div>
+
+<div class="viewcode-block" id="MPISGD"><a class="viewcode-back" href="../../../plasma.models.mpi_runner.MPISGD.html#plasma.models.mpi_runner.MPISGD">[docs]</a><span class="k">class</span> <span class="nc">MPISGD</span><span class="p">(</span><span class="n">MPIOptimizer</span><span class="p">):</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">lr</span><span class="p">):</span>
+    <span class="nb">super</span><span class="p">(</span><span class="n">MPISGD</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">lr</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">get_deltas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">raw_deltas</span><span class="p">):</span>
+    <span class="n">deltas</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">raw_deltas</span><span class="p">:</span>
+      <span class="n">deltas</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lr</span><span class="o">*</span><span class="n">g</span><span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">iterations</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="n">deltas</span></div>
+
+<div class="viewcode-block" id="MPIAdam"><a class="viewcode-back" href="../../../plasma.models.mpi_runner.MPIAdam.html#plasma.models.mpi_runner.MPIAdam">[docs]</a><span class="k">class</span> <span class="nc">MPIAdam</span><span class="p">(</span><span class="n">MPIOptimizer</span><span class="p">):</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">lr</span><span class="p">):</span>
+    <span class="nb">super</span><span class="p">(</span><span class="n">MPIAdam</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">lr</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">beta_1</span> <span class="o">=</span> <span class="mf">0.9</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">beta_2</span> <span class="o">=</span> <span class="mf">0.999</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">eps</span> <span class="o">=</span> <span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">8</span>
+
+  <span class="k">def</span> <span class="nf">get_deltas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">raw_deltas</span><span class="p">):</span>
+
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">iterations</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">m_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">g</span><span class="p">)</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">raw_deltas</span><span class="p">]</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">v_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">g</span><span class="p">)</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">raw_deltas</span><span class="p">]</span>
+
+    <span class="n">t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">iterations</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="n">lr_t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lr</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">beta_2</span><span class="o">**</span><span class="n">t</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">beta_1</span><span class="o">**</span><span class="n">t</span><span class="p">)</span>
+    <span class="n">deltas</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">g</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">raw_deltas</span><span class="p">):</span>
+      <span class="n">m_t</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">beta_1</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">m_list</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta_1</span><span class="p">)</span> <span class="o">*</span> <span class="n">g</span>
+      <span class="n">v_t</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">beta_2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">v_list</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta_2</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">g</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+      <span class="n">delta_t</span> <span class="o">=</span> <span class="n">lr_t</span> <span class="o">*</span> <span class="n">m_t</span> <span class="o">/</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">v_t</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">eps</span><span class="p">)</span>
+      <span class="n">deltas</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">delta_t</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">m_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">m_t</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">v_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">v_t</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">iterations</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="n">deltas</span></div>
+
+
+<div class="viewcode-block" id="Averager"><a class="viewcode-back" href="../../../plasma.models.mpi_runner.Averager.html#plasma.models.mpi_runner.Averager">[docs]</a><span class="k">class</span> <span class="nc">Averager</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">steps</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">val</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+  <span class="k">def</span> <span class="nf">add_val</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">val</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">val</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">steps</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">val</span> <span class="o">+</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="n">val</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">steps</span> <span class="o">+</span> <span class="mf">1.0</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">steps</span> <span class="o">+=</span> <span class="mi">1</span>
+
+  <span class="k">def</span> <span class="nf">get_val</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">val</span></div>
+
+
+<div class="viewcode-block" id="MPIModel"><a class="viewcode-back" href="../../../plasma.models.mpi_runner.MPIModel.html#plasma.models.mpi_runner.MPIModel">[docs]</a><span class="k">class</span> <span class="nc">MPIModel</span><span class="p">():</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">model</span><span class="p">,</span><span class="n">optimizer</span><span class="p">,</span><span class="n">comm</span><span class="p">,</span><span class="n">batch_iterator</span><span class="p">,</span><span class="n">batch_size</span><span class="p">,</span><span class="n">num_replicas</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span><span class="n">warmup_steps</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span><span class="n">lr</span><span class="o">=</span><span class="mf">0.01</span><span class="p">):</span>
+    <span class="c1"># random.seed(task_index)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">epoch</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span> <span class="o">=</span> <span class="n">optimizer</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">lr</span> <span class="o">=</span> <span class="n">lr</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">DUMMY_LR</span> <span class="o">=</span> <span class="mf">0.1</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">max_lr</span> <span class="o">=</span> <span class="mf">0.1</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">comm</span> <span class="o">=</span> <span class="n">comm</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span> <span class="o">=</span> <span class="n">batch_size</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">batch_iterator</span> <span class="o">=</span> <span class="n">batch_iterator</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span><span class="o">=</span><span class="n">warmup_steps</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">num_workers</span> <span class="o">=</span> <span class="n">comm</span><span class="o">.</span><span class="n">Get_size</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">task_index</span> <span class="o">=</span> <span class="n">comm</span><span class="o">.</span><span class="n">Get_rank</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">history</span> <span class="o">=</span> <span class="n">cbks</span><span class="o">.</span><span class="n">History</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">num_replicas</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">num_replicas</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">num_replicas</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_workers</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">num_replicas</span> <span class="o">=</span> <span class="n">num_workers</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">num_replicas</span> <span class="o">=</span> <span class="n">num_replicas</span>
+
+
+  <span class="k">def</span> <span class="nf">set_lr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">lr</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">lr</span> <span class="o">=</span> <span class="n">lr</span>
+
+  <span class="k">def</span> <span class="nf">save_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">path</span><span class="p">,</span><span class="n">overwrite</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">save_weights</span><span class="p">(</span><span class="n">path</span><span class="p">,</span><span class="n">overwrite</span><span class="o">=</span><span class="n">overwrite</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">load_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">path</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">load_weights</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">compile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">loss</span><span class="o">=</span><span class="s1">&#39;mse&#39;</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">optimizer</span><span class="o">=</span><span class="n">SGD</span><span class="p">(</span><span class="n">lr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">DUMMY_LR</span><span class="p">),</span><span class="n">loss</span><span class="o">=</span><span class="n">loss</span><span class="p">)</span>
+
+
+  <span class="k">def</span> <span class="nf">get_deltas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">X_batch</span><span class="p">,</span><span class="n">Y_batch</span><span class="p">,</span><span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="n">weights_before_update</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">get_weights</span><span class="p">()</span>
+
+    <span class="n">loss</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">train_on_batch</span><span class="p">(</span><span class="n">X_batch</span><span class="p">,</span><span class="n">Y_batch</span><span class="p">)</span>
+
+    <span class="n">weights_after_update</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">get_weights</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">set_weights</span><span class="p">(</span><span class="n">weights_before_update</span><span class="p">)</span>
+
+    <span class="n">deltas</span> <span class="o">=</span> <span class="n">subtract_params</span><span class="p">(</span><span class="n">weights_after_update</span><span class="p">,</span><span class="n">weights_before_update</span><span class="p">)</span>
+    <span class="n">deltas</span> <span class="o">=</span> <span class="n">multiply_params</span><span class="p">(</span><span class="n">deltas</span><span class="p">,</span><span class="mf">1.0</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">DUMMY_LR</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">deltas</span><span class="p">,</span><span class="n">loss</span>
+
+
+  <span class="k">def</span> <span class="nf">get_new_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">deltas</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">add_params</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">get_weights</span><span class="p">(),</span><span class="n">deltas</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">mpi_average_gradients</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">arr</span><span class="p">,</span><span class="n">num_replicas</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">num_replicas</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="n">num_replicas</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_workers</span> 
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">task_index</span> <span class="o">&gt;=</span> <span class="n">num_replicas</span><span class="p">:</span>
+      <span class="n">arr</span> <span class="o">*=</span> <span class="mf">0.0</span>
+    <span class="n">arr_global</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">Allreduce</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span><span class="n">arr_global</span><span class="p">,</span><span class="n">op</span><span class="o">=</span><span class="n">MPI</span><span class="o">.</span><span class="n">SUM</span><span class="p">)</span>
+    <span class="n">arr_global</span> <span class="o">/=</span> <span class="n">num_replicas</span>
+    <span class="k">return</span> <span class="n">arr_global</span>
+
+
+
+  <span class="k">def</span> <span class="nf">mpi_average_scalars</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">val</span><span class="p">,</span><span class="n">num_replicas</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">val_global</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mpi_sum_scalars</span><span class="p">(</span><span class="n">val</span><span class="p">,</span><span class="n">num_replicas</span><span class="p">)</span>
+    <span class="n">val_global</span> <span class="o">/=</span> <span class="n">num_replicas</span>
+    <span class="k">return</span> <span class="n">val_global</span>
+
+
+  <span class="k">def</span> <span class="nf">mpi_sum_scalars</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">val</span><span class="p">,</span><span class="n">num_replicas</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">num_replicas</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="n">num_replicas</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_workers</span> 
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">task_index</span> <span class="o">&gt;=</span> <span class="n">num_replicas</span><span class="p">:</span>
+      <span class="n">val</span> <span class="o">*=</span> <span class="mf">0.0</span>
+    <span class="n">val_global</span> <span class="o">=</span> <span class="mf">0.0</span> 
+    <span class="n">val_global</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">allreduce</span><span class="p">(</span><span class="n">val</span><span class="p">,</span><span class="n">op</span><span class="o">=</span><span class="n">MPI</span><span class="o">.</span><span class="n">SUM</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">val_global</span>
+
+
+
+  <span class="k">def</span> <span class="nf">sync_deltas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">deltas</span><span class="p">,</span><span class="n">num_replicas</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">global_deltas</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="c1">#default is to reduce the deltas from all workers</span>
+    <span class="k">for</span> <span class="n">delta</span> <span class="ow">in</span> <span class="n">deltas</span><span class="p">:</span>
+      <span class="n">global_deltas</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mpi_average_gradients</span><span class="p">(</span><span class="n">delta</span><span class="p">,</span><span class="n">num_replicas</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">global_deltas</span> 
+
+  <span class="k">def</span> <span class="nf">set_new_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">deltas</span><span class="p">,</span><span class="n">num_replicas</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">global_deltas</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sync_deltas</span><span class="p">(</span><span class="n">deltas</span><span class="p">,</span><span class="n">num_replicas</span><span class="p">)</span>
+    <span class="n">effective_lr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_effective_lr</span><span class="p">(</span><span class="n">num_replicas</span><span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="o">.</span><span class="n">set_lr</span><span class="p">(</span><span class="n">effective_lr</span><span class="p">)</span>
+    <span class="n">global_deltas</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="o">.</span><span class="n">get_deltas</span><span class="p">(</span><span class="n">global_deltas</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">comm</span><span class="o">.</span><span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+      <span class="n">new_weights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_new_weights</span><span class="p">(</span><span class="n">global_deltas</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">new_weights</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">new_weights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">bcast</span><span class="p">(</span><span class="n">new_weights</span><span class="p">,</span><span class="n">root</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">set_weights</span><span class="p">(</span><span class="n">new_weights</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">build_callbacks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">conf</span><span class="p">,</span><span class="n">callbacks_list</span><span class="p">):</span>
+      <span class="c1">#prepare callbacks to pass here</span>
+      <span class="c1">#other possible Callbacks to add: RemoteMonitor, LearningRateScheduler</span>
+      <span class="c1">#https://github.com/fchollet/keras/blob/fbc9a18f0abc5784607cd4a2a3886558efa3f794/keras/callbacks.py</span>
+
+      <span class="c1">#potentially move to conf.yaml</span>
+      <span class="n">mode</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;callbacks&#39;</span><span class="p">][</span><span class="s1">&#39;mode&#39;</span><span class="p">]</span>
+      <span class="n">monitor</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;callbacks&#39;</span><span class="p">][</span><span class="s1">&#39;monitor&#39;</span><span class="p">]</span>
+      <span class="n">patience</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;callbacks&#39;</span><span class="p">][</span><span class="s1">&#39;patience&#39;</span><span class="p">]</span>
+      <span class="n">callback_save_path</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;paths&#39;</span><span class="p">][</span><span class="s1">&#39;callback_save_path&#39;</span><span class="p">]</span>
+      <span class="n">callbacks_list</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;callbacks&#39;</span><span class="p">][</span><span class="s1">&#39;list&#39;</span><span class="p">]</span>
+
+      <span class="n">callbacks</span> <span class="o">=</span> <span class="p">[</span><span class="n">cbks</span><span class="o">.</span><span class="n">BaseLogger</span><span class="p">()]</span>
+      <span class="n">callbacks</span> <span class="o">+=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">history</span><span class="p">]</span>
+      <span class="n">callbacks</span> <span class="o">+=</span> <span class="p">[</span><span class="n">cbks</span><span class="o">.</span><span class="n">CSVLogger</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">callbacks-</span><span class="si">{}</span><span class="s2">.log&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">callback_save_path</span><span class="p">,</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">-%H-%M-%S&quot;</span><span class="p">)))]</span>
+
+      <span class="k">if</span> <span class="s2">&quot;earlystop&quot;</span> <span class="ow">in</span> <span class="n">callbacks_list</span><span class="p">:</span> 
+          <span class="n">callbacks</span> <span class="o">+=</span> <span class="p">[</span><span class="n">cbks</span><span class="o">.</span><span class="n">EarlyStopping</span><span class="p">(</span><span class="n">patience</span><span class="o">=</span><span class="n">patience</span><span class="p">,</span> <span class="n">monitor</span><span class="o">=</span><span class="n">monitor</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">)]</span>
+      <span class="k">if</span> <span class="s2">&quot;lr_scheduler&quot;</span> <span class="ow">in</span> <span class="n">callbacks_list</span><span class="p">:</span> 
+          <span class="k">pass</span>
+      
+      <span class="k">return</span> <span class="n">cbks</span><span class="o">.</span><span class="n">CallbackList</span><span class="p">(</span><span class="n">callbacks</span><span class="p">)</span>
+
+
+  <span class="k">def</span> <span class="nf">train_epoch</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">verbose</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">loss_averager</span> <span class="o">=</span> <span class="n">Averager</span><span class="p">()</span>
+    <span class="n">t_start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+    <span class="n">batch_iterator_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_iterator</span><span class="p">()</span>
+    <span class="n">num_so_far</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">num_total</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">ave_loss</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="n">curr_loss</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="n">t0</span> <span class="o">=</span> <span class="mi">0</span> 
+    <span class="n">t1</span> <span class="o">=</span> <span class="mi">0</span> 
+    <span class="n">t2</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">while</span> <span class="n">num_so_far</span> <span class="o">&lt;</span> <span class="n">num_total</span><span class="p">:</span>
+
+      <span class="k">try</span><span class="p">:</span>
+          <span class="n">batch_xs</span><span class="p">,</span><span class="n">batch_ys</span><span class="p">,</span><span class="n">reset_states_now</span><span class="p">,</span><span class="n">num_so_far</span><span class="p">,</span><span class="n">num_total</span> <span class="o">=</span> <span class="n">batch_iterator_func</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
+      <span class="k">except</span><span class="p">:</span>
+          <span class="n">batch_iterator_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_iterator</span><span class="p">()</span>
+          <span class="n">batch_xs</span><span class="p">,</span><span class="n">batch_ys</span><span class="p">,</span><span class="n">reset_states_now</span><span class="p">,</span><span class="n">num_so_far</span><span class="p">,</span><span class="n">num_total</span> <span class="o">=</span> <span class="n">batch_iterator_func</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
+
+      <span class="k">if</span> <span class="n">reset_states_now</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">reset_states</span><span class="p">()</span>
+
+      <span class="n">warmup_phase</span> <span class="o">=</span> <span class="p">(</span><span class="n">step</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">epoch</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+      <span class="n">num_replicas</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">warmup_phase</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_replicas</span>
+
+      <span class="n">num_so_far</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mpi_sum_scalars</span><span class="p">(</span><span class="n">num_so_far</span><span class="p">,</span><span class="n">num_replicas</span><span class="p">)</span>
+      
+      <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+      <span class="n">deltas</span><span class="p">,</span><span class="n">loss</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_deltas</span><span class="p">(</span><span class="n">batch_xs</span><span class="p">,</span><span class="n">batch_ys</span><span class="p">,</span><span class="n">verbose</span><span class="p">)</span>
+      <span class="n">t1</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">set_new_weights</span><span class="p">(</span><span class="n">deltas</span><span class="p">,</span><span class="n">num_replicas</span><span class="p">)</span>
+      <span class="n">t2</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+      <span class="n">write_str_0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calculate_speed</span><span class="p">(</span><span class="n">t0</span><span class="p">,</span><span class="n">t1</span><span class="p">,</span><span class="n">t2</span><span class="p">,</span><span class="n">num_replicas</span><span class="p">)</span>
+
+      <span class="n">curr_loss</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mpi_average_scalars</span><span class="p">(</span><span class="mf">1.0</span><span class="o">*</span><span class="n">loss</span><span class="p">,</span><span class="n">num_replicas</span><span class="p">)</span>
+      <span class="n">loss_averager</span><span class="o">.</span><span class="n">add_val</span><span class="p">(</span><span class="n">curr_loss</span><span class="p">)</span>
+      <span class="n">ave_loss</span> <span class="o">=</span> <span class="n">loss_averager</span><span class="o">.</span><span class="n">get_val</span><span class="p">()</span>
+      <span class="n">eta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimate_remaining_time</span><span class="p">(</span><span class="n">t0</span> <span class="o">-</span> <span class="n">t_start</span><span class="p">,</span><span class="n">num_so_far</span><span class="p">,</span><span class="n">num_total</span><span class="p">)</span>
+      <span class="n">write_str</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\r</span><span class="s1">[</span><span class="si">{}</span><span class="s1">] step: </span><span class="si">{}</span><span class="s1"> [ETA: </span><span class="si">{:.2f}</span><span class="s1">s] [</span><span class="si">{:.2f}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">], loss: </span><span class="si">{:.5f}</span><span class="s1"> [</span><span class="si">{:.5f}</span><span class="s1">] | &#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">task_index</span><span class="p">,</span><span class="n">step</span><span class="p">,</span><span class="n">eta</span><span class="p">,</span><span class="mf">1.0</span><span class="o">*</span><span class="n">num_so_far</span><span class="p">,</span><span class="n">num_total</span><span class="p">,</span><span class="n">ave_loss</span><span class="p">,</span><span class="n">curr_loss</span><span class="p">)</span>
+      <span class="n">print_unique</span><span class="p">(</span><span class="n">write_str</span> <span class="o">+</span> <span class="n">write_str_0</span><span class="p">)</span>
+      <span class="n">step</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">epoch</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="n">print_unique</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Epoch </span><span class="si">{}</span><span class="s1"> finished in </span><span class="si">{:.2f}</span><span class="s1"> seconds.</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">epoch</span><span class="p">,</span><span class="n">t2</span> <span class="o">-</span> <span class="n">t_start</span><span class="p">))</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">step</span><span class="p">,</span><span class="n">ave_loss</span><span class="p">,</span><span class="n">curr_loss</span><span class="p">,</span><span class="n">num_so_far</span><span class="p">)</span>
+
+
+  <span class="k">def</span> <span class="nf">estimate_remaining_time</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">time_so_far</span><span class="p">,</span><span class="n">work_so_far</span><span class="p">,</span><span class="n">work_total</span><span class="p">):</span>
+    <span class="n">eps</span> <span class="o">=</span> <span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">6</span>
+    <span class="n">total_time</span> <span class="o">=</span> <span class="mf">1.0</span><span class="o">*</span><span class="n">time_so_far</span><span class="o">*</span><span class="n">work_total</span><span class="o">/</span><span class="p">(</span><span class="n">work_so_far</span> <span class="o">+</span> <span class="n">eps</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">total_time</span> <span class="o">-</span> <span class="n">time_so_far</span>
+
+  <span class="k">def</span> <span class="nf">get_effective_lr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">num_replicas</span><span class="p">):</span>
+    <span class="n">effective_lr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lr</span> <span class="o">*</span> <span class="n">num_replicas</span>
+    <span class="k">if</span> <span class="n">effective_lr</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_lr</span><span class="p">:</span>
+      <span class="n">print_unique</span><span class="p">(</span><span class="s1">&#39;Warning: effective learning rate set to </span><span class="si">{}</span><span class="s1">, larger than maximum </span><span class="si">{}</span><span class="s1">. Clipping.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">effective_lr</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">max_lr</span><span class="p">))</span>
+      <span class="n">effective_lr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_lr</span>
+    <span class="k">return</span> <span class="n">effective_lr</span>
+
+  <span class="k">def</span> <span class="nf">get_effective_batch_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">num_replicas</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="o">*</span><span class="n">num_replicas</span>
+
+  <span class="k">def</span> <span class="nf">calculate_speed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t0</span><span class="p">,</span><span class="n">t_after_deltas</span><span class="p">,</span><span class="n">t_after_update</span><span class="p">,</span><span class="n">num_replicas</span><span class="p">,</span><span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="n">effective_batch_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_effective_batch_size</span><span class="p">(</span><span class="n">num_replicas</span><span class="p">)</span>
+    <span class="n">t_calculate</span> <span class="o">=</span> <span class="n">t_after_deltas</span> <span class="o">-</span> <span class="n">t0</span>
+    <span class="n">t_sync</span> <span class="o">=</span> <span class="n">t_after_update</span> <span class="o">-</span> <span class="n">t_after_deltas</span>
+    <span class="n">t_tot</span> <span class="o">=</span> <span class="n">t_after_update</span> <span class="o">-</span> <span class="n">t0</span>
+
+    <span class="n">examples_per_sec</span> <span class="o">=</span> <span class="n">effective_batch_size</span><span class="o">/</span><span class="n">t_tot</span>
+    <span class="n">frac_calculate</span> <span class="o">=</span> <span class="n">t_calculate</span><span class="o">/</span><span class="n">t_tot</span>
+    <span class="n">frac_sync</span> <span class="o">=</span> <span class="n">t_sync</span><span class="o">/</span><span class="n">t_tot</span>
+
+    <span class="n">print_str</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{:.2E}</span><span class="s1"> Examples/sec | </span><span class="si">{:.2E}</span><span class="s1"> sec/batch [</span><span class="si">{:.1%}</span><span class="s1"> calc., </span><span class="si">{:.1%}</span><span class="s1"> synch.]&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">examples_per_sec</span><span class="p">,</span><span class="n">t_tot</span><span class="p">,</span><span class="n">frac_calculate</span><span class="p">,</span><span class="n">frac_sync</span><span class="p">)</span>
+    <span class="n">print_str</span> <span class="o">+=</span> <span class="s1">&#39;[batch = </span><span class="si">{}</span><span class="s1"> = </span><span class="si">{}</span><span class="s1">*</span><span class="si">{}</span><span class="s1">] [lr = </span><span class="si">{:.2E}</span><span class="s1"> = </span><span class="si">{:.2E}</span><span class="s1">*</span><span class="si">{}</span><span class="s1">]&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">effective_batch_size</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span><span class="n">num_replicas</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">get_effective_lr</span><span class="p">(</span><span class="n">num_replicas</span><span class="p">),</span><span class="bp">self</span><span class="o">.</span><span class="n">lr</span><span class="p">,</span><span class="n">num_replicas</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+      <span class="n">print_unique</span><span class="p">(</span><span class="n">print_str</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">print_str</span></div>
+
+
+
+<div class="viewcode-block" id="print_unique"><a class="viewcode-back" href="../../../plasma.models.mpi_runner.print_unique.html#plasma.models.mpi_runner.print_unique">[docs]</a><span class="k">def</span> <span class="nf">print_unique</span><span class="p">(</span><span class="n">print_str</span><span class="p">):</span>
+  <span class="k">if</span> <span class="n">task_index</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">print_str</span><span class="p">)</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="print_all"><a class="viewcode-back" href="../../../plasma.models.mpi_runner.print_all.html#plasma.models.mpi_runner.print_all">[docs]</a><span class="k">def</span> <span class="nf">print_all</span><span class="p">(</span><span class="n">print_str</span><span class="p">):</span>
+  <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;[</span><span class="si">{}</span><span class="s1">] &#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">task_index</span><span class="p">)</span> <span class="o">+</span> <span class="n">print_str</span><span class="p">)</span>
+  <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="multiply_params"><a class="viewcode-back" href="../../../plasma.models.mpi_runner.multiply_params.html#plasma.models.mpi_runner.multiply_params">[docs]</a><span class="k">def</span> <span class="nf">multiply_params</span><span class="p">(</span><span class="n">params</span><span class="p">,</span><span class="n">eps</span><span class="p">):</span>
+  <span class="k">return</span> <span class="p">[</span><span class="n">el</span><span class="o">*</span><span class="n">eps</span> <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">params</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="subtract_params"><a class="viewcode-back" href="../../../plasma.models.mpi_runner.subtract_params.html#plasma.models.mpi_runner.subtract_params">[docs]</a><span class="k">def</span> <span class="nf">subtract_params</span><span class="p">(</span><span class="n">params1</span><span class="p">,</span><span class="n">params2</span><span class="p">):</span>
+  <span class="k">return</span> <span class="p">[</span><span class="n">p1</span> <span class="o">-</span> <span class="n">p2</span> <span class="k">for</span> <span class="n">p1</span><span class="p">,</span><span class="n">p2</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">params1</span><span class="p">,</span><span class="n">params2</span><span class="p">)]</span></div>
+
+<div class="viewcode-block" id="add_params"><a class="viewcode-back" href="../../../plasma.models.mpi_runner.add_params.html#plasma.models.mpi_runner.add_params">[docs]</a><span class="k">def</span> <span class="nf">add_params</span><span class="p">(</span><span class="n">params1</span><span class="p">,</span><span class="n">params2</span><span class="p">):</span>
+  <span class="k">return</span> <span class="p">[</span><span class="n">p1</span> <span class="o">+</span> <span class="n">p2</span> <span class="k">for</span> <span class="n">p1</span><span class="p">,</span><span class="n">p2</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">params1</span><span class="p">,</span><span class="n">params2</span><span class="p">)]</span></div>
+
+
+<div class="viewcode-block" id="get_shot_list_path"><a class="viewcode-back" href="../../../plasma.models.mpi_runner.get_shot_list_path.html#plasma.models.mpi_runner.get_shot_list_path">[docs]</a><span class="k">def</span> <span class="nf">get_shot_list_path</span><span class="p">(</span><span class="n">conf</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;paths&#39;</span><span class="p">][</span><span class="s1">&#39;base_path&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;/normalization/shot_lists.npz&#39;</span> <span class="c1">#kyle: not compatible with flexible conf.py hierarchy </span></div>
+
+<div class="viewcode-block" id="save_shotlists"><a class="viewcode-back" href="../../../plasma.models.mpi_runner.save_shotlists.html#plasma.models.mpi_runner.save_shotlists">[docs]</a><span class="k">def</span> <span class="nf">save_shotlists</span><span class="p">(</span><span class="n">conf</span><span class="p">,</span><span class="n">shot_list_train</span><span class="p">,</span><span class="n">shot_list_validate</span><span class="p">,</span><span class="n">shot_list_test</span><span class="p">):</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">get_shot_list_path</span><span class="p">(</span><span class="n">conf</span><span class="p">)</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">savez</span><span class="p">(</span><span class="n">path</span><span class="p">,</span><span class="n">shot_list_train</span><span class="o">=</span><span class="n">shot_list_train</span><span class="p">,</span><span class="n">shot_list_validate</span><span class="o">=</span><span class="n">shot_list_validate</span><span class="p">,</span><span class="n">shot_list_test</span><span class="o">=</span><span class="n">shot_list_test</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="load_shotlists"><a class="viewcode-back" href="../../../plasma.models.mpi_runner.load_shotlists.html#plasma.models.mpi_runner.load_shotlists">[docs]</a><span class="k">def</span> <span class="nf">load_shotlists</span><span class="p">(</span><span class="n">conf</span><span class="p">):</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">get_shot_list_path</span><span class="p">(</span><span class="n">conf</span><span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">shot_list_train</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;shot_list_train&#39;</span><span class="p">][()]</span>
+    <span class="n">shot_list_validate</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;shot_list_validate&#39;</span><span class="p">][()]</span>
+    <span class="n">shot_list_test</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;shot_list_test&#39;</span><span class="p">][()]</span>
+    <span class="k">return</span> <span class="n">shot_list_train</span><span class="p">,</span><span class="n">shot_list_validate</span><span class="p">,</span><span class="n">shot_list_test</span></div>
+
+<span class="c1">#shot_list_train,shot_list_validate,shot_list_test = load_shotlists(conf)</span>
+
+<div class="viewcode-block" id="mpi_make_predictions"><a class="viewcode-back" href="../../../plasma.models.mpi_runner.mpi_make_predictions.html#plasma.models.mpi_runner.mpi_make_predictions">[docs]</a><span class="k">def</span> <span class="nf">mpi_make_predictions</span><span class="p">(</span><span class="n">conf</span><span class="p">,</span><span class="n">shot_list</span><span class="p">,</span><span class="n">loader</span><span class="p">):</span>
+
+    <span class="n">specific_builder</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">ModelBuilder</span><span class="p">(</span><span class="n">conf</span><span class="p">)</span> 
+
+    <span class="n">y_prime</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">y_gold</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">disruptive</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">model</span> <span class="o">=</span> <span class="n">specific_builder</span><span class="o">.</span><span class="n">build_model</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">specific_builder</span><span class="o">.</span><span class="n">load_model_weights</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">reset_states</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">task_index</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">pbar</span> <span class="o">=</span>  <span class="n">Progbar</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">shot_list</span><span class="p">))</span>
+    <span class="n">shot_sublists</span> <span class="o">=</span> <span class="n">shot_list</span><span class="o">.</span><span class="n">sublists</span><span class="p">(</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;pred_batch_size&#39;</span><span class="p">],</span><span class="n">do_shuffle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span><span class="n">equal_size</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">y_prime_global</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">y_gold_global</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">disruptive_global</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="n">task_index</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">loader</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="kc">False</span>
+
+
+    <span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">shot_sublist</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">shot_sublists</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="n">num_workers</span> <span class="o">==</span> <span class="n">task_index</span><span class="p">:</span>
+            <span class="n">X</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">shot_lengths</span><span class="p">,</span><span class="n">disr</span> <span class="o">=</span> <span class="n">loader</span><span class="o">.</span><span class="n">load_as_X_y_pred</span><span class="p">(</span><span class="n">shot_sublist</span><span class="p">)</span>
+            <span class="c1">#load data and fit on data</span>
+            <span class="n">y_p</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">,</span>
+                <span class="n">batch_size</span><span class="o">=</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;pred_batch_size&#39;</span><span class="p">])</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">reset_states</span><span class="p">()</span>
+            <span class="n">y_p</span> <span class="o">=</span> <span class="n">loader</span><span class="o">.</span><span class="n">batch_output_to_array</span><span class="p">(</span><span class="n">y_p</span><span class="p">)</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">loader</span><span class="o">.</span><span class="n">batch_output_to_array</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+            <span class="c1">#cut arrays back</span>
+            <span class="n">y_p</span> <span class="o">=</span> <span class="p">[</span><span class="n">arr</span><span class="p">[:</span><span class="n">shot_lengths</span><span class="p">[</span><span class="n">j</span><span class="p">]]</span> <span class="k">for</span> <span class="p">(</span><span class="n">j</span><span class="p">,</span><span class="n">arr</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">y_p</span><span class="p">)]</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="p">[</span><span class="n">arr</span><span class="p">[:</span><span class="n">shot_lengths</span><span class="p">[</span><span class="n">j</span><span class="p">]]</span> <span class="k">for</span> <span class="p">(</span><span class="n">j</span><span class="p">,</span><span class="n">arr</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">y</span><span class="p">)]</span>
+
+            <span class="c1"># print(&#39;Shots {}/{}&#39;.format(i*num_at_once + j*1.0*len(shot_sublist)/len(X_list),len(shot_list_train)))</span>
+            <span class="n">y_prime</span> <span class="o">+=</span> <span class="n">y_p</span>
+            <span class="n">y_gold</span> <span class="o">+=</span> <span class="n">y</span>
+            <span class="n">disruptive</span> <span class="o">+=</span> <span class="n">disr</span>
+            <span class="c1"># print_all(&#39;\nFinished with i = {}&#39;.format(i))</span>
+
+        <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="n">num_workers</span> <span class="o">==</span> <span class="n">num_workers</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">i</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">shot_sublists</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">comm</span><span class="o">.</span><span class="n">Barrier</span><span class="p">()</span>
+            <span class="n">y_prime_global</span> <span class="o">+=</span> <span class="n">concatenate_sublists</span><span class="p">(</span><span class="n">comm</span><span class="o">.</span><span class="n">allgather</span><span class="p">(</span><span class="n">y_prime</span><span class="p">))</span>
+            <span class="n">y_gold_global</span> <span class="o">+=</span> <span class="n">concatenate_sublists</span><span class="p">(</span><span class="n">comm</span><span class="o">.</span><span class="n">allgather</span><span class="p">(</span><span class="n">y_gold</span><span class="p">))</span>
+            <span class="n">disruptive_global</span> <span class="o">+=</span> <span class="n">concatenate_sublists</span><span class="p">(</span><span class="n">comm</span><span class="o">.</span><span class="n">allgather</span><span class="p">(</span><span class="n">disruptive</span><span class="p">))</span>
+            <span class="n">comm</span><span class="o">.</span><span class="n">Barrier</span><span class="p">()</span>
+            <span class="n">y_prime</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">y_gold</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">disruptive</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="c1"># print_all(&#39;\nFinished subepoch with lists len(y_prime_global), gold, disruptive = {},{},{}&#39;.format(len(y_prime_global),len(y_gold_global),len(disruptive_global)))</span>
+
+        <span class="k">if</span> <span class="n">task_index</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">pbar</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="mf">1.0</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">shot_sublist</span><span class="p">))</span>
+
+    <span class="n">y_prime_global</span> <span class="o">=</span> <span class="n">y_prime_global</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="n">shot_list</span><span class="p">)]</span>
+    <span class="n">y_gold_global</span> <span class="o">=</span> <span class="n">y_gold_global</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="n">shot_list</span><span class="p">)]</span>
+    <span class="n">disruptive_global</span> <span class="o">=</span> <span class="n">disruptive_global</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="n">shot_list</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">y_prime_global</span><span class="p">,</span><span class="n">y_gold_global</span><span class="p">,</span><span class="n">disruptive_global</span></div>
+
+
+<div class="viewcode-block" id="mpi_make_predictions_and_evaluate"><a class="viewcode-back" href="../../../plasma.models.mpi_runner.mpi_make_predictions_and_evaluate.html#plasma.models.mpi_runner.mpi_make_predictions_and_evaluate">[docs]</a><span class="k">def</span> <span class="nf">mpi_make_predictions_and_evaluate</span><span class="p">(</span><span class="n">conf</span><span class="p">,</span><span class="n">shot_list</span><span class="p">,</span><span class="n">loader</span><span class="p">):</span>
+    <span class="n">y_prime</span><span class="p">,</span><span class="n">y_gold</span><span class="p">,</span><span class="n">disruptive</span> <span class="o">=</span> <span class="n">mpi_make_predictions</span><span class="p">(</span><span class="n">conf</span><span class="p">,</span><span class="n">shot_list</span><span class="p">,</span><span class="n">loader</span><span class="p">)</span>
+    <span class="n">analyzer</span> <span class="o">=</span> <span class="n">PerformanceAnalyzer</span><span class="p">(</span><span class="n">conf</span><span class="o">=</span><span class="n">conf</span><span class="p">)</span>
+    <span class="n">roc_area</span> <span class="o">=</span> <span class="n">analyzer</span><span class="o">.</span><span class="n">get_roc_area</span><span class="p">(</span><span class="n">y_prime</span><span class="p">,</span><span class="n">y_gold</span><span class="p">,</span><span class="n">disruptive</span><span class="p">)</span>
+    <span class="n">loss</span> <span class="o">=</span> <span class="n">get_loss_from_list</span><span class="p">(</span><span class="n">y_prime</span><span class="p">,</span><span class="n">y_gold</span><span class="p">,</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][</span><span class="s1">&#39;target&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">loss</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">roc_area</span><span class="p">,</span><span class="n">loss</span></div>
+
+
+<div class="viewcode-block" id="mpi_train"><a class="viewcode-back" href="../../../plasma.models.mpi_runner.mpi_train.html#plasma.models.mpi_runner.mpi_train">[docs]</a><span class="k">def</span> <span class="nf">mpi_train</span><span class="p">(</span><span class="n">conf</span><span class="p">,</span><span class="n">shot_list_train</span><span class="p">,</span><span class="n">shot_list_validate</span><span class="p">,</span><span class="n">loader</span><span class="p">,</span> <span class="n">callbacks_list</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>   
+
+    <span class="n">specific_builder</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">ModelBuilder</span><span class="p">(</span><span class="n">conf</span><span class="p">)</span>
+    <span class="n">train_model</span><span class="p">,</span><span class="n">test_model</span> <span class="o">=</span> <span class="n">specific_builder</span><span class="o">.</span><span class="n">build_train_test_models</span><span class="p">()</span>
+
+    <span class="c1">#load the latest epoch we did. Returns -1 if none exist yet</span>
+    <span class="n">e</span> <span class="o">=</span> <span class="n">specific_builder</span><span class="o">.</span><span class="n">load_model_weights</span><span class="p">(</span><span class="n">train_model</span><span class="p">)</span>
+
+    <span class="n">num_epochs</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;training&#39;</span><span class="p">][</span><span class="s1">&#39;num_epochs&#39;</span><span class="p">]</span>
+    <span class="n">lr_decay</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;lr_decay&#39;</span><span class="p">]</span>
+    <span class="n">batch_size</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;training&#39;</span><span class="p">][</span><span class="s1">&#39;batch_size&#39;</span><span class="p">]</span>
+    <span class="n">lr</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;lr&#39;</span><span class="p">]</span>
+    <span class="n">warmup_steps</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;warmup_steps&#39;</span><span class="p">]</span>
+    <span class="n">optimizer</span> <span class="o">=</span> <span class="n">MPIAdam</span><span class="p">(</span><span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1"> epochs left to go&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">num_epochs</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">e</span><span class="p">))</span>
+
+    <span class="n">batch_generator</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">loader</span><span class="o">.</span><span class="n">training_batch_generator</span><span class="p">,</span><span class="n">shot_list</span><span class="o">=</span><span class="n">shot_list_train</span><span class="p">)</span>
+
+    <span class="n">mpi_model</span> <span class="o">=</span> <span class="n">MPIModel</span><span class="p">(</span><span class="n">train_model</span><span class="p">,</span><span class="n">optimizer</span><span class="p">,</span><span class="n">comm</span><span class="p">,</span><span class="n">batch_generator</span><span class="p">,</span><span class="n">batch_size</span><span class="p">,</span><span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">,</span><span class="n">warmup_steps</span> <span class="o">=</span> <span class="n">warmup_steps</span><span class="p">)</span>
+    <span class="n">mpi_model</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][</span><span class="s1">&#39;target&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">loss</span><span class="p">)</span>
+
+    <span class="n">callbacks</span> <span class="o">=</span> <span class="n">mpi_model</span><span class="o">.</span><span class="n">build_callbacks</span><span class="p">(</span><span class="n">conf</span><span class="p">,</span><span class="n">callbacks_list</span><span class="p">)</span>
+
+    <span class="n">callbacks</span><span class="o">.</span><span class="n">set_model</span><span class="p">(</span><span class="n">mpi_model</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
+    <span class="n">callback_metrics</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;callbacks&#39;</span><span class="p">][</span><span class="s1">&#39;metrics&#39;</span><span class="p">]</span>
+
+    <span class="n">callbacks</span><span class="o">.</span><span class="n">set_params</span><span class="p">({</span>
+        <span class="s1">&#39;nb_epoch&#39;</span><span class="p">:</span> <span class="n">num_epochs</span><span class="p">,</span>
+        <span class="s1">&#39;metrics&#39;</span><span class="p">:</span> <span class="n">callback_metrics</span><span class="p">,</span>
+    <span class="p">})</span>
+    <span class="n">callbacks</span><span class="o">.</span><span class="n">on_train_begin</span><span class="p">()</span>
+
+    <span class="k">while</span> <span class="n">e</span> <span class="o">&lt;</span> <span class="n">num_epochs</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+        <span class="n">callbacks</span><span class="o">.</span><span class="n">on_epoch_begin</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+        <span class="n">e</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">mpi_model</span><span class="o">.</span><span class="n">set_lr</span><span class="p">(</span><span class="n">lr</span><span class="o">*</span><span class="n">lr_decay</span><span class="o">**</span><span class="n">e</span><span class="p">)</span>
+        <span class="n">print_unique</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Epoch </span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">e</span><span class="p">,</span><span class="n">num_epochs</span><span class="p">))</span>
+
+        <span class="p">(</span><span class="n">step</span><span class="p">,</span><span class="n">ave_loss</span><span class="p">,</span><span class="n">curr_loss</span><span class="p">,</span><span class="n">num_so_far</span><span class="p">)</span> <span class="o">=</span> <span class="n">mpi_model</span><span class="o">.</span><span class="n">train_epoch</span><span class="p">()</span>
+
+        <span class="n">loader</span><span class="o">.</span><span class="n">verbose</span><span class="o">=</span><span class="kc">False</span> <span class="c1">#True during the first iteration</span>
+        <span class="k">if</span> <span class="n">task_index</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">specific_builder</span><span class="o">.</span><span class="n">save_model_weights</span><span class="p">(</span><span class="n">train_model</span><span class="p">,</span><span class="n">e</span><span class="p">)</span>
+
+        <span class="n">epoch_logs</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">roc_area</span><span class="p">,</span><span class="n">loss</span> <span class="o">=</span> <span class="n">mpi_make_predictions_and_evaluate</span><span class="p">(</span><span class="n">conf</span><span class="p">,</span><span class="n">shot_list_validate</span><span class="p">,</span><span class="n">loader</span><span class="p">)</span>
+
+        <span class="c1">#validation_losses.append(loss)</span>
+        <span class="c1">#validation_roc.append(roc_area)</span>
+        <span class="c1">#training_losses.append(ave_loss)</span>
+
+        <span class="n">epoch_logs</span><span class="p">[</span><span class="s1">&#39;val_roc&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">roc_area</span> 
+        <span class="n">epoch_logs</span><span class="p">[</span><span class="s1">&#39;val_loss&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">loss</span>
+        <span class="n">epoch_logs</span><span class="p">[</span><span class="s1">&#39;train_loss&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ave_loss</span>
+
+        <span class="k">if</span> <span class="n">task_index</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;=========Summary======== for epoch</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">step</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Training Loss: </span><span class="si">{:.3e}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ave_loss</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Validation Loss: </span><span class="si">{:.3e}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">loss</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Validation ROC: </span><span class="si">{:.4f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">roc_area</span><span class="p">))</span>
+
+            <span class="n">callbacks</span><span class="o">.</span><span class="n">on_epoch_end</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">epoch_logs</span><span class="p">)</span>
+
+    <span class="n">callbacks</span><span class="o">.</span><span class="n">on_train_end</span><span class="p">()</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">FRNN 0.0.2 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, FRNN group.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.2.
+    </div>
+  </body>
+</html>

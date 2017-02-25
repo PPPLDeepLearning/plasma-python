@@ -1,0 +1,351 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>plasma.models.runner &#8212; FRNN 0.0.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.0.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">FRNN 0.0.2 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for plasma.models.runner</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
+<span class="kn">import</span> <span class="nn">matplotlib</span>
+<span class="n">matplotlib</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s1">&#39;Agg&#39;</span><span class="p">)</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">itertools</span> <span class="k">import</span> <span class="n">imap</span>
+
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="k">import</span> <span class="n">partial</span>
+<span class="kn">import</span> <span class="nn">pathos.multiprocessing</span> <span class="k">as</span> <span class="nn">mp</span>
+
+<span class="kn">from</span> <span class="nn">plasma.conf</span> <span class="k">import</span> <span class="n">conf</span>
+<span class="kn">from</span> <span class="nn">plasma.models.loader</span> <span class="k">import</span> <span class="n">Loader</span>
+<span class="kn">from</span> <span class="nn">plasma.utils.performance</span> <span class="k">import</span> <span class="n">PerformanceAnalyzer</span>
+<span class="kn">from</span> <span class="nn">plasma.utils.evaluation</span> <span class="k">import</span> <span class="o">*</span>
+
+
+<div class="viewcode-block" id="train"><a class="viewcode-back" href="../../../plasma.models.runner.train.html#plasma.models.runner.train">[docs]</a><span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="n">conf</span><span class="p">,</span><span class="n">shot_list_train</span><span class="p">,</span><span class="n">loader</span><span class="p">):</span>
+
+    <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">validation_losses</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">validation_roc</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">training_losses</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;training&#39;</span><span class="p">][</span><span class="s1">&#39;validation_frac&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">:</span>
+        <span class="n">shot_list_train</span><span class="p">,</span><span class="n">shot_list_validate</span> <span class="o">=</span> <span class="n">shot_list_train</span><span class="o">.</span><span class="n">split_direct</span><span class="p">(</span><span class="mf">1.0</span><span class="o">-</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;training&#39;</span><span class="p">][</span><span class="s1">&#39;validation_frac&#39;</span><span class="p">],</span><span class="n">do_shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;validate: </span><span class="si">{}</span><span class="s1"> shots, </span><span class="si">{}</span><span class="s1"> disruptive&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">shot_list_validate</span><span class="p">),</span><span class="n">shot_list_validate</span><span class="o">.</span><span class="n">num_disruptive</span><span class="p">()))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;training: </span><span class="si">{}</span><span class="s1"> shots, </span><span class="si">{}</span><span class="s1"> disruptive&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">shot_list_train</span><span class="p">),</span><span class="n">shot_list_train</span><span class="o">.</span><span class="n">num_disruptive</span><span class="p">()))</span>
+    <span class="c1">##Need to import later because accessing the GPU from several processes via multiprocessing</span>
+    <span class="c1">## gives weird errors.</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;THEANO_FLAGS&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;device=gpu,floatX=float32&#39;</span><span class="c1">#,mode=NanGuardMode&#39;</span>
+    <span class="kn">import</span> <span class="nn">theano</span>
+    <span class="kn">from</span> <span class="nn">keras.utils.generic_utils</span> <span class="k">import</span> <span class="n">Progbar</span> 
+    <span class="kn">from</span> <span class="nn">keras</span> <span class="k">import</span> <span class="n">backend</span> <span class="k">as</span> <span class="n">K</span>
+    <span class="kn">from</span> <span class="nn">plasma.models</span> <span class="k">import</span> <span class="n">builder</span> <span class="c1">#from model_builder import ModelBuilder, LossHistory</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Build model...&#39;</span><span class="p">,</span><span class="n">end</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="n">specific_builder</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">ModelBuilder</span><span class="p">(</span><span class="n">conf</span><span class="p">)</span>
+    <span class="n">train_model</span><span class="p">,</span><span class="n">test_model</span> <span class="o">=</span> <span class="n">specific_builder</span><span class="o">.</span><span class="n">build_train_test_models</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;...done&#39;</span><span class="p">)</span>
+
+    <span class="c1">#load the latest epoch we did. Returns -1 if none exist yet</span>
+    <span class="n">e</span> <span class="o">=</span> <span class="n">specific_builder</span><span class="o">.</span><span class="n">load_model_weights</span><span class="p">(</span><span class="n">train_model</span><span class="p">)</span>
+
+    <span class="n">num_epochs</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;training&#39;</span><span class="p">][</span><span class="s1">&#39;num_epochs&#39;</span><span class="p">]</span>
+    <span class="n">num_at_once</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;training&#39;</span><span class="p">][</span><span class="s1">&#39;num_shots_at_once&#39;</span><span class="p">]</span>
+    <span class="n">lr_decay</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;lr_decay&#39;</span><span class="p">]</span>
+    <span class="n">lr</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;lr&#39;</span><span class="p">]</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1"> epochs left to go&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">num_epochs</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">e</span><span class="p">))</span>
+    <span class="k">while</span> <span class="n">e</span> <span class="o">&lt;</span> <span class="n">num_epochs</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+        <span class="n">e</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Epoch </span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">e</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="n">num_epochs</span><span class="p">))</span>
+        <span class="n">pbar</span> <span class="o">=</span>  <span class="n">Progbar</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">shot_list_train</span><span class="p">))</span>
+
+        <span class="c1">#shuffle during every iteration</span>
+        <span class="n">shot_list_train</span><span class="o">.</span><span class="n">shuffle</span><span class="p">()</span> 
+        <span class="n">shot_sublists</span> <span class="o">=</span> <span class="n">shot_list_train</span><span class="o">.</span><span class="n">sublists</span><span class="p">(</span><span class="n">num_at_once</span><span class="p">)</span>
+        <span class="n">training_losses_tmp</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1">#decay learning rate each epoch:</span>
+        <span class="n">K</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">train_model</span><span class="o">.</span><span class="n">optimizer</span><span class="o">.</span><span class="n">lr</span><span class="p">,</span> <span class="n">lr</span><span class="o">*</span><span class="n">lr_decay</span><span class="o">**</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Learning rate: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">train_model</span><span class="o">.</span><span class="n">optimizer</span><span class="o">.</span><span class="n">lr</span><span class="o">.</span><span class="n">get_value</span><span class="p">()))</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">shot_sublist</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">shot_sublists</span><span class="p">):</span>
+            <span class="n">X_list</span><span class="p">,</span><span class="n">y_list</span> <span class="o">=</span> <span class="n">loader</span><span class="o">.</span><span class="n">load_as_X_y_list</span><span class="p">(</span><span class="n">shot_sublist</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">j</span><span class="p">,(</span><span class="n">X</span><span class="p">,</span><span class="n">y</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">X_list</span><span class="p">,</span><span class="n">y_list</span><span class="p">)):</span>
+                <span class="n">history</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">LossHistory</span><span class="p">()</span>
+                <span class="c1">#load data and fit on data</span>
+                <span class="n">train_model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span><span class="n">y</span><span class="p">,</span>
+                    <span class="n">batch_size</span><span class="o">=</span><span class="n">Loader</span><span class="o">.</span><span class="n">get_batch_size</span><span class="p">(</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;training&#39;</span><span class="p">][</span><span class="s1">&#39;batch_size&#39;</span><span class="p">],</span><span class="n">prediction_mode</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+                    <span class="n">nb_epoch</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">shuffle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span><span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                    <span class="n">validation_split</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span><span class="n">callbacks</span><span class="o">=</span><span class="p">[</span><span class="n">history</span><span class="p">])</span>
+                <span class="n">train_model</span><span class="o">.</span><span class="n">reset_states</span><span class="p">()</span>
+                <span class="n">train_loss</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">history</span><span class="o">.</span><span class="n">losses</span><span class="p">)</span>
+                <span class="n">training_losses_tmp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">train_loss</span><span class="p">)</span>
+
+                <span class="n">pbar</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="mf">1.0</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">shot_sublist</span><span class="p">)</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">X_list</span><span class="p">),</span> <span class="n">values</span><span class="o">=</span><span class="p">[(</span><span class="s2">&quot;train loss&quot;</span><span class="p">,</span> <span class="n">train_loss</span><span class="p">)])</span>
+                <span class="n">loader</span><span class="o">.</span><span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="c1">#True during the first iteration</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+        <span class="n">training_losses</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">training_losses_tmp</span><span class="p">))</span>
+        <span class="n">specific_builder</span><span class="o">.</span><span class="n">save_model_weights</span><span class="p">(</span><span class="n">train_model</span><span class="p">,</span><span class="n">e</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;training&#39;</span><span class="p">][</span><span class="s1">&#39;validation_frac&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">:</span>
+            <span class="n">roc_area</span><span class="p">,</span><span class="n">loss</span> <span class="o">=</span> <span class="n">make_predictions_and_evaluate_gpu</span><span class="p">(</span><span class="n">conf</span><span class="p">,</span><span class="n">shot_list_validate</span><span class="p">,</span><span class="n">loader</span><span class="p">)</span>
+            <span class="n">validation_losses</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">loss</span><span class="p">)</span>
+            <span class="n">validation_roc</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">roc_area</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;=========Summary========&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Training Loss: </span><span class="si">{:.3e}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">training_losses</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;training&#39;</span><span class="p">][</span><span class="s1">&#39;validation_frac&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Validation Loss: </span><span class="si">{:.3e}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">validation_losses</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Validation ROC: </span><span class="si">{:.4f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">validation_roc</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+
+
+    <span class="c1"># plot_losses(conf,[training_losses],specific_builder,name=&#39;training&#39;)</span>
+    <span class="k">if</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;training&#39;</span><span class="p">][</span><span class="s1">&#39;validation_frac&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">:</span>
+        <span class="n">plot_losses</span><span class="p">(</span><span class="n">conf</span><span class="p">,[</span><span class="n">training_losses</span><span class="p">,</span><span class="n">validation_losses</span><span class="p">,</span><span class="n">validation_roc</span><span class="p">],</span><span class="n">specific_builder</span><span class="p">,</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;training_validation_roc&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;...done&#39;</span><span class="p">)</span></div>
+
+
+
+
+<div class="viewcode-block" id="plot_losses"><a class="viewcode-back" href="../../../plasma.models.runner.plot_losses.html#plasma.models.runner.plot_losses">[docs]</a><span class="k">def</span> <span class="nf">plot_losses</span><span class="p">(</span><span class="n">conf</span><span class="p">,</span><span class="n">losses_list</span><span class="p">,</span><span class="n">specific_builder</span><span class="p">,</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+    <span class="n">unique_id</span> <span class="o">=</span> <span class="n">specific_builder</span><span class="o">.</span><span class="n">get_unique_id</span><span class="p">()</span>
+    <span class="n">savedir</span> <span class="o">=</span> <span class="s1">&#39;losses&#39;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">savedir</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">savedir</span><span class="p">)</span>
+
+    <span class="n">save_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">savedir</span><span class="p">,</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">_loss_</span><span class="si">{}</span><span class="s1">.png&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="n">unique_id</span><span class="p">))</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">losses</span> <span class="ow">in</span> <span class="n">losses_list</span><span class="p">:</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">semilogy</span><span class="p">(</span><span class="n">losses</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Epoch&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Loss&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">save_path</span><span class="p">)</span></div>
+
+
+
+
+
+<div class="viewcode-block" id="make_predictions"><a class="viewcode-back" href="../../../plasma.models.runner.make_predictions.html#plasma.models.runner.make_predictions">[docs]</a><span class="k">def</span> <span class="nf">make_predictions</span><span class="p">(</span><span class="n">conf</span><span class="p">,</span><span class="n">shot_list</span><span class="p">,</span><span class="n">loader</span><span class="p">):</span>
+
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;THEANO_FLAGS&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;device=cpu&#39;</span> <span class="c1">#=cpu</span>
+    <span class="kn">import</span> <span class="nn">theano</span>
+    <span class="kn">from</span> <span class="nn">keras.utils.generic_utils</span> <span class="k">import</span> <span class="n">Progbar</span> 
+    <span class="kn">from</span> <span class="nn">plasma.models.builder</span> <span class="k">import</span> <span class="n">ModelBuilder</span>
+    <span class="n">specific_builder</span> <span class="o">=</span> <span class="n">ModelBuilder</span><span class="p">(</span><span class="n">conf</span><span class="p">)</span> 
+    
+
+
+    <span class="n">y_prime</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">y_gold</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">disruptive</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">model</span> <span class="o">=</span> <span class="n">specific_builder</span><span class="o">.</span><span class="n">build_model</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">specific_builder</span><span class="o">.</span><span class="n">load_model_weights</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+    <span class="n">model_save_path</span> <span class="o">=</span> <span class="n">specific_builder</span><span class="o">.</span><span class="n">get_latest_save_path</span><span class="p">()</span>
+
+    <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">pool</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">Pool</span><span class="p">()</span>
+    <span class="n">fn</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">make_single_prediction</span><span class="p">,</span><span class="n">builder</span><span class="o">=</span><span class="n">specific_builder</span><span class="p">,</span><span class="n">loader</span><span class="o">=</span><span class="n">loader</span><span class="p">,</span><span class="n">model_save_path</span><span class="o">=</span><span class="n">model_save_path</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;running in parallel on </span><span class="si">{}</span><span class="s1"> processes&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pool</span><span class="o">.</span><span class="n">_processes</span><span class="p">))</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="p">,(</span><span class="n">y_p</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">is_disruptive</span><span class="p">))</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">pool</span><span class="o">.</span><span class="n">imap</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span><span class="n">shot_list</span><span class="p">)):</span>
+    <span class="c1"># for (i,(y_p,y,is_disruptive)) in enumerate(imap(fn,shot_list)):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Shot </span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">shot_list</span><span class="p">)))</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+        <span class="n">y_prime</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y_p</span><span class="p">)</span>
+        <span class="n">y_gold</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="n">disruptive</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">is_disruptive</span><span class="p">)</span>
+    <span class="n">pool</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">pool</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Finished Predictions in </span><span class="si">{}</span><span class="s1"> seconds&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="o">-</span><span class="n">start_time</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">y_prime</span><span class="p">,</span><span class="n">y_gold</span><span class="p">,</span><span class="n">disruptive</span></div>
+
+
+
+
+<div class="viewcode-block" id="make_single_prediction"><a class="viewcode-back" href="../../../plasma.models.runner.make_single_prediction.html#plasma.models.runner.make_single_prediction">[docs]</a><span class="k">def</span> <span class="nf">make_single_prediction</span><span class="p">(</span><span class="n">shot</span><span class="p">,</span><span class="n">specific_builder</span><span class="p">,</span><span class="n">loader</span><span class="p">,</span><span class="n">model_save_path</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">specific_builder</span><span class="o">.</span><span class="n">build_model</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">load_weights</span><span class="p">(</span><span class="n">model_save_path</span><span class="p">)</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">reset_states</span><span class="p">()</span>
+    <span class="n">X</span><span class="p">,</span><span class="n">y</span> <span class="o">=</span> <span class="n">loader</span><span class="o">.</span><span class="n">load_as_X_y</span><span class="p">(</span><span class="n">shot</span><span class="p">,</span><span class="n">prediction_mode</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">assert</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">y_p</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">,</span><span class="n">batch_size</span><span class="o">=</span><span class="n">Loader</span><span class="o">.</span><span class="n">get_batch_size</span><span class="p">(</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;training&#39;</span><span class="p">][</span><span class="s1">&#39;batch_size&#39;</span><span class="p">],</span><span class="n">prediction_mode</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span><span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">answer_dims</span> <span class="o">=</span> <span class="n">y_p</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;return_sequences&#39;</span><span class="p">]:</span>
+        <span class="n">shot_length</span> <span class="o">=</span> <span class="n">y_p</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">y_p</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">shot_length</span> <span class="o">=</span> <span class="n">y_p</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">y_p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">y_p</span><span class="p">,(</span><span class="n">shot_length</span><span class="p">,</span><span class="n">answer_dims</span><span class="p">))</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">y</span><span class="p">,(</span><span class="n">shot_length</span><span class="p">,</span><span class="n">answer_dims</span><span class="p">))</span>
+    <span class="n">is_disruptive</span> <span class="o">=</span> <span class="n">shot</span><span class="o">.</span><span class="n">is_disruptive_shot</span><span class="p">()</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">reset_states</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">y_p</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">is_disruptive</span></div>
+
+
+<div class="viewcode-block" id="make_predictions_gpu"><a class="viewcode-back" href="../../../plasma.models.runner.make_predictions_gpu.html#plasma.models.runner.make_predictions_gpu">[docs]</a><span class="k">def</span> <span class="nf">make_predictions_gpu</span><span class="p">(</span><span class="n">conf</span><span class="p">,</span><span class="n">shot_list</span><span class="p">,</span><span class="n">loader</span><span class="p">):</span>
+
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;THEANO_FLAGS&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;device=gpu,floatX=float32&#39;</span> <span class="c1">#=cpu</span>
+    <span class="kn">import</span> <span class="nn">theano</span>
+    <span class="kn">from</span> <span class="nn">keras.utils.generic_utils</span> <span class="k">import</span> <span class="n">Progbar</span> 
+    <span class="kn">from</span> <span class="nn">plasma.models.builder</span> <span class="k">import</span> <span class="n">ModelBuilder</span>
+    <span class="n">specific_builder</span> <span class="o">=</span> <span class="n">ModelBuilder</span><span class="p">(</span><span class="n">conf</span><span class="p">)</span> 
+
+    <span class="n">y_prime</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">y_gold</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">disruptive</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">model</span> <span class="o">=</span> <span class="n">specific_builder</span><span class="o">.</span><span class="n">build_model</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">specific_builder</span><span class="o">.</span><span class="n">load_model_weights</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">reset_states</span><span class="p">()</span>
+
+    <span class="n">pbar</span> <span class="o">=</span>  <span class="n">Progbar</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">shot_list</span><span class="p">))</span>
+    <span class="n">shot_sublists</span> <span class="o">=</span> <span class="n">shot_list</span><span class="o">.</span><span class="n">sublists</span><span class="p">(</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;pred_batch_size&#39;</span><span class="p">],</span><span class="n">do_shuffle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span><span class="n">equal_size</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">shot_sublist</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">shot_sublists</span><span class="p">):</span>
+        <span class="n">X</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">shot_lengths</span><span class="p">,</span><span class="n">disr</span> <span class="o">=</span> <span class="n">loader</span><span class="o">.</span><span class="n">load_as_X_y_pred</span><span class="p">(</span><span class="n">shot_sublist</span><span class="p">)</span>
+        <span class="c1">#load data and fit on data</span>
+        <span class="n">y_p</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">,</span>
+            <span class="n">batch_size</span><span class="o">=</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;pred_batch_size&#39;</span><span class="p">])</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">reset_states</span><span class="p">()</span>
+        <span class="n">y_p</span> <span class="o">=</span> <span class="n">loader</span><span class="o">.</span><span class="n">batch_output_to_array</span><span class="p">(</span><span class="n">y_p</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">loader</span><span class="o">.</span><span class="n">batch_output_to_array</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="c1">#cut arrays back</span>
+        <span class="n">y_p</span> <span class="o">=</span> <span class="p">[</span><span class="n">arr</span><span class="p">[:</span><span class="n">shot_lengths</span><span class="p">[</span><span class="n">j</span><span class="p">]]</span> <span class="k">for</span> <span class="p">(</span><span class="n">j</span><span class="p">,</span><span class="n">arr</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">y_p</span><span class="p">)]</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="p">[</span><span class="n">arr</span><span class="p">[:</span><span class="n">shot_lengths</span><span class="p">[</span><span class="n">j</span><span class="p">]]</span> <span class="k">for</span> <span class="p">(</span><span class="n">j</span><span class="p">,</span><span class="n">arr</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">y</span><span class="p">)]</span>
+
+        <span class="c1"># print(&#39;Shots {}/{}&#39;.format(i*num_at_once + j*1.0*len(shot_sublist)/len(X_list),len(shot_list_train)))</span>
+        <span class="n">pbar</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="mf">1.0</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">shot_sublist</span><span class="p">))</span>
+        <span class="n">loader</span><span class="o">.</span><span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="c1">#True during the first iteration</span>
+        <span class="n">y_prime</span> <span class="o">+=</span> <span class="n">y_p</span>
+        <span class="n">y_gold</span> <span class="o">+=</span> <span class="n">y</span>
+        <span class="n">disruptive</span> <span class="o">+=</span> <span class="n">disr</span>
+    <span class="n">y_prime</span> <span class="o">=</span> <span class="n">y_prime</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="n">shot_list</span><span class="p">)]</span>
+    <span class="n">y_gold</span> <span class="o">=</span> <span class="n">y_gold</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="n">shot_list</span><span class="p">)]</span>
+    <span class="n">disruptive</span> <span class="o">=</span> <span class="n">disruptive</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="n">shot_list</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">y_prime</span><span class="p">,</span><span class="n">y_gold</span><span class="p">,</span><span class="n">disruptive</span></div>
+
+
+
+<div class="viewcode-block" id="make_predictions_and_evaluate_gpu"><a class="viewcode-back" href="../../../plasma.models.runner.make_predictions_and_evaluate_gpu.html#plasma.models.runner.make_predictions_and_evaluate_gpu">[docs]</a><span class="k">def</span> <span class="nf">make_predictions_and_evaluate_gpu</span><span class="p">(</span><span class="n">conf</span><span class="p">,</span><span class="n">shot_list</span><span class="p">,</span><span class="n">loader</span><span class="p">):</span>
+    <span class="n">y_prime</span><span class="p">,</span><span class="n">y_gold</span><span class="p">,</span><span class="n">disruptive</span> <span class="o">=</span> <span class="n">make_predictions_gpu</span><span class="p">(</span><span class="n">conf</span><span class="p">,</span><span class="n">shot_list</span><span class="p">,</span><span class="n">loader</span><span class="p">)</span>
+    <span class="n">analyzer</span> <span class="o">=</span> <span class="n">PerformanceAnalyzer</span><span class="p">(</span><span class="n">conf</span><span class="o">=</span><span class="n">conf</span><span class="p">)</span>
+    <span class="n">roc_area</span> <span class="o">=</span> <span class="n">analyzer</span><span class="o">.</span><span class="n">get_roc_area</span><span class="p">(</span><span class="n">y_prime</span><span class="p">,</span><span class="n">y_gold</span><span class="p">,</span><span class="n">disruptive</span><span class="p">)</span>
+    <span class="n">loss</span> <span class="o">=</span> <span class="n">get_loss_from_list</span><span class="p">(</span><span class="n">y_prime</span><span class="p">,</span><span class="n">y_gold</span><span class="p">,</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][</span><span class="s1">&#39;target&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">loss</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">roc_area</span><span class="p">,</span><span class="n">loss</span></div>
+
+<div class="viewcode-block" id="make_evaluations_gpu"><a class="viewcode-back" href="../../../plasma.models.runner.make_evaluations_gpu.html#plasma.models.runner.make_evaluations_gpu">[docs]</a><span class="k">def</span> <span class="nf">make_evaluations_gpu</span><span class="p">(</span><span class="n">conf</span><span class="p">,</span><span class="n">shot_list</span><span class="p">,</span><span class="n">loader</span><span class="p">):</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;THEANO_FLAGS&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;device=gpu,floatX=float32&#39;</span> <span class="c1">#=cpu</span>
+    <span class="kn">import</span> <span class="nn">theano</span>
+    <span class="kn">from</span> <span class="nn">keras.utils.generic_utils</span> <span class="k">import</span> <span class="n">Progbar</span> 
+    <span class="kn">from</span> <span class="nn">plasma.models.builder</span> <span class="k">import</span> <span class="n">ModelBuilder</span>
+    <span class="n">specific_builder</span> <span class="o">=</span> <span class="n">ModelBuilder</span><span class="p">(</span><span class="n">conf</span><span class="p">)</span> 
+
+    <span class="n">y_prime</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">y_gold</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">disruptive</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">batch_size</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">shot_list</span><span class="p">),</span><span class="n">conf</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;pred_batch_size&#39;</span><span class="p">])</span>
+
+    <span class="n">pbar</span> <span class="o">=</span>  <span class="n">Progbar</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">shot_list</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;evaluating </span><span class="si">{}</span><span class="s1"> shots using batchsize </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">shot_list</span><span class="p">),</span><span class="n">batch_size</span><span class="p">))</span>
+
+    <span class="n">shot_sublists</span> <span class="o">=</span> <span class="n">shot_list</span><span class="o">.</span><span class="n">sublists</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span><span class="n">equal_size</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">all_metrics</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">all_weights</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">shot_sublist</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">shot_sublists</span><span class="p">):</span>
+        <span class="n">batch_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">shot_sublist</span><span class="p">)</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">specific_builder</span><span class="o">.</span><span class="n">build_model</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span><span class="n">custom_batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">)</span>
+        <span class="n">specific_builder</span><span class="o">.</span><span class="n">load_model_weights</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">reset_states</span><span class="p">()</span>
+        <span class="n">X</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">shot_lengths</span><span class="p">,</span><span class="n">disr</span> <span class="o">=</span> <span class="n">loader</span><span class="o">.</span><span class="n">load_as_X_y_pred</span><span class="p">(</span><span class="n">shot_sublist</span><span class="p">,</span><span class="n">custom_batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">)</span>
+        <span class="c1">#load data and fit on data</span>
+        <span class="n">all_metrics</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">X</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span><span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+        <span class="n">all_weights</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">batch_size</span><span class="p">)</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">reset_states</span><span class="p">()</span>
+
+        <span class="n">pbar</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="mf">1.0</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">shot_sublist</span><span class="p">))</span>
+        <span class="n">loader</span><span class="o">.</span><span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="c1">#True during the first iteration</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_metrics</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;evaluations all: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">all_metrics</span><span class="p">))</span>
+    <span class="n">loss</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">all_metrics</span><span class="p">,</span><span class="n">weights</span> <span class="o">=</span> <span class="n">all_weights</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Evaluation Loss: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">loss</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">loss</span> </div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">FRNN 0.0.2 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, FRNN group.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.2.
+    </div>
+  </body>
+</html>
