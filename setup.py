@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 #import plasma.version
 
 setup(name = "plasma",
-      version = "0.0.2",
+      version = "0.0.3",
       packages = find_packages(),
       #scripts = [""],
       description = "PPPL deep learning package.",
@@ -17,7 +17,7 @@ setup(name = "plasma",
       download_url = "https://github.com/PPPLDeepLearning/plasma-python",
       #license = "Apache Software License v2",
       test_suite = "tests",
-      install_requires = ['theano','pathos','h5py','keras'],
+      install_requires = ['keras','theano','pathos','matplotlib','mpi4py'],
       tests_require = [],
       classifiers = ["Development Status :: 3 - Alpha",
                      "Environment :: Console",
