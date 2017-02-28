@@ -1,5 +1,4 @@
-FRNN - PPPL deep learning disruption prediction package
-=======================================================
+## FRNN - PPPL deep learning disruption prediction package
 
 The FRNN code workflow is similar to that characteristic of typical distributed deep learning projects.
 First, the raw data is preprocessed and normalized. The pre-processing step involves cutting, resampling, 
@@ -26,8 +25,7 @@ consisting of 4 core modules:
 
 This is a pure Python implementation for Python versions 2.6 and 2.7.
 
-Installation
-============
+## Installation
 
 The package comes with a standard setup script and a list of dependencies which include: mpi4py, Theano,
 Keras, h5py, Pathos. It also requires a standard set of CUDA drivers to run on GPU.
@@ -46,13 +44,11 @@ python setup.py install
 
 with `sudo` if superuser permissions are needed or `--home=~` to install in a home directory. The latter option requires an appropriate `PYTHONPATH`.
 
-Module index
-============
+## Module index
 
-Tutorials
-=========
+## Tutorials
 
-## Sample usage on Tiger
+### Sample usage on Tiger
 
 ```bash
 module load anaconda cudatoolkit/7.5 cudann openmpi/intel-16.0/1.8.8/64
@@ -62,17 +58,17 @@ python setup.py install
 
 Where `environment` should contain the Python packages as per `requirements.txt` file.
 
-### Preprocessing
+#### Preprocessing
 
 ```bash
 python guarantee_preprocessed.py
 ```
 
-### Training and inference
+#### Training and inference
 
 Use Slurm scheduler to perform batch or interactive analysis on Tiger cluster.
 
-#### Batch analysis
+##### Batch analysis
 
 For batch analysis, make sure to allocate 1 process per GPU:
 
@@ -89,7 +85,7 @@ where X is the number of nodes for distibuted data parallel training.
 sbatch slurm.cmd
 ```
 
-#### Interactive analysis
+##### Interactive analysis
 
 The workflow is to request an interactive session:
 
@@ -109,5 +105,4 @@ mpirun -npernode 4 python examples/mpi_learn.py
 Note: there is Theano compilation going on in the 1st epoch which will distort timing. It is recommended to perform testing setting `num_epochs >= 2` in `conf.py`.
 
 
-Status
-======
+## Status
