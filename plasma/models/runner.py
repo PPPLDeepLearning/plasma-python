@@ -41,7 +41,7 @@ def train(conf,shot_list_train,loader):
 
     print('Build model...',end='')
     specific_builder = builder.ModelBuilder(conf)
-    train_model,test_model = specific_builder.build_train_test_models()
+    train_model = specific_builder.build_model(False) 
     print('...done')
 
     #load the latest epoch we did. Returns -1 if none exist yet
