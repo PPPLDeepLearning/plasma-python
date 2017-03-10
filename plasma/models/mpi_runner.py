@@ -240,11 +240,24 @@ class MPIModel():
     self.model.set_weights(new_weights)
 
   def build_callbacks(self,conf,callbacks_list):
-      #prepare callbacks to pass here
-      #other possible Callbacks to add: RemoteMonitor, LearningRateScheduler
-      #https://github.com/fchollet/keras/blob/fbc9a18f0abc5784607cd4a2a3886558efa3f794/keras/callbacks.py
+      '''
+      The purpose of the method is to set up logging and history. It is based on Keras Callbacks
+      https://github.com/fchollet/keras/blob/fbc9a18f0abc5784607cd4a2a3886558efa3f794/keras/callbacks.py
 
-      #potentially move to conf.yaml
+      Currently used callbacks include: BaseLogger, CSVLogger, EarlyStopping. 
+      Other possible callbacks to add in future: RemoteMonitor, LearningRateScheduler
+
+      Argument list: 
+        - conf: There is a "callbacks" section in conf.yaml file. Relevant parameters are:
+             list: Parameter specifying additional callbacks, read in the driver script and passed as an argument of type list (see next arg)
+             metrics: List of quantities monitored during training and validation
+             mode: one of {auto, min, max}. The decision to overwrite the current save file is made based on either the maximization or the minimization of the monitored quantity. For val_acc, this should be max, for val_loss this should be min, etc. In auto mode, the direction is automatically inferred from the name of the monitored quantity. 
+             monitor: Quantity used for early stopping, has to be from the list of metrics
+             patience: Number of epochs used to decide on whether to apply early stopping or continue training
+        - callbacks_list: uses callbacks.list configuration parameter, specifies the list of additional callbacks
+      Returns: modified list of callbacks
+      '''
+
       mode = conf['callbacks']['mode']
       monitor = conf['callbacks']['monitor']
       patience = conf['callbacks']['patience']
