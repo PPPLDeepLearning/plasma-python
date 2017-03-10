@@ -282,7 +282,7 @@ class MPIModel():
 
       try:
           batch_xs,batch_ys,reset_states_now,num_so_far,num_total = batch_iterator_func.next()
-      except:
+      except StopIteration:
           batch_iterator_func = self.batch_iterator()
           batch_xs,batch_ys,reset_states_now,num_so_far,num_total = batch_iterator_func.next()
 
