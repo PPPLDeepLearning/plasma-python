@@ -173,6 +173,22 @@ class MPIModel():
 
 
   def get_deltas(self,X_batch,Y_batch,verbose=False):
+    '''
+    The purpose of the method is to perform a single gradient update over one mini-batch for one model replica.
+    Given a mini-batch, it first accesses the current model weights, performs single gradient update over one mini-batch,
+    gets new model weights, calculates weight updates (deltas) by subtracting weight scalars, applies the learning rate.
+
+    It performs calls to: subtract_params, multiply_params 
+
+    Argument list: 
+      - X_batch: input data for one mini-batch as a Numpy array
+      - Y_batch: labels for one mini-batch as a Numpy array
+      - verbose: set verbosity level (currently unused)
+
+    Returns:  
+      - deltas: a list of model weight updates
+      - loss: scalar training loss
+    '''
     weights_before_update = self.model.get_weights()
 
     loss = self.model.train_on_batch(X_batch,Y_batch)
@@ -202,12 +218,34 @@ class MPIModel():
 
 
   def mpi_average_scalars(self,val,num_replicas=None):
+    '''
+    The purpose of the method is to calculate a simple scalar arithmetic mean over num_replicas.
+
+    It performs calls to: MPIModel.mpi_sum_scalars
+
+    Argument list: 
+      - val: value averaged, scalar
+      - num_replicas: the size of the ensemble an average is perfromed over
+
+    Returns:  
+      - val_global: scalar arithmetic mean over num_replicas
+    '''
     val_global = self.mpi_sum_scalars(val,num_replicas)
     val_global /= num_replicas
     return val_global
 
 
   def mpi_sum_scalars(self,val,num_replicas=None):
+    '''
+    The purpose of the method is to calculate a simple scalar arithmetic mean over num_replicas using MPI allreduce action with fixed op=MPI.SIM
+
+    Argument list: 
+      - val: value averaged, scalar
+      - num_replicas: the size of the ensemble an average is perfromed over
+
+    Returns:  
+      - val_global: scalar arithmetic mean over num_replicas
+    '''
     if num_replicas == None:
       num_replicas = self.num_workers 
     if self.task_index >= num_replicas:
