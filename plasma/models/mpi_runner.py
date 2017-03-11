@@ -277,6 +277,29 @@ class MPIModel():
 
 
   def train_epoch(self):
+    '''
+    The purpose of the method is to perform distributed mini-batch SGD for one epoch.
+    It takes the batch iterator function and a NN model from MPIModel object, fetches mini-batches
+    in a while-loop until number of samples seen by the ensemble of workers (num_so_far) exceeds the 
+    training dataset size (num_total). 
+
+    During each iteration, the gradient updates (deltas) and the loss are calculated for each model replica
+    in the ensemble, weights are averaged over ensemble, and the new weights are set.
+
+    It performs calls to: MPIModel.get_deltas, MPIModel.set_new_weights methods 
+
+    Argument list: Empty
+
+    Returns:  
+      - step: epoch number
+      - ave_loss: training loss averaged over replicas
+      - curr_loss:
+      - num_so_far: the number of samples seen by ensemble of replicas to a current epoch (step) 
+
+    Intermediate outputs and logging: debug printout of task_index (MPI), epoch number, number of samples seen to 
+    a current epoch, average training loss
+    '''
+
     verbose = False
     step = 0
     loss_averager = Averager()
