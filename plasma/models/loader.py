@@ -88,7 +88,6 @@ class Loader(object):
 
 
     def load_as_X_y_list(self,shot_list,verbose=False,prediction_mode=False):
-        #pdb.set_trace()
         """
         The method turns a ShotList into a set of equal-sized patches which contain a number of examples
         that is a multiple of the batch size.
