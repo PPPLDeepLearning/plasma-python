@@ -17,7 +17,19 @@ import numpy as np
 from plasma.utils.processing import train_test_split
 
 class ShotList(object):
+    '''
+    A wrapper class around list of Shot objects, providing utilities to 
+    extract, load and transform Shots before passing them to an estimator.
+
+    During distributed training, shot lists are split into sublists.
+    A sublist is a ShotList object having num_at_once shots. The ShotList contains an entire dataset 
+    as specified in the configuration file.
+    '''
+
     def __init__(self,shots=None):
+        '''
+        A ShotList is a list of 2D Numpy arrays.
+        '''
         self.shots = []
         if shots is not None:
             assert(all([isinstance(shot,Shot) for shot in shots]))
