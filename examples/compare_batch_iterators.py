@@ -42,7 +42,7 @@ class MPIModel_default():
 
                 try:
                     batch = batch_generator_func.next()
-                except:
+                except StopIteration:
                     batch_generator_func = self.batch_iterator()
                     batch = batch_generator_func.next()
                 print ("Next batch id: {}".format(batch))
