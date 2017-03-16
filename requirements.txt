@@ -1,3 +1,4 @@
 mkl-service
 scipy
 mpi4py
+h5py
