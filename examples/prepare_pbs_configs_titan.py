@@ -32,7 +32,7 @@ def createOneConfig(configBaseName, GPUcount):
 	f.write('##PBS -l procs=1\n')
 	f.write('##PBS -l gres=atlas1%atlas2\n')
         f.write('\n\n')
-	f.write('export HOME=/ccs/proj/fus117/\n')
+	f.write('export HOME=/lustre/atlas/proj-shared/fus117\n')
 	f.write('cd $HOME/PPPL/plasma-python/examples\n')
         f.write('\n\n')
 	f.write('source $MODULESHOME/init/bash\n')
