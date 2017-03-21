@@ -84,6 +84,7 @@ model:
     dropout_prob: 0.3
     #only relevant if we want to do mpi training. The number of steps with a single replica
     warmup_steps: 0
+    backend: 'theano'
 
 training:
     as_array_of_shots: True
