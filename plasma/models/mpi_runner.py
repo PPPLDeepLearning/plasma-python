@@ -34,16 +34,22 @@ task_index = comm.Get_rank()
 num_workers = comm.Get_size()
 NUM_GPUS = 4
 MY_GPU = task_index % NUM_GPUS
-backend = 'theano'
 
 from pprint import pprint
 from plasma.conf import conf
 
+backend = conf['model']['backend']
+
 if backend == 'tf' or backend == 'tensorflow':
     os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(MY_GPU)#,mode=NanGuardMode'
     os.environ['KERAS_BACKEND'] = 'tensorflow'
-    import tensorflow
+    import tensorflow as tf
+    from keras.backend.tensorflow_backend import set_session
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.95, allow_growth=True)
+    config = tf.ConfigProto(gpu_options=gpu_options)
+    set_session(tf.Session(config=config))
 else:
+    os.environ['KERAS_BACKEND'] = 'theano'
     base_compile_dir = '{}/tmp/{}-{}'.format(conf['paths']['output_path'],socket.gethostname(),task_index)
     os.environ['THEANO_FLAGS'] = 'device=gpu{},floatX=float32,base_compiledir={}'.format(MY_GPU,base_compile_dir)#,mode=NanGuardMode'
     import theano
@@ -173,6 +179,22 @@ class MPIModel():
 
 
   def get_deltas(self,X_batch,Y_batch,verbose=False):
+    '''
+    The purpose of the method is to perform a single gradient update over one mini-batch for one model replica.
+    Given a mini-batch, it first accesses the current model weights, performs single gradient update over one mini-batch,
+    gets new model weights, calculates weight updates (deltas) by subtracting weight scalars, applies the learning rate.
+
+    It performs calls to: subtract_params, multiply_params 
+
+    Argument list: 
+      - X_batch: input data for one mini-batch as a Numpy array
+      - Y_batch: labels for one mini-batch as a Numpy array
+      - verbose: set verbosity level (currently unused)
+
+    Returns:  
+      - deltas: a list of model weight updates
+      - loss: scalar training loss
+    '''
     weights_before_update = self.model.get_weights()
 
     loss = self.model.train_on_batch(X_batch,Y_batch)
@@ -202,12 +224,34 @@ class MPIModel():
 
 
   def mpi_average_scalars(self,val,num_replicas=None):
+    '''
+    The purpose of the method is to calculate a simple scalar arithmetic mean over num_replicas.
+
+    It performs calls to: MPIModel.mpi_sum_scalars
+
+    Argument list: 
+      - val: value averaged, scalar
+      - num_replicas: the size of the ensemble an average is perfromed over
+
+    Returns:  
+      - val_global: scalar arithmetic mean over num_replicas
+    '''
     val_global = self.mpi_sum_scalars(val,num_replicas)
     val_global /= num_replicas
     return val_global
 
 
   def mpi_sum_scalars(self,val,num_replicas=None):
+    '''
+    The purpose of the method is to calculate a simple scalar arithmetic mean over num_replicas using MPI allreduce action with fixed op=MPI.SIM
+
+    Argument list: 
+      - val: value averaged, scalar
+      - num_replicas: the size of the ensemble an average is perfromed over
+
+    Returns:  
+      - val_global: scalar arithmetic mean over num_replicas
+    '''
     if num_replicas == None:
       num_replicas = self.num_workers 
     if self.task_index >= num_replicas:
@@ -240,11 +284,24 @@ class MPIModel():
     self.model.set_weights(new_weights)
 
   def build_callbacks(self,conf,callbacks_list):
-      #prepare callbacks to pass here
-      #other possible Callbacks to add: RemoteMonitor, LearningRateScheduler
-      #https://github.com/fchollet/keras/blob/fbc9a18f0abc5784607cd4a2a3886558efa3f794/keras/callbacks.py
+      '''
+      The purpose of the method is to set up logging and history. It is based on Keras Callbacks
+      https://github.com/fchollet/keras/blob/fbc9a18f0abc5784607cd4a2a3886558efa3f794/keras/callbacks.py
 
-      #potentially move to conf.yaml
+      Currently used callbacks include: BaseLogger, CSVLogger, EarlyStopping. 
+      Other possible callbacks to add in future: RemoteMonitor, LearningRateScheduler
+
+      Argument list: 
+        - conf: There is a "callbacks" section in conf.yaml file. Relevant parameters are:
+             list: Parameter specifying additional callbacks, read in the driver script and passed as an argument of type list (see next arg)
+             metrics: List of quantities monitored during training and validation
+             mode: one of {auto, min, max}. The decision to overwrite the current save file is made based on either the maximization or the minimization of the monitored quantity. For val_acc, this should be max, for val_loss this should be min, etc. In auto mode, the direction is automatically inferred from the name of the monitored quantity. 
+             monitor: Quantity used for early stopping, has to be from the list of metrics
+             patience: Number of epochs used to decide on whether to apply early stopping or continue training
+        - callbacks_list: uses callbacks.list configuration parameter, specifies the list of additional callbacks
+      Returns: modified list of callbacks
+      '''
+
       mode = conf['callbacks']['mode']
       monitor = conf['callbacks']['monitor']
       patience = conf['callbacks']['patience']
@@ -264,6 +321,29 @@ class MPIModel():
 
 
   def train_epoch(self):
+    '''
+    The purpose of the method is to perform distributed mini-batch SGD for one epoch.
+    It takes the batch iterator function and a NN model from MPIModel object, fetches mini-batches
+    in a while-loop until number of samples seen by the ensemble of workers (num_so_far) exceeds the 
+    training dataset size (num_total). 
+
+    During each iteration, the gradient updates (deltas) and the loss are calculated for each model replica
+    in the ensemble, weights are averaged over ensemble, and the new weights are set.
+
+    It performs calls to: MPIModel.get_deltas, MPIModel.set_new_weights methods 
+
+    Argument list: Empty
+
+    Returns:  
+      - step: epoch number
+      - ave_loss: training loss averaged over replicas
+      - curr_loss:
+      - num_so_far: the number of samples seen by ensemble of replicas to a current epoch (step) 
+
+    Intermediate outputs and logging: debug printout of task_index (MPI), epoch number, number of samples seen to 
+    a current epoch, average training loss
+    '''
+
     verbose = False
     step = 0
     loss_averager = Averager()

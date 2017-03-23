@@ -17,7 +17,19 @@ import numpy as np
 from plasma.utils.processing import train_test_split
 
 class ShotList(object):
+    '''
+    A wrapper class around list of Shot objects, providing utilities to 
+    extract, load and transform Shots before passing them to an estimator.
+
+    During distributed training, shot lists are split into sublists.
+    A sublist is a ShotList object having num_at_once shots. The ShotList contains an entire dataset 
+    as specified in the configuration file.
+    '''
+
     def __init__(self,shots=None):
+        '''
+        A ShotList is a list of 2D Numpy arrays.
+        '''
         self.shots = []
         if shots is not None:
             assert(all([isinstance(shot,Shot) for shot in shots]))
@@ -155,7 +167,23 @@ class ShotList(object):
         
 
 class Shot(object):
+    '''
+    A class representing a shot.
+    Each shot is a measurement of plasma properties (current, locked mode amplitude, etc.) as a function of time. 
+
+    For 0D data, each shot is modeled as a 2D Numpy array - time vs a plasma property.
+    '''
+
     def __init__(self,number=None,signals=None,ttd=None,valid=None,is_disruptive=None,t_disrupt=None):
+        '''
+        Shot objects contain following attributes:
+    
+         - number: integer, unique identifier of a shot
+         - t_disrupt: double, disruption time in milliseconds (second column in the shotlist input file)
+         - ttd: Numpy array of doubles, time profile of the shot converted to time-to-disruption values
+         - valid: boolean flag indicating whether plasma property (specifically, current) reaches a certain value during the shot
+         - is_disruptive: boolean flag indicating whether a shot is disruptive
+        '''
         self.number = number #Shot number
         self.signals = signals 
         self.ttd = ttd 

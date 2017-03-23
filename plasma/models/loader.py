@@ -14,6 +14,18 @@ import numpy as np
 from plasma.primitives.shots import Shot
 
 class Loader(object):
+    '''
+    A Python class to ...
+
+    The length of shots in e.g. JET data varies by orders of magnitude. For data parallel 
+    synchronous training it is essential that amounds of train data passed to the model replica is about the same size.
+    Therefore, a patching technique is introduced.
+
+    A patch is a subset of shot's time/signal profile having a fixed length, equal among all patches. 
+    Patch size is approximately equal to the minimum shot length. More precisely: it is equal
+    to the max(1, min_len//rnn_length)*rnn_length - the largest number less or equal to the minimum shot length divisible by the LSTM model length. If minimum shot length is less than the rnn_length, then the patch length is equal to the rnn_length
+    '''
+
     def __init__(self,conf,normalizer=None):
         self.conf = conf
         self.stateful = conf['model']['stateful']
@@ -21,9 +33,21 @@ class Loader(object):
         self.verbose = True
 
     def training_batch_generator(self,shot_list):
-        """Iterates indefinitely over the data set and returns one batch of data at a time.
-        Can be inefficient during distributed training because one process loading data will
-        cause all other processes to stall."""
+        """
+        The method implements a training batch generator as a Python generator with a while-loop.
+        It iterates indefinitely over the data set and returns one mini-batch of data at a time.
+
+        NOTE: Can be inefficient during distributed training because one process loading data will
+        cause all other processes to stall.
+
+        Argument list: 
+          - shot_list:
+
+        Returns:  
+          - One mini-batch of data and label as a Numpy array: X[start:end],y[start:end]
+          - reset_states_now: boolean flag indicating when to reset state during stateful RNN training
+          - num_so_far,num_total: number of samples generated so far and the total dataset size as per shot_list
+        """
         batch_size = self.conf['training']['batch_size']
         num_at_once = self.conf['training']['num_shots_at_once']
         epoch = 0
@@ -42,11 +66,13 @@ class Loader(object):
                     num_examples = X.shape[0]
                     assert(num_examples % batch_size == 0)
                     num_chunks = num_examples/batch_size
-                    """produce batch-sized data X,y to feed during training.
-                    dimensions are (num_examples, num_timesteps, num_dimensions_of_data)
-                    also num_examples is divisible by the batch_size. The ith example and the
-                    (batchsize + 1)th example are consecutive in time, so we do not reset the
-                    RNN internal state unless we start a new chunk."""
+                    """
+                    The method produces batch-sized training data X and labels y as Numpy arrays to feed during training.
+                    Mini-batch dimensions are (num_examples, num_timesteps, num_dimensions_of_data)
+                    also num_examples has to be divisible by the batch_size. The i-th example and the
+                    (batchsize + 1)-th example are consecutive in time, so we do not reset the
+                    RNN internal state unless we start a new chunk.
+                    """
                     for k in range(num_chunks):
                         #epoch_end = (i == len(shot_sublists) - 1 and j == len(X_list) -1 and k == num_chunks - 1)
                         reset_states_now = (k == 0)
@@ -62,8 +88,23 @@ class Loader(object):
 
 
     def load_as_X_y_list(self,shot_list,verbose=False,prediction_mode=False):
-        """Turn a list of shots into a set of equal-sized patches which contain a number of examples
-        that is a multiple of the batch size."""
+        """
+        The method turns a ShotList into a set of equal-sized patches which contain a number of examples
+        that is a multiple of the batch size.
+        Initially, shots are "light" meaning signal amd disruption related attributes are not filled.
+        By invoking Loader.get_signals_results_from_shotlist the shot information is filled and stored in
+        the object in memory. Next, patches are made, finally patches are arranged into batch input shape expected by RNN model.
+
+        Performs calls to: get_signals_results_from_shotlist, make_patches, arange_patches
+
+        Argument list:
+          - shot_list: a ShotList
+          - verbose: TO BE DEPRECATED, self.verbose data member is used instead
+          - prediction_mode: unused
+ 
+        Returns:
+          - X_list,y_list: lists of Numpy arrays of batch input shape
+        """
         signals,results,total_length = self.get_signals_results_from_shotlist(shot_list) 
         sig_patches, res_patches = self.make_patches(signals,results)
 
@@ -192,12 +233,40 @@ class Loader(object):
         return max_len
 
     def make_patches(self,signals,results):
+        """
+        A patch is a subset of shot's time/signal profile having a fixed length, equal among all patches. 
+        Patch size is approximately equal to the minimum shot length. More precisely: it is equal
+        to the max(1, min_len//rnn_length)*rnn_length - the largest number less or equal to the minimum shot length divisible by the LSTM model length. If minimum shot length is less than the rnn_length, then the patch length is equal to the rnn_length
+
+        Since shot lengthes are not multiples of the minimum shot length in general, 
+        some non-deterministic fraction of patches is created. See:
+
+        Deterministic patching:
+
+        Random patching:
+
+
+        Argument list: 
+          - signals: a list of 1D Numpy array of doubles containing signal values (a plasma property). 
+                     Numpy arrays are shot-sized
+          - results: a list of 1D Numpy array of doubles containing disruption times or -1 if a shot 
+                     is non-disruptive. Numpy arrays are shot-sized
+
+          NOTE: signals and results are parallel lists. Since Arrays are shot-sized, the shape veries across the list
+
+        Returns:  
+          - sig_patches_det + sig_patches_rand: (concatenated) list of 1D Numpy arrays of doubles containing signal values. 
+                     Numpy arrays are patch-sized
+          - res_patches_det + res_patches_rand: (concatenated) a list of 1D Numpy array of doubles containing disruption times 
+                     or -1 if a shot is non-disruptive. Numpy arrays are patch-sized
+          NOTE: sig_patches_det + sig_patches_rand and res_patches_det + res_patches_rand are prallel lists
+                All arrays in the list have identical shapes.
+        """
         total_num = self.conf['training']['batch_size'] 
         sig_patches_det,res_patches_det = self.make_deterministic_patches(signals,results)
         num_already = len(sig_patches_det)
         
         total_num = int(np.ceil(1.0 * num_already / total_num)) * total_num
-        
         
         num_additional = total_num - num_already
         assert(num_additional >= 0)
@@ -205,7 +274,6 @@ class Loader(object):
         if self.verbose:
             print('random to deterministic ratio: {}/{}'.format(num_additional,num_already))
         return sig_patches_det + sig_patches_rand,res_patches_det + res_patches_rand 
-
 
 
     def make_prediction_patches(self,signals,results):
@@ -394,80 +462,3 @@ class Loader(object):
         shot_list_validate = data['shot_list_validate'][()]
         shot_list_test = data['shot_list_test'][()]
         return shot_list_train,shot_list_validate,shot_list_test
-
-    # def produce_indices(signals_list):
-    #     indices_list = []
-    #     for xx in signals_list:
-    #         indices_list.append(arange(len(xx)))
-    #     return indices_list
-
-
-
-    # def array_to_path_and_external_pred(self,arr,res,return_sequences=False):
-    #     length = self.conf['model']['length']
-    #     skip = self.conf['model']['skip']
-    #     assert(shape(arr)[0] == shape(res)[0])
-    #     X = []
-    #     y = []
-    #     i = 0
-    #     while True:
-    #         pred = i+length
-    #         if pred > len(arr):
-    #             break
-    #         X.append(arr[i:i+length,:])
-    #         if return_sequences:
-    #             y.append(res[i:i+length])
-    #         else:
-    #             y.append(res[i+length-1])
-    #         i += skip
-    #     X = array(X)
-    #     y = array(y)
-    #     if len(shape(X)) == 1:
-    #         X = np.expand_dims(X,axis=len(shape(X)))
-    #     if return_sequences and len(shape(y)) == 1:
-    #         y = np.expand_dims(y,axis=len(shape(y)))
-    #     return X,y
-
-   
-    # def array_to_path_and_next(self,arr):
-    #     length = self.conf['model']['length']
-    #     skip = self.conf['model']['skip']
-    #     X = []
-    #     y = []
-    #     i = 0
-    #     while True:
-    #         pred = i+length
-    #         if pred >= len(arr):
-    #             break
-    #         X.append(arr[i:i+length])
-    #         y.append(arr[i+length])
-    #         i += skip
-    #     X = array(X)
-    #     X = np.expand_dims(X,axis=len(shape(X)))
-    #     return X,array(y)
-
-    
-    # def array_to_path(self,arr):
-    #     length = self.conf['model']['length']
-    #     skip = self.conf['model']['skip']
-    #     X = []
-    #     i = 0
-    #     while True:
-    #         pred = i+length
-    #         if pred > len(arr):
-    #             break
-    #         X.append(arr[i:i+length,:])
-    #         i += skip
-    #     X = array(X)
-    #     if len(shape(X)) == 1:
-    #         X = np.expand_dims(X,axis=len(shape(X)))
-    #     return X
-
-    
-    #unused: handling sequences of shots        
-    # def load_shots_as_X_y(conf,shots,verbose=False,stateful=True,prediction_mode=False):
-    #     X,y = zip(*[load_shot_as_X_y(conf,shot,verbose,stateful,prediction_mode) for shot in shots])
-    #     return vstack(X),hstack(y)
-
-    # def load_shots_as_X_y_list(conf,shots,verbose=False,stateful=True,prediction_mode=False):
-    #     return [load_shot_as_X_y(conf,shot,verbose,stateful,prediction_mode) for shot in shots]
