@@ -43,7 +43,7 @@ backend = conf['model']['backend']
 if backend == 'tf' or backend == 'tensorflow':
     os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(MY_GPU)#,mode=NanGuardMode'
     os.environ['KERAS_BACKEND'] = 'tensorflow'
-    import tensorflow
+    import tensorflow as tf
     from keras.backend.tensorflow_backend import set_session
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.95, allow_growth=True)
     config = tf.ConfigProto(gpu_options=gpu_options)
