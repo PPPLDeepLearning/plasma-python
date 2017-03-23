@@ -34,16 +34,22 @@ task_index = comm.Get_rank()
 num_workers = comm.Get_size()
 NUM_GPUS = 4
 MY_GPU = task_index % NUM_GPUS
-backend = 'theano'
 
 from pprint import pprint
 from plasma.conf import conf
 
+backend = conf['model']['backend']
+
 if backend == 'tf' or backend == 'tensorflow':
     os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(MY_GPU)#,mode=NanGuardMode'
     os.environ['KERAS_BACKEND'] = 'tensorflow'
-    import tensorflow
+    import tensorflow as tf
+    from keras.backend.tensorflow_backend import set_session
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.95, allow_growth=True)
+    config = tf.ConfigProto(gpu_options=gpu_options)
+    set_session(tf.Session(config=config))
 else:
+    os.environ['KERAS_BACKEND'] = 'theano'
     base_compile_dir = '{}/tmp/{}-{}'.format(conf['paths']['output_path'],socket.gethostname(),task_index)
     os.environ['THEANO_FLAGS'] = 'device=gpu{},floatX=float32,base_compiledir={}'.format(MY_GPU,base_compile_dir)#,mode=NanGuardMode'
     import theano
