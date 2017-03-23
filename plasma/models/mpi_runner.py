@@ -44,6 +44,10 @@ if backend == 'tf' or backend == 'tensorflow':
     os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(MY_GPU)#,mode=NanGuardMode'
     os.environ['KERAS_BACKEND'] = 'tensorflow'
     import tensorflow
+    from keras.backend.tensorflow_backend import set_session
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.95, allow_growth=True)
+    config = tf.ConfigProto(gpu_options=gpu_options)
+    set_session(tf.Session(config=config))
 else:
     os.environ['KERAS_BACKEND'] = 'theano'
     base_compile_dir = '{}/tmp/{}-{}'.format(conf['paths']['output_path'],socket.gethostname(),task_index)
