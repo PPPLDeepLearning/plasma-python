@@ -20,6 +20,8 @@ from plasma.models.loader import Loader
 from plasma.utils.performance import PerformanceAnalyzer
 from plasma.utils.evaluation import *
 
+backend = conf['model']['backend']
+
 def train(conf,shot_list_train,loader):
 
     np.random.seed(1)
@@ -31,13 +33,21 @@ def train(conf,shot_list_train,loader):
         shot_list_train,shot_list_validate = shot_list_train.split_direct(1.0-conf['training']['validation_frac'],do_shuffle=True)
         print('validate: {} shots, {} disruptive'.format(len(shot_list_validate),shot_list_validate.num_disruptive()))
     print('training: {} shots, {} disruptive'.format(len(shot_list_train),shot_list_train.num_disruptive()))
-    ##Need to import later because accessing the GPU from several processes via multiprocessing
-    ## gives weird errors.
-    os.environ['THEANO_FLAGS'] = 'device=gpu,floatX=float32'#,mode=NanGuardMode'
-    import theano
+
+    if backend == 'tf' or backend == 'tensorflow':
+        import tensorflow as tf
+        os.environ['KERAS_BACKEND'] = 'tensorflow'
+        from keras.backend.tensorflow_backend import set_session
+        config = tf.ConfigProto(device_count={"GPU":1})
+        set_session(tf.Session(config=config))
+    else:
+        os.environ['KERAS_BACKEND'] = 'theano'
+        os.environ['THEANO_FLAGS'] = 'device=gpu,floatX=float32'
+        import theano
+
     from keras.utils.generic_utils import Progbar 
     from keras import backend as K
-    from plasma.models import builder #from model_builder import ModelBuilder, LossHistory
+    from plasma.models import builder
 
     print('Build model...',end='')
     specific_builder = builder.ModelBuilder(conf)
@@ -64,7 +74,8 @@ def train(conf,shot_list_train,loader):
 
         #decay learning rate each epoch:
         K.set_value(train_model.optimizer.lr, lr*lr_decay**(e))
-        print('Learning rate: {}'.format(train_model.optimizer.lr.get_value()))
+        
+        #print('Learning rate: {}'.format(train_model.optimizer.lr.get_value()))
         for (i,shot_sublist) in enumerate(shot_sublists):
             X_list,y_list = loader.load_as_X_y_list(shot_sublist)
             for j,(X,y) in enumerate(zip(X_list,y_list)):
@@ -120,11 +131,9 @@ class HyperRunner(object):
         validation_roc = []
         training_losses = []
         shot_list_train,shot_list_validate = self.shot_list.split_direct(1.0-conf['training']['validation_frac'],do_shuffle=True)
-        os.environ['THEANO_FLAGS'] = 'device=gpu,floatX=float32'
-	import theano
+        
 	from keras.utils.generic_utils import Progbar
 	from keras import backend as K
-
 
         num_epochs = self.conf['training']['num_epochs']
         num_at_once = self.conf['training']['num_shots_at_once']
@@ -214,18 +223,22 @@ def plot_losses(conf,losses_list,specific_builder,name=''):
     plt.savefig(save_path)
 
 
-
-
-
 def make_predictions(conf,shot_list,loader):
 
-    os.environ['THEANO_FLAGS'] = 'device=cpu' #=cpu
-    import theano
-    from keras.utils.generic_utils import Progbar 
+    use_cores = max(1,mp.cpu_count()-2)
+
+    if backend == 'tf' or backend == 'tensorflow':
+        import tensorflow as tf
+        os.environ['KERAS_BACKEND'] = 'tensorflow'
+        from keras.backend.tensorflow_backend import set_session
+        config = tf.ConfigProto(device_count={"CPU":use_cores})
+        set_session(tf.Session(config=config))
+    else:
+        os.environ['THEANO_FLAGS'] = 'device=cpu'
+        import theano
+
     from plasma.models.builder import ModelBuilder
     specific_builder = ModelBuilder(conf) 
-    
-
 
     y_prime = []
     y_gold = []
@@ -236,13 +249,11 @@ def make_predictions(conf,shot_list,loader):
     model_save_path = specific_builder.get_latest_save_path()
 
     start_time = time.time()
-    use_cores = max(1,mp.cpu_count()-2)
     pool = mp.Pool(use_cores)
     fn = partial(make_single_prediction,builder=specific_builder,loader=loader,model_save_path=model_save_path)
 
     print('running in parallel on {} processes'.format(pool._processes))
     for (i,(y_p,y,is_disruptive)) in enumerate(pool.imap(fn,shot_list)):
-    # for (i,(y_p,y,is_disruptive)) in enumerate(imap(fn,shot_list)):
         print('Shot {}/{}'.format(i,len(shot_list)))
         sys.stdout.flush()
         y_prime.append(y_p)
@@ -252,8 +263,6 @@ def make_predictions(conf,shot_list,loader):
     pool.join()
     print('Finished Predictions in {} seconds'.format(time.time()-start_time))
     return y_prime,y_gold,disruptive
-
-
 
 
 def make_single_prediction(shot,specific_builder,loader,model_save_path):
@@ -277,8 +286,16 @@ def make_single_prediction(shot,specific_builder,loader,model_save_path):
 
 def make_predictions_gpu(conf,shot_list,loader):
 
-    os.environ['THEANO_FLAGS'] = 'device=gpu,floatX=float32' #=cpu
-    import theano
+    if backend == 'tf' or backend == 'tensorflow':
+        import tensorflow as tf
+        os.environ['KERAS_BACKEND'] = 'tensorflow'
+        from keras.backend.tensorflow_backend import set_session
+        config = tf.ConfigProto(device_count={"GPU":1})
+        set_session(tf.Session(config=config))
+    else:
+        os.environ['THEANO_FLAGS'] = 'device=gpu,floatX=float32'
+        import theano
+
     from keras.utils.generic_utils import Progbar 
     from plasma.models.builder import ModelBuilder
     specific_builder = ModelBuilder(conf) 
@@ -305,7 +322,6 @@ def make_predictions_gpu(conf,shot_list,loader):
         y_p = [arr[:shot_lengths[j]] for (j,arr) in enumerate(y_p)]
         y = [arr[:shot_lengths[j]] for (j,arr) in enumerate(y)]
 
-        # print('Shots {}/{}'.format(i*num_at_once + j*1.0*len(shot_sublist)/len(X_list),len(shot_list_train)))
         pbar.add(1.0*len(shot_sublist))
         loader.verbose=False#True during the first iteration
         y_prime += y_p
@@ -326,8 +342,17 @@ def make_predictions_and_evaluate_gpu(conf,shot_list,loader):
     return roc_area,loss
 
 def make_evaluations_gpu(conf,shot_list,loader):
-    os.environ['THEANO_FLAGS'] = 'device=gpu,floatX=float32' #=cpu
-    import theano
+
+    if backend == 'tf' or backend == 'tensorflow':
+        import tensorflow as tf
+        os.environ['KERAS_BACKEND'] = 'tensorflow'
+        from keras.backend.tensorflow_backend import set_session
+        config = tf.ConfigProto(device_count={"GPU":1})
+        set_session(tf.Session(config=config))
+    else:
+        os.environ['THEANO_FLAGS'] = 'device=gpu,floatX=float32'
+        import theano
+    
     from keras.utils.generic_utils import Progbar 
     from plasma.models.builder import ModelBuilder
     specific_builder = ModelBuilder(conf) 
