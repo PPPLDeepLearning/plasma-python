@@ -5,7 +5,7 @@ from keras.utils.data_utils import get_file
 from keras.layers.wrappers import TimeDistributed
 from keras.callbacks import Callback
 from keras.optimizers import *
-from keras.regularizers import l1,l2,l1l2
+from keras.regularizers import l1,l2,l1_l2
 
 import dill
 import re
@@ -94,8 +94,8 @@ class ModelBuilder(object):
  #               model.add(TimeDistributed(Dense(num_density_channels,bias=True),batch_input_shape=batch_input_shape))
 		for _ in range(model_conf['rnn_layers']):
 			model.add(rnn_model(rnn_size, return_sequences=return_sequences,batch_input_shape=batch_input_shape,
-			 stateful=stateful,W_regularizer=l2(regularization),U_regularizer=l2(regularization),
-			 b_regularizer=l2(regularization),dropout_W=dropout_prob,dropout_U=dropout_prob))
+			 stateful=stateful,kernel_regularizer=l2(regularization),recurrent_regularizer=l2(regularization),
+			 bias_regularizer=l2(regularization),dropout=dropout_prob,recurrent_dropout=dropout_prob))
 			model.add(Dropout(dropout_prob))
 		if return_sequences:
 			model.add(TimeDistributed(Dense(1,activation=output_activation)))
@@ -222,8 +222,8 @@ class ModelBuilder(object):
 
 		for _ in range(model_conf['rnn_layers']):
 			model.add(rnn_model(rnn_size, return_sequences=return_sequences,batch_input_shape=batch_input_shape,
-				stateful=stateful,W_regularizer=l2(regularization),U_regularizer=l2(regularization),
-				b_regularizer=l2(regularization),dropout_W=dropout_prob,dropout_U=dropout_prob))
+				stateful=stateful,kernel_regularizer=l2(regularization),recurrent_regularizer=l2(regularization),
+				bias_regularizer=l2(regularization),dropout=dropout_prob,recurrent_dropout=dropout_prob))
 			model.add(Dropout(space['Dropout']))
 		if return_sequences:
 			model.add(TimeDistributed(Dense(1,activation=output_activation)))
