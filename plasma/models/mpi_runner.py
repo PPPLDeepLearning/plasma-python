@@ -562,7 +562,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
     callback_metrics = conf['callbacks']['metrics']
 
     callbacks.set_params({
-        'nb_epoch': num_epochs,
+        'epochs': num_epochs,
         'metrics': callback_metrics,
     })
     callbacks.on_train_begin()

@@ -83,7 +83,7 @@ def train(conf,shot_list_train,loader):
                 #load data and fit on data
                 train_model.fit(X,y,
                     batch_size=Loader.get_batch_size(conf['training']['batch_size'],prediction_mode=False),
-                    nb_epoch=1,shuffle=False,verbose=0,
+                    epochs=1,shuffle=False,verbose=0,
                     validation_split=0.0,callbacks=[history])
                 train_model.reset_states()
                 train_loss = np.mean(history.losses)
@@ -159,7 +159,7 @@ class HyperRunner(object):
                     history = builder.LossHistory()
                     train_model.fit(X,y,
                         batch_size=Loader.get_batch_size(self.conf['training']['batch_size'],prediction_mode=False),
-                        nb_epoch=1,shuffle=False,verbose=0,
+                        epochs=1,shuffle=False,verbose=0,
                         validation_split=0.0,callbacks=[history])
                     train_model.reset_states()
                     train_loss = np.mean(history.losses)
