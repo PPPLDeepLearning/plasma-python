@@ -155,6 +155,7 @@ class MPIModel():
     self.max_lr = 0.1
     self.comm = comm
     self.batch_size = batch_size
+    self.batch_iterator_func = batch_iterator()
     self.batch_iterator = batch_iterator
     self.warmup_steps=warmup_steps
     self.num_workers = comm.Get_size()
@@ -349,7 +350,7 @@ class MPIModel():
     loss_averager = Averager()
     t_start = time.time()
 
-    batch_iterator_func = self.batch_iterator()
+    batch_iterator_func = self.batch_iterator_func
     num_so_far = 0
     num_total = 1
     ave_loss = -1
