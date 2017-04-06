@@ -359,13 +359,18 @@ class MPIModel():
     t1 = 0 
     t2 = 0
 
-    while num_so_far < num_total:
+    num_batches_minimum = 100
+    num_batches_current = 0
+
+    while num_so_far < num_total and num_batches_current < num_batches_minimum:
 
       try:
           batch_xs,batch_ys,reset_states_now,num_so_far,num_total = batch_iterator_func.next()
       except StopIteration:
           batch_iterator_func = self.batch_iterator()
           batch_xs,batch_ys,reset_states_now,num_so_far,num_total = batch_iterator_func.next()
+
+      num_batches_current +=1 
 
       if reset_states_now:
         self.model.reset_states()
@@ -390,9 +395,10 @@ class MPIModel():
       print_unique(write_str + write_str_0)
       step += 1
 
-    self.epoch += 1
-    print_unique('\nEpoch {} finished in {:.2f} seconds.\n'.format(self.epoch,t2 - t_start))
-    return (step,ave_loss,curr_loss,num_so_far)
+    effective_epochs = 1.0*num_so_far/num_total
+    self.epoch += effective_epochs
+    print_unique('\nEpoch {} finished ({:.2f} effective epochs passed) in {:.2f} seconds.\n'.format(self.epoch,effective_epochs,t2 - t_start))
+    return (step,ave_loss,curr_loss,num_so_far,effective_epochs)
 
 
   def estimate_remaining_time(self,time_so_far,work_so_far,work_total):
@@ -569,16 +575,16 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
     callbacks.on_train_begin()
 
     while e < num_epochs-1:
-        callbacks.on_epoch_begin(e)
-        e += 1
+        callbacks.on_epoch_begin(int(round(e)))
         mpi_model.set_lr(lr*lr_decay**e)
         print_unique('\nEpoch {}/{}'.format(e,num_epochs))
 
-        (step,ave_loss,curr_loss,num_so_far) = mpi_model.train_epoch()
+        (step,ave_loss,curr_loss,num_so_far,effective_epochs) = mpi_model.train_epoch()
+	e += effective_epochs
 
         loader.verbose=False #True during the first iteration
         if task_index == 0:
-            specific_builder.save_model_weights(train_model,e)
+            specific_builder.save_model_weights(train_model,int(round(e)))
 
         epoch_logs = {}
         roc_area,loss = mpi_make_predictions_and_evaluate(conf,shot_list_validate,loader)
@@ -597,6 +603,6 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
             print('Validation Loss: {:.3e}'.format(loss))
             print('Validation ROC: {:.4f}'.format(roc_area))
 
-            callbacks.on_epoch_end(e, epoch_logs)
+            callbacks.on_epoch_end(int(round(e)), epoch_logs)
 
     callbacks.on_train_end()
