@@ -362,10 +362,6 @@ class MPIModel():
     num_batches_minimum = 50
     num_batches_current = 0
 
-    #run the model once to force compilation. Don't actually use these values.
-    t0_comp = time.time()
-    _,_ = self.get_deltas(batch_xs,batch_ys,verbose)
-    print_unique('compilation finished in {:.2f}s'.format(time.time()-t0_comp))
 
     while (num_so_far-self.epoch*num_total) < num_total or num_batches_current < num_batches_minimum:
 
@@ -384,6 +380,12 @@ class MPIModel():
       num_replicas = 1 if warmup_phase else self.num_replicas
 
       num_so_far = self.mpi_sum_scalars(num_so_far,num_replicas)
+
+      #run the model once to force compilation. Don't actually use these values.
+      if step == 0 and self.epoch == 0
+        t0_comp = time.time()
+    	_,_ = self.get_deltas(batch_xs,batch_ys,verbose)
+    	print_unique('compilation finished in {:.2f}s'.format(time.time()-t0_comp))
       
       t0 = time.time()
       deltas,loss = self.get_deltas(batch_xs,batch_ys,verbose)
