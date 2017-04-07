@@ -382,7 +382,7 @@ class MPIModel():
       num_so_far = self.mpi_sum_scalars(num_so_far,num_replicas)
 
       #run the model once to force compilation. Don't actually use these values.
-      if step == 0 and self.epoch == 0
+      if step == 0 and self.epoch == 0:
         t0_comp = time.time()
     	_,_ = self.get_deltas(batch_xs,batch_ys,verbose)
     	print_unique('compilation finished in {:.2f}s'.format(time.time()-t0_comp))
