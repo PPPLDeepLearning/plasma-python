@@ -362,7 +362,7 @@ class MPIModel():
     num_batches_minimum = 100
     num_batches_current = 0
 
-    while num_so_far < num_total and num_batches_current < num_batches_minimum:
+    while (num_so_far-self.epoch*num_total) < num_total and num_batches_current < num_batches_minimum:
 
       try:
           batch_xs,batch_ys,reset_states_now,num_so_far,num_total = batch_iterator_func.next()
