@@ -359,10 +359,15 @@ class MPIModel():
     t1 = 0 
     t2 = 0
 
-    num_batches_minimum = 100
+    num_batches_minimum = 50
     num_batches_current = 0
 
-    while (num_so_far-self.epoch*num_total) < num_total and num_batches_current < num_batches_minimum:
+    #run the model once to force compilation. Don't actually use these values.
+    t0_comp = time.time()
+    _,_ = self.get_deltas(batch_xs,batch_ys,verbose)
+    print_unique('compilation finished in {:.2f}s'.format(time.time()-t0_comp))
+
+    while (num_so_far-self.epoch*num_total) < num_total or num_batches_current < num_batches_minimum:
 
       try:
           batch_xs,batch_ys,reset_states_now,num_so_far,num_total = batch_iterator_func.next()
@@ -396,8 +401,8 @@ class MPIModel():
       step += 1
 
     effective_epochs = 1.0*num_so_far/num_total
-    self.epoch += effective_epochs
-    print_unique('\nEpoch {} finished ({:.2f} effective epochs passed) in {:.2f} seconds.\n'.format(self.epoch,effective_epochs,t2 - t_start))
+    self.epoch = effective_epochs
+    print_unique('\nEpoch {} finished in {:.2f} seconds.\n'.format(self.epoch,t2 - t_start))
     return (step,ave_loss,curr_loss,num_so_far,effective_epochs)
 
 
@@ -580,7 +585,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
         print_unique('\nEpoch {}/{}'.format(e,num_epochs))
 
         (step,ave_loss,curr_loss,num_so_far,effective_epochs) = mpi_model.train_epoch()
-	e += effective_epochs
+	e = effective_epochs
 
         loader.verbose=False #True during the first iteration
         if task_index == 0:
