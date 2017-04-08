@@ -362,7 +362,6 @@ class MPIModel():
     num_batches_minimum = 50
     num_batches_current = 0
 
-
     while (num_so_far-self.epoch*num_total) < num_total or num_batches_current < num_batches_minimum:
 
       try:
@@ -384,9 +383,13 @@ class MPIModel():
       #run the model once to force compilation. Don't actually use these values.
       if step == 0 and self.epoch == 0:
         t0_comp = time.time()
-    	_,_ = self.get_deltas(batch_xs,batch_ys,verbose)
-    	print_unique('compilation finished in {:.2f}s'.format(time.time()-t0_comp))
-      
+        _,_ = self.get_deltas(batch_xs,batch_ys,verbose)
+	comm.Barrier()
+        sys.stdout.flush()
+        print_unique('Compilation finished in {:.2f}s'.format(time.time()-t0_comp))
+    	t_start = time.time()
+        sys.stdout.flush()  
+
       t0 = time.time()
       deltas,loss = self.get_deltas(batch_xs,batch_ys,verbose)
       t1 = time.time()
@@ -397,14 +400,15 @@ class MPIModel():
       curr_loss = self.mpi_average_scalars(1.0*loss,num_replicas)
       loss_averager.add_val(curr_loss)
       ave_loss = loss_averager.get_val()
-      eta = self.estimate_remaining_time(t0 - t_start,num_so_far,num_total)
+      eta = self.estimate_remaining_time(t0 - t_start,num_so_far-self.epoch*num_total,num_total)
       write_str = '\r[{}] step: {} [ETA: {:.2f}s] [{:.2f}/{}], loss: {:.5f} [{:.5f}] | '.format(self.task_index,step,eta,1.0*num_so_far,num_total,ave_loss,curr_loss)
       print_unique(write_str + write_str_0)
       step += 1
 
     effective_epochs = 1.0*num_so_far/num_total
+    epoch_previous = self.epoch
     self.epoch = effective_epochs
-    print_unique('\nEpoch {} finished in {:.2f} seconds.\n'.format(self.epoch,t2 - t_start))
+    print_unique('\nEpoch {:.2f} finished ({:.2f} epochs passed) in {:.2f} seconds.\n'.format(1.0*self.epoch,self.epoch-epoch_previous,t2 - t_start))
     return (step,ave_loss,curr_loss,num_so_far,effective_epochs)
 
 
