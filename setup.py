@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 #import plasma.version
 
 setup(name = "plasma",
-      version = "0.0.3",
+      version = "0.1.0",
       packages = find_packages(),
       #scripts = [""],
       description = "PPPL deep learning package.",
