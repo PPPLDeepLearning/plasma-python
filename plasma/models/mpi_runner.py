@@ -155,6 +155,7 @@ class MPIModel():
     self.max_lr = 0.1
     self.comm = comm
     self.batch_size = batch_size
+    self.batch_iterator_func = batch_iterator()
     self.batch_iterator = batch_iterator
     self.warmup_steps=warmup_steps
     self.num_workers = comm.Get_size()
@@ -349,7 +350,7 @@ class MPIModel():
     loss_averager = Averager()
     t_start = time.time()
 
-    batch_iterator_func = self.batch_iterator()
+    batch_iterator_func = self.batch_iterator_func
     num_so_far = 0
     num_total = 1
     ave_loss = -1
@@ -358,13 +359,18 @@ class MPIModel():
     t1 = 0 
     t2 = 0
 
-    while num_so_far < num_total:
+    num_batches_minimum = 50
+    num_batches_current = 0
+
+    while (num_so_far-self.epoch*num_total) < num_total or num_batches_current < num_batches_minimum:
 
       try:
           batch_xs,batch_ys,reset_states_now,num_so_far,num_total = batch_iterator_func.next()
       except StopIteration:
           batch_iterator_func = self.batch_iterator()
           batch_xs,batch_ys,reset_states_now,num_so_far,num_total = batch_iterator_func.next()
+
+      num_batches_current +=1 
 
       if reset_states_now:
         self.model.reset_states()
@@ -373,7 +379,17 @@ class MPIModel():
       num_replicas = 1 if warmup_phase else self.num_replicas
 
       num_so_far = self.mpi_sum_scalars(num_so_far,num_replicas)
-      
+
+      #run the model once to force compilation. Don't actually use these values.
+      if step == 0 and self.epoch == 0:
+        t0_comp = time.time()
+        _,_ = self.get_deltas(batch_xs,batch_ys,verbose)
+	comm.Barrier()
+        sys.stdout.flush()
+        print_unique('Compilation finished in {:.2f}s'.format(time.time()-t0_comp))
+    	t_start = time.time()
+        sys.stdout.flush()  
+
       t0 = time.time()
       deltas,loss = self.get_deltas(batch_xs,batch_ys,verbose)
       t1 = time.time()
@@ -384,14 +400,16 @@ class MPIModel():
       curr_loss = self.mpi_average_scalars(1.0*loss,num_replicas)
       loss_averager.add_val(curr_loss)
       ave_loss = loss_averager.get_val()
-      eta = self.estimate_remaining_time(t0 - t_start,num_so_far,num_total)
+      eta = self.estimate_remaining_time(t0 - t_start,num_so_far-self.epoch*num_total,num_total)
       write_str = '\r[{}] step: {} [ETA: {:.2f}s] [{:.2f}/{}], loss: {:.5f} [{:.5f}] | '.format(self.task_index,step,eta,1.0*num_so_far,num_total,ave_loss,curr_loss)
       print_unique(write_str + write_str_0)
       step += 1
 
-    self.epoch += 1
-    print_unique('\nEpoch {} finished in {:.2f} seconds.\n'.format(self.epoch,t2 - t_start))
-    return (step,ave_loss,curr_loss,num_so_far)
+    effective_epochs = 1.0*num_so_far/num_total
+    epoch_previous = self.epoch
+    self.epoch = effective_epochs
+    print_unique('\nEpoch {:.2f} finished ({:.2f} epochs passed) in {:.2f} seconds.\n'.format(1.0*self.epoch,self.epoch-epoch_previous,t2 - t_start))
+    return (step,ave_loss,curr_loss,num_so_far,effective_epochs)
 
 
   def estimate_remaining_time(self,time_so_far,work_so_far,work_total):
@@ -568,16 +586,16 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
     callbacks.on_train_begin()
 
     while e < num_epochs-1:
-        callbacks.on_epoch_begin(e)
-        e += 1
+        callbacks.on_epoch_begin(int(round(e)))
         mpi_model.set_lr(lr*lr_decay**e)
         print_unique('\nEpoch {}/{}'.format(e,num_epochs))
 
-        (step,ave_loss,curr_loss,num_so_far) = mpi_model.train_epoch()
+        (step,ave_loss,curr_loss,num_so_far,effective_epochs) = mpi_model.train_epoch()
+	e = effective_epochs
 
         loader.verbose=False #True during the first iteration
         if task_index == 0:
-            specific_builder.save_model_weights(train_model,e)
+            specific_builder.save_model_weights(train_model,int(round(e)))
 
         epoch_logs = {}
         roc_area,loss = mpi_make_predictions_and_evaluate(conf,shot_list_validate,loader)
@@ -596,6 +614,6 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
             print('Validation Loss: {:.3e}'.format(loss))
             print('Validation ROC: {:.4f}'.format(roc_area))
 
-            callbacks.on_epoch_end(e, epoch_logs)
+            callbacks.on_epoch_end(int(round(e)), epoch_logs)
 
     callbacks.on_train_end()
