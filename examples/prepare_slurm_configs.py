@@ -28,9 +28,9 @@ def createOneConfig(configBaseName, GPUcount):
 	f.write('#!/bin/bash\n')
         f.write('#SBATCH -t 01:00:00\n')
         f.write('#SBATCH -N '+str(GPUcount)+'\n')
-        f.write('#SBATCH --ntasks-per-node=1\n')
-        f.write('#SBATCH --ntasks-per-socket=1\n')
-        f.write('#SBATCH --gres=gpu:1\n')
+        f.write('#SBATCH --ntasks-per-node=4\n')
+        f.write('#SBATCH --ntasks-per-socket=2\n')
+        f.write('#SBATCH --gres=gpu:4\n')
         f.write('#SBATCH -c 4\n')
         f.write('\n\n')
         f.write('module load anaconda\n')
@@ -44,7 +44,7 @@ def createOneConfig(configBaseName, GPUcount):
 
 if __name__=='__main__':
     nextGPUcount = 1
-    GPUstep = 2
+    GPUstep = 3
     maxGPUcount = 24
     configBaseName = "FRNN_TigerGPU"
     checkAndSchedule(configBaseName,nextGPUcount,GPUstep,maxGPUcount)
