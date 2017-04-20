@@ -3,23 +3,23 @@ import subprocess
 from subprocess import Popen
 from time import sleep
 
-def checkAndSchedule(configBaseName,nextGPUcount,GPUstep,maxGPUcount):
-    if nextGPUcount > maxGPUcount: return 
+def checkAndSchedule(configBaseName,gpuNodeCountGrid,nextGPUNodeCount):
+    if nextGPUNodeCount > len(gpuNodeCountGrid)-1: return 
     job_is_running = subprocess.check_output(['squeue','-u','alexeys']) #['qstat','-u','alexeys'])
     if 'alexeys' in job_is_running:
         #sleep 500 seconds
         sleep(500)
-        checkAndSchedule(configBaseName,nextGPUcount,GPUstep,maxGPUcount)
+        checkAndSchedule(configBaseName,gpuNodeCountGrid,nextGPUNodeCount)
     else:
         #create a config
-        nextConfigName = createOneConfig(configBaseName,nextGPUcount)
-        print "Submitting next PBS job {} to run on {} GPUs".format(configBaseName,nextGPUcount)
+        nextConfigName = createOneConfig(configBaseName,gpuNodeCountGrid[nextGPUNodeCount])
+        print "Submitting next PBS job {} to run on {} GPUs".format(configBaseName,gpuNodeCountGrid[nextGPUNodeCount])
         print "sbatch "+nextConfigName
         Popen("sbatch "+nextConfigName,shell=True).wait() 
         #update parameters
-        nextGPUcount += GPUstep
+        nextGPUNodeCount += 1
         sleep(10)
-        checkAndSchedule(configBaseName,nextGPUcount,GPUstep,maxGPUcount)
+        checkAndSchedule(configBaseName,gpuNodeCountGrid,nextGPUNodeCount)
 
 
 def createOneConfig(configBaseName, GPUcount):
@@ -43,8 +43,6 @@ def createOneConfig(configBaseName, GPUcount):
     return configFullName
 
 if __name__=='__main__':
-    nextGPUcount = 1
-    GPUstep = 3
-    maxGPUcount = 24
+    gpuNodeCountGrid = [1,3,6,12,24,32,48]
     configBaseName = "FRNN_TigerGPU"
-    checkAndSchedule(configBaseName,nextGPUcount,GPUstep,maxGPUcount)
+    checkAndSchedule(configBaseName,gpuNodeCountGrid,0)
