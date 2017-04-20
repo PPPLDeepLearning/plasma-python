@@ -150,9 +150,9 @@ class MPIModel():
     self.epoch = 0
     self.model = model
     self.optimizer = optimizer
-    self.lr = lr
-    self.DUMMY_LR = 0.1
     self.max_lr = 0.1
+    self.lr = lr if (lr < self.max_lr) else self.max_lr
+    self.DUMMY_LR = 0.1
     self.comm = comm
     self.batch_size = batch_size
     self.batch_iterator_func = batch_iterator()
