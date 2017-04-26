@@ -256,8 +256,8 @@ class PerformanceAnalyzer():
             plt.grid()
             plt.title(title_str)
             plt.show()
-    	if save_figure:
-    	    plt.savefig('accum_disruptions.png',bbox_inches='tight')
+        if save_figure:
+            plt.savefig('accum_disruptions.png',bbox_inches='tight')
         else:
             print(title_str + ": No alarms!")
 
@@ -360,7 +360,7 @@ class PerformanceAnalyzer():
                 print('============= AT P_THRESH = {} ============='.format(P_thresh_opt))
             else:
                 print('No such P_thresh found')
-    	    P_thresh_opt = P_thresh_default
+            P_thresh_opt = P_thresh_default
             print('')
 
         #last index where
@@ -377,7 +377,7 @@ class PerformanceAnalyzer():
                 print('============= AT P_THRESH = {} ============='.format(P_thresh_opt))
             else:
                 print('No such P_thresh found')
-    	    P_thresh_opt = P_thresh_default
+            P_thresh_opt = P_thresh_default
             print('')
 
         print('============== Crossing Point: ==============')
