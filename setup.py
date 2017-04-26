@@ -1,16 +1,16 @@
 import sys
 from setuptools import setup, find_packages
 
-#import plasma.version
+import plasma.version
 
 setup(name = "plasma",
-      version = "0.1.0",
+      version = plasma.version.__version__,
       packages = find_packages(),
       #scripts = [""],
       description = "PPPL deep learning package.",
       long_description = """Add description here""",
-      author = "Julian Kates-Harbeck, PPPL authors",
-      #author_email = "",
+      author = "Julian Kates-Harbeck, Alexey Svyatkovskiy",
+      author_email = "jkatesharbeck@g.harvard.edu",
       maintainer = "Alexey Svyatkovskiy",
       maintainer_email = "alexeys@princeton.edu",
       #url = "http://",
