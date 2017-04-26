@@ -306,7 +306,7 @@ class Loader(object):
         num_batches = len(sig_patches) // batch_size
         #patch_length = len(sig_patches[0])
 
-        zipped = len(zip(sig_patches,res_patches))
+        zipped = list(zip(sig_patches,res_patches))
         np.random.shuffle(zipped)
         sig_patches, res_patches = zip(*zipped) 
         X_list = []
