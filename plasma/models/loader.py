@@ -8,7 +8,7 @@ This work was supported by the DOE CSGF program.
 #########################################################
 '''
 
-from __future__ import print_function
+from __future__ import print_function, division
 import numpy as np
 
 from plasma.primitives.shots import Shot
@@ -65,7 +65,7 @@ class Loader(object):
                 for j,(X,y) in enumerate(zip(X_list,y_list)):
                     num_examples = X.shape[0]
                     assert(num_examples % batch_size == 0)
-                    num_chunks = num_examples/batch_size
+                    num_chunks = num_examples//batch_size
                     """
                     The method produces batch-sized training data X and labels y as Numpy arrays to feed during training.
                     Mini-batch dimensions are (num_examples, num_timesteps, num_dimensions_of_data)
@@ -169,7 +169,7 @@ class Loader(object):
         if batch_size is None:
             batch_size = self.conf['model']['pred_batch_size']
         assert(output.shape[0] % batch_size == 0)
-        num_chunks = output.shape[0] / batch_size
+        num_chunks = output.shape[0] // batch_size
         num_timesteps = output.shape[1]
         feature_size = output.shape[2]
 
@@ -303,10 +303,10 @@ class Loader(object):
         batch_size = self.conf['training']['batch_size']
         assert(len(sig_patches) % batch_size == 0) #fixed number of batches
         assert(len(sig_patches[0]) % num_timesteps == 0) #divisible by length of RNN sequence
-        num_batches = len(sig_patches) / batch_size
+        num_batches = len(sig_patches) // batch_size
         #patch_length = len(sig_patches[0])
 
-        zipped = zip(sig_patches,res_patches)
+        zipped = list(zip(sig_patches,res_patches))
         np.random.shuffle(zipped)
         sig_patches, res_patches = zip(*zipped) 
         X_list = []
@@ -331,7 +331,7 @@ class Loader(object):
 
         assert(len(sig_patches) == batch_size)
         assert(len(sig_patches[0]) % num_timesteps == 0)
-        num_chunks = len(sig_patches[0]) / num_timesteps
+        num_chunks = len(sig_patches[0]) // num_timesteps
         num_dimensions_of_data = sig_patches[0].shape[1]
         if len(res_patches[0].shape) == 1:
             num_answers = 1

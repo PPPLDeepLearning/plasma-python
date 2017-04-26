@@ -132,8 +132,8 @@ class HyperRunner(object):
         training_losses = []
         shot_list_train,shot_list_validate = self.shot_list.split_direct(1.0-conf['training']['validation_frac'],do_shuffle=True)
         
-	from keras.utils.generic_utils import Progbar
-	from keras import backend as K
+        from keras.utils.generic_utils import Progbar
+        from keras import backend as K
 
         num_epochs = self.conf['training']['num_epochs']
         num_at_once = self.conf['training']['num_shots_at_once']
@@ -188,7 +188,7 @@ class HyperRunner(object):
         }
 
     def frnn_minimize(self, algo, max_evals, trials, rseed=1337):
-	from hyperopt import fmin
+        from hyperopt import fmin
 
         best_run = fmin(self.keras_fmin_fnct,
                     space=self.get_space(),
