@@ -37,7 +37,7 @@ class ShotList(object):
 
     def load_from_files(self,shot_list_dir,shot_files):
         shot_numbers,disruption_times = ShotList.get_multiple_shots_and_disruption_times(shot_list_dir,shot_files)
-        for number,t in zip(shot_numbers,disruption_times):
+        for number,t in list(zip(shot_numbers,disruption_times)):
             self.append(Shot(number=number,t_disrupt=t))
 
             ######Generic Methods####
@@ -46,8 +46,8 @@ class ShotList(object):
     def get_shots_and_disruption_times(shots_and_disruption_times_path):
         data = np.loadtxt(shots_and_disruption_times_path,ndmin=1,dtype={'names':('num','disrupt_times'),
                                                                   'formats':('i4','f4')})
-        shots = np.array(zip(*data)[0])
-        disrupt_times = np.array(zip(*data)[1])
+        shots = np.array(list(zip(*data))[0])
+        disrupt_times = np.array(list(zip(*data))[1])
         return shots, disrupt_times
 
     @staticmethod
@@ -74,15 +74,15 @@ class ShotList(object):
         use_shots_test = int(round((1-train_frac)*use_shots))
         if len(shot_files_test) == 0:
             shot_list_train,shot_list_test = train_test_split(self.shots,train_frac,shuffle_training)
-    	    shot_numbers_train = [shot.number for shot in shot_list_train]
-    	    shot_numbers_test = [shot.number for shot in shot_list_test]
+            shot_numbers_train = [shot.number for shot in shot_list_train]
+            shot_numbers_test = [shot.number for shot in shot_list_test]
         #train and test list given
         else:
             shot_numbers_train,_ = ShotList.get_multiple_shots_and_disruption_times(shot_list_dir,shot_files)
             shot_numbers_test,_ = ShotList.get_multiple_shots_and_disruption_times(shot_list_dir,shot_files_test)
 
         
-    	print(len(shot_numbers_train),len(shot_numbers_test))
+        print(len(shot_numbers_train),len(shot_numbers_test))
         shots_train = self.filter_by_number(shot_numbers_train)
         shots_test = self.filter_by_number(shot_numbers_test)
         return shots_train.random_sublist(use_shots_train),shots_test.random_sublist(use_shots_test)
