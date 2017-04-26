@@ -61,8 +61,8 @@ class Preprocessor(object):
         if len(shot_files_test) > 0:
             return self.preprocess_from_files(shot_list_dir,shot_files_train,use_shots_train) + \
                self.preprocess_from_files(shot_list_dir,shot_files_test,use_shots_test)
-    	else:
-    	    return self.preprocess_from_files(shot_list_dir,shot_files_train,use_shots_train)
+        else:
+            return self.preprocess_from_files(shot_list_dir,shot_files_train,use_shots_train)
 
 
     def preprocess_from_files(self,shot_list_dir,shot_files,use_shots):
