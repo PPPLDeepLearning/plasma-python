@@ -16,4 +16,4 @@ def compatible(serializedVersion):
     elif selfMinor >= otherMinor:
         return True
     else:
-return False
+        return False
