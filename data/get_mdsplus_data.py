@@ -20,7 +20,7 @@ import gadata
 
 #print("Importing numpy version"+np.__version__)
 
-prepath = '/home/felkerk/mdsplus_data/'
+prepath = '/cscratch/share/frnn'
 shot_numbers_path = 'shot_lists/'
 save_path = 'signal_data/'
 machine = 'd3d'
