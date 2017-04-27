@@ -6,7 +6,6 @@ http://www.mdsplus.org/index.php?title=Documentation:Tutorial:MdsObjects&open=76
 '''
 from __future__ import print_function
 from MDSplus import *
-from data_processing import ShotList
 from pylab import *
 import numpy as np
 import sys
@@ -17,6 +16,8 @@ import os
 import errno
 
 import gadata
+
+from plasma.primitives.shots import ShotList
 
 #print("Importing numpy version"+np.__version__)
 
@@ -40,7 +41,7 @@ if machine == 'nstx':
 elif machine == 'd3d':
 #	shot_numbers_files = ['shotlist_JaysonBarr_clear.txt']
 #	shot_numbers_files = ['shotlist_JaysonBarr_disrupt.txt']
-	shot_numbers_files = ['d3d_single_clear.txt']# ,'d3d_clear.txt', 'd3d_disrupt.txt']
+	shot_numbers_files = ['d3d_short_clear.txt']# ,'d3d_clear.txt', 'd3d_disrupt.txt']
 	server_path = 'atlas.gat.com'
 	import d3d_signals
 #	signal_paths = ['PINJ','IP','Q95','DENSITY','WMHD'] #,'PRAD'] #PRAD returns a 2D xdata
