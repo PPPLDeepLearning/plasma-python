@@ -42,11 +42,16 @@ elif machine == 'd3d':
 #	shot_numbers_files = ['shotlist_JaysonBarr_disrupt.txt']
 	shot_numbers_files = ['d3d_single_clear.txt']# ,'d3d_clear.txt', 'd3d_disrupt.txt']
 	server_path = 'atlas.gat.com'
+	import d3d_signals
 #	signal_paths = ['PINJ','IP','Q95','DENSITY','WMHD'] #,'PRAD'] #PRAD returns a 2D xdata
 #       Recommended signals from DIII-D
-	signal_paths = ['efsli','ipsip','efsbetan','efswmhd','nssampn1l','nssfrqn1l',
-			'nssampn2l','nssfrqn2l',
-			'dusbradial','dssdenest',r'\bol_l15_p',r'\bol_l03_p','bmspinj','bmstinj','pcechpwrf']
+	# signal_paths = ['efsli','ipsip','efsbetan','efswmhd','nssampn1l','nssfrqn1l',
+			# 'nssampn2l','nssfrqn2l',
+			# 'dusbradial','dssdenest',r'\bol_l15_p',r'\bol_l03_p','bmspinj','bmstinj','pcechpwrf']
+	# signal_paths = ['d3d/' + path for path in signal_paths]
+	
+
+
 elif machine == 'jet':
 	shot_numbers_files = ['CWall_clear.txt','CFC_unint.txt','BeWall_clear.txt','ILW_unint.txt']
 	server_path = 'mdsplus.jet.efda.org'
@@ -222,3 +227,8 @@ print('Finished downloading {} shots in {} seconds'.format(len(shot_numbers),tim
 
 # pool.close()
 # pool.join()
+
+
+
+
+
