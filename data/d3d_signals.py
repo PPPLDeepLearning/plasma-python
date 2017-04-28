@@ -29,14 +29,14 @@ signal_paths = [
 r'\bol_l15_p', #Radiated Power core
 r'\bol_l03_p', #Radiated Power Edge
 'bmspinj', #Total Beam Power
-'bmstinj', #Total Beam Torque
-'pcechpwrf'] #Total ECH Power
+'bmstinj',] #Total Beam Torque
+#'pcechpwrf'] #Total ECH Power Not always on!
 
 signal_paths = ['d3d/' + path for path in signal_paths]
   
 ### 1D EFIT signals ###
 signal_paths += [
-'AOT/EQU.te', #electron temperature profile vs rho (uniform mapping over time)
+'AOT/EQU.t_e', #electron temperature profile vs rho (uniform mapping over time)
 'AOT/EQU.dens_e'] #electron density profile vs rho (uniform mapping over time)
 
 #make into list of lists format to be consistent with jet_signals.py

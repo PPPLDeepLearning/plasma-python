@@ -6,7 +6,7 @@ http://www.mdsplus.org/index.php?title=Documentation:Tutorial:MdsObjects&open=76
 '''
 from __future__ import print_function
 from MDSplus import *
-from pylab import *
+#from pylab import *
 import numpy as np
 import sys
 import multiprocessing as mp
@@ -21,7 +21,7 @@ from plasma.primitives.shots import ShotList
 
 #print("Importing numpy version"+np.__version__)
 
-prepath = '/cscratch/share/frnn'
+prepath = '/cscratch/share/frnn/'
 shot_numbers_path = 'shot_lists/'
 save_path = 'signal_data/'
 machine = 'd3d'
@@ -43,7 +43,9 @@ elif machine == 'd3d':
 #	shot_numbers_files = ['shotlist_JaysonBarr_disrupt.txt']
 	shot_numbers_files = ['d3d_short_clear.txt']# ,'d3d_clear.txt', 'd3d_disrupt.txt']
 	server_path = 'atlas.gat.com'
-	import d3d_signals
+	from d3d_signals import signal_paths	
+	import itertools
+	signal_paths = list(itertools.chain.from_iterable(signal_paths))
 #	signal_paths = ['PINJ','IP','Q95','DENSITY','WMHD'] #,'PRAD'] #PRAD returns a 2D xdata
 #       Recommended signals from DIII-D
 	# signal_paths = ['efsli','ipsip','efsbetan','efswmhd','nssampn1l','nssfrqn1l',
@@ -127,6 +129,14 @@ def get_tree_and_tag(path):
 	tag = '\\' + spl[1]
 	return tree,tag
 
+def get_tree_and_tag_no_backslash(path):
+	spl = path.split('/')
+	tree = spl[0]
+	tag = spl[1]
+	return tree,tag
+
+
+
 
 def format_save_path(prepath,signal_path,shot_num):
 	return prepath + signal_path  + '/{}.txt'.format(shot_num)
@@ -161,8 +171,11 @@ def save_shot(shot_num_queue,c,signal_paths,save_prepath,machine):
 							print('Signal {}, shot {} missing. Filling with zeros'.format(signal_path,shot_num))
 							time,data = create_missing_value_filler()
 					elif machine == 'd3d':
+						tree,tag = get_tree_and_tag_no_backslash(signal_path)
 						try:
-							ga1 = gadata.gadata('{}'.format(signal_path),shot_num,tree='d3d',connection=c)
+							ga1 = gadata.gadata('{}'.format(tag),shot_num,tree=tree,connection=c)
+							if not ga1.found:
+								raise
 #							ga1 = gadata.gadata('\\{}'.format(signal_path),shot_num,tree='d3d',connection=c)
 							data = ga1.zdata
 							time = ga1.xdata					
@@ -171,7 +184,7 @@ def save_shot(shot_num_queue,c,signal_paths,save_prepath,machine):
 							print('Signal {}, shot {} missing. Filling with zeros'.format(signal_path,shot_num))
 							time,data = create_missing_value_filler()
 
-					data_two_column = vstack((time,data)).transpose()
+					data_two_column = np.vstack((np.atleast_2d(time),np.atleast_2d(data))).transpose()
 					try: #can lead to race condition
 						mkdirdepth(save_path_full)
 					except OSError, e:
@@ -181,7 +194,7 @@ def save_shot(shot_num_queue,c,signal_paths,save_prepath,machine):
 					    else:
 					        # Our target dir exists as a file, or different error, reraise the error!
 					        raise
-					savetxt(save_path_full,data_two_column,fmt = '%f %f')
+					np.savetxt(save_path_full,data_two_column,fmt = '%.5e')#fmt = '%f %f')
 					print('.',end='')
 			    except:
 					print('Could not save shot {}, signal {}'.format(shot_num,signal_path))
