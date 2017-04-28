@@ -33,11 +33,19 @@ r'\bol_l03_p', #Radiated Power Edge
 #'pcechpwrf'] #Total ECH Power Not always on!
 
 signal_paths = ['d3d/' + path for path in signal_paths]
+
+### 0D EFIT signals ###
+#signal_paths += ['EFIT02/RESULTS.AEQDSK.Q95']
   
 ### 1D EFIT signals ###
+#signal_paths += [
+#'AOT/EQU.t_e', #electron temperature profile vs rho (uniform mapping over time)
+#'AOT/EQU.dens_e'] #electron density profile vs rho (uniform mapping over time)
+
+#these signals seem to give more reliable data
 signal_paths += [
-'AOT/EQU.t_e', #electron temperature profile vs rho (uniform mapping over time)
-'AOT/EQU.dens_e'] #electron density profile vs rho (uniform mapping over time)
+'ZIPFIT01/PROFILES.ETEMPFIT', #electron temperature profile vs rho (uniform mapping over time)
+'ZIPFIT01/PROFILES.EDENSFIT'] #electron density profile vs rho (uniform mapping over time)
 
 #make into list of lists format to be consistent with jet_signals.py
 signal_paths = [[path] for path in signal_paths]

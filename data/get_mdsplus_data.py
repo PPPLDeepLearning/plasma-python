@@ -39,9 +39,9 @@ if machine == 'nstx':
 	'efit02/wpdot/']
 
 elif machine == 'd3d':
-#	shot_numbers_files = ['shotlist_JaysonBarr_clear.txt']
-#	shot_numbers_files = ['shotlist_JaysonBarr_disrupt.txt']
-	shot_numbers_files = ['d3d_short_clear.txt']# ,'d3d_clear.txt', 'd3d_disrupt.txt']
+	shot_numbers_files = ['shotlist_JaysonBarr_clear.txt']
+	shot_numbers_files += ['shotlist_JaysonBarr_disrupt.txt']
+	#shot_numbers_files = ['d3d_short_clear.txt']# ,'d3d_clear.txt', 'd3d_disrupt.txt']
 	server_path = 'atlas.gat.com'
 	from d3d_signals import signal_paths	
 	import itertools
@@ -214,7 +214,7 @@ shot_numbers,_ = ShotList.get_multiple_shots_and_disruption_times(prepath + shot
 
 
 fn = partial(save_shot,signal_paths=signal_paths,save_prepath=save_prepath,machine=machine)
-num_cores = min(mp.cpu_count(),8) #can only handle 8 connections at once :(
+num_cores = min(mp.cpu_count(),32) #can only handle 8 connections at once :(
 queue = mp.Queue()
 for shot_num in shot_numbers:
 	queue.put(shot_num)

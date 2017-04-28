@@ -44,22 +44,28 @@ class gadata:
 				self.zdata  = self.connection.get('_s = '+tag).data()
 				self.zunits = self.connection.get('units_of(_s)').data()  
 				self.rank = numpy.ndim(self.zdata)	
-				self.xdata = self.connection.get('dim_of(_s)').data()
-				self.xunits = self.connection.get('units_of(dim_of(_s))').data()
-				if self.xunits == '' or self.xunits == ' ': 
-   					self.xunits = self.connection.get('units(dim_of(_s))').data()
 				if self.rank > 1:
-					self.ydata 	= self.connection.get('dim_of(_s,1)').data()
-                			self.yunits = self.connection.get('units_of(dim_of(_s,1))').data()
+					self.xdata = self.connection.get('dim_of(_s,1)').data()
+					self.xunits = self.connection.get('units_of(dim_of(_s,1))').data()
+					if self.xunits == '' or self.xunits == ' ': 
+   						self.xunits = self.connection.get('units(dim_of(_s,1))').data()
+
+					self.ydata 	= self.connection.get('dim_of(_s)').data()
+                			self.yunits = self.connection.get('units_of(dim_of(_s))').data()
 					if self.yunits == '' or self.yunits == ' ':
- 						self.yunits     = self.connection.get('units(dim_of(_s,1))').data()
+ 						self.yunits     = self.connection.get('units(dim_of(_s))').data()
+				else:
+					self.xdata = self.connection.get('dim_of(_s)').data()
+					self.xunits = self.connection.get('units_of(dim_of(_s))').data()
+					if self.xunits == '' or self.xunits == ' ': 
+   						self.xunits = self.connection.get('units(dim_of(_s))').data()
 				#print 'zdata: ' + str(self.zdata)
 				self.found = True
 
 				# MDSplus seems to return 2-D arrays transposed.  Change them back.
-				#if numpy.ndim(self.zdata) == 2: self.zdata = numpy.transpose(self.zdata)
-				#if numpy.ndim(self.ydata) == 2: self.ydata = numpy.transpose(self.ydata)
-				#if numpy.ndim(self.xdata) == 2: self.xdata = numpy.transpose(self.xdata)
+				if numpy.ndim(self.zdata) == 2: self.zdata = numpy.transpose(self.zdata)
+				if numpy.ndim(self.ydata) == 2: self.ydata = numpy.transpose(self.ydata)
+				if numpy.ndim(self.xdata) == 2: self.xdata = numpy.transpose(self.xdata)
 
             		except Exception,e:
             	#node not found
