@@ -1,5 +1,5 @@
 from MDSplus import *
-import numpy
+import numpy as np
 import time
 import sys
 
@@ -11,12 +11,12 @@ import sys
 # 			self.signals.append(Signal(signal_descriptions[i],signal_paths[i]))
 
 class Signal:
-	def __init__(self,description,paths,machines=['jet'],tex_label=None,causal_shifts=None)
+	def __init__(self,description,paths,machines=['jet'],tex_label=None,causal_shifts=None):
 		assert(len(paths) == len(machines))
 		self.description = description
 		self.paths = paths
 		self.machines = machines #on which machines is the signal defined
-		if causal_shifts = None:
+		if causal_shifts == None:
 			causal_shifts = [0 for m in machines]
 		self.causal_shifts = causal_shifts #causal shift in ms
 
@@ -51,15 +51,32 @@ class Machine:
 
 	def fetch_data(self,signal,shot_num,c):
 		path = signal.get_path(self)
-		time,data,mapping,success = self.fetch_data_fn(path,shot_num,c)
-		time = time + signal.get_causal_shift(self)
-		return time,data,mapping,success
+		success = False
+		mapping = None
+		try:
+			time,data,mapping,success = self.fetch_data_fn(path,shot_num,c)
+		except Exception,e:
+			time,data = create_missing_value_filler()
+			print(e)
+			sys.stdout.flush()
+		time = np.array(time) + signal.get_causal_shift(self)
+		return time,np.array(data),mapping,success
 
 	def __eq__(self,other):
-		return __eq__(self.name,other.name)
+		return self.name.__eq__(other.name)
+
+	
+	def __ne__(self,other):
+		return self.name.__ne__(other.name)
+	
+	def __hash__(self,other):
+		return self.name.__hash__()
 
 
-
+def create_missing_value_filler():
+	time = np.linspace(0,100,100)
+	vals = np.zeros_like(time)
+	return time,vals
 
 def get_tree_and_tag(path):
 	spl = path.split('/')
@@ -73,16 +90,7 @@ def get_tree_and_tag_no_backslash(path):
 	tag = spl[1]
 	return tree,tag
 
-def fetch_d3d_data(signal_path,shot_num,c):
-	success = False
-	try:
-		time,data,success = attempt_fetch_d3d_data(signal_path,shot_num,c)
-	except:
-		time,data = create_missing_value_filler()
-	return time,data,success
-
-
-def attempt_fetch_d3d_data(signal_path,shot,c=None):
+def fetch_d3d_data(signal_path,shot,c=None):
 	tree,signal = get_tree_and_tag_no_backslash(signal_path)
 	if tree == None:
 		signal = c.get('findsig("'+signal+'",_fstree)').value
@@ -106,28 +114,32 @@ def attempt_fetch_d3d_data(signal_path,shot,c=None):
 		return units
 
 	try:     
-		c.openTree(fstree,shot)
-		data  = c.get('_s = '+tag).data()
+		c.openTree(tree,shot)
+		data  = c.get('_s = '+signal).data()
 		data_units = c.get('units_of(_s)').data()  
-		rank = numpy.ndim(data)	
+		rank = np.ndim(data)	
 		if rank > 1:
 			xdata = c.get('dim_of(_s,1)').data()
 			xunits = get_units('dim_of(_s,1)')
 			ydata 	= c.get('dim_of(_s)').data()
-	    	yunits = get_units('dim_of(_s)')
+	    		yunits = get_units('dim_of(_s)')
 		else:
 			xdata = c.get('dim_of(_s)').data()
-	    	xunits = get_units('dim_of(_s)')
+	    		xunits = get_units('dim_of(_s)')
 		found = True
 		# MDSplus seems to return 2-D arrays transposed.  Change them back.
-		if numpy.ndim(data) == 2: data = numpy.transpose(data)
-		if numpy.ndim(ydata) == 2: ydata = numpy.transpose(ydata)
-		if numpy.ndim(xdata) == 2: xdata = numpy.transpose(xdata)
+		if np.ndim(data) == 2: data = np.transpose(data)
+		if np.ndim(ydata) == 2: ydata = np.transpose(ydata)
+		if np.ndim(xdata) == 2: xdata = np.transpose(xdata)
 
 	except Exception,e:
+		#print(e)
+		#sys.stdout.flush()
 		pass
+
 	# Retrieve data from PTDATA if node not found
 	if not found:
+		#print("not in full path {}".format(signal))
 		data = c.get('_s = ptdata2("'+signal+'",'+str(shot)+')')
 		if len(data) != 1:
 			xdata = c.get('dim_of(_s)')
@@ -135,6 +147,7 @@ def attempt_fetch_d3d_data(signal_path,shot,c=None):
 			found = True
 	# Retrieve data from Pseudo-pointname if not in ptdata
 	if not found:
+		#print("not in PTDATA {}".format(signal))
 		data = c.get('_s = pseudo("'+signal+'",'+str(shot)+')')
 		if len(data) != 1:
 			xdata = c.get('dim_of(_s)')
@@ -142,8 +155,8 @@ def attempt_fetch_d3d_data(signal_path,shot,c=None):
 			found = True
 	#this means the signal wasn't found
 	if not found:  
+		print "   No such signal: %s" % (signal,)
 		pass
-		#print "   No such signal: %s" % (signal,)
 
     # print '   GADATA Retrieval Time : ',time.time() - t0
 	return xdata,data,ydata,found
@@ -170,13 +183,13 @@ nstk = Machine("nstx","skylark.pppl.gov:8501::",fetch_nstx_data)
 
 all_machines = [d3d,jet]
 
-etemp_profile = Signal("Electron temperature profile",["ZIPFIT01/PROFILES.ETEMPPROFILE"],[d3d],causal_shifts=[10])
-edens_profile = Signal("Electron density profile",["ZIPFIT01/PROFILES.EDENSPROFILE"],[d3d],causal_shifts=[10])
+etemp_profile = Signal("Electron temperature profile",["ZIPFIT01/PROFILES.ETEMPFIT"],[d3d],causal_shifts=[10])
+edens_profile = Signal("Electron density profile",["ZIPFIT01/PROFILES.EDENSFIT"],[d3d],causal_shifts=[10])
 
-q95 = Signal("q95 safety factor",["EFIT02/RESULTS.AEQDSK.Q95"],[d3d],causal_shifts=[10])
+q95 = Signal("q95 safety factor",["EFIT01/RESULTS.AEQDSK.Q95"],[d3d],causal_shifts=[10])
 
 li = Signal("locked mode amplitude",["jpf/gs/bl-li<s","d3d/efsli"],[jet,d3d])
-ip = Signal("plasma current",["jpf/da/c2-ipla","d3d/ipsip"])
+ip = Signal("plasma current",["jpf/da/c2-ipla","d3d/ipsip"],[jet,d3d])
 betan = Signal("Normalized Beta",['d3d/efsbetan'],[d3d])
 energy = Signal("stored energy",['d3d/efswmhd'],[d3d])
 lm = Signal("Locked mode amplitude",['jpf/da/c2-loca','d3d/dusbradial'],[jet,d3d])
@@ -197,10 +210,13 @@ tmfreq2 = Signal("Tearing Mode frequency (rotating 3/2)", ['d3d/nssfrqn2l'],[d3d
 
 all_signals = [etemp_profile,edens_profile,q95,li,ip,
 betan,energy,lm,dens,pradcore,pradedge,pradtot,pin,
-pechin,torquein,tmamp1,tmamp2,tmfreq1,tmfreq2]
+torquein,tmamp1,tmamp2,tmfreq1,tmfreq2
+#pechin,
+]
 
 
 fully_defined_signals = [sig for sig in all_signals if sig.is_defined_on_machines(all_machines)]
+d3d_signals = [sig for sig in all_signals if sig.is_defined_on_machine(d3d)]
 
 
 

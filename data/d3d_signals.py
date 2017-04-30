@@ -35,7 +35,7 @@ r'\bol_l03_p', #Radiated Power Edge
 signal_paths = ['d3d/' + path for path in signal_paths]
 
 ### 0D EFIT signals ###
-#signal_paths += ['EFIT02/RESULTS.AEQDSK.Q95']
+signal_paths += ['EFIT01/RESULTS.AEQDSK.Q95']
   
 ### 1D EFIT signals ###
 #signal_paths += [

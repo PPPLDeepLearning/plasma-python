@@ -27,7 +27,7 @@ import errno
 
 from plasma.primitives.shots import ShotList
 
-from signal_names import *
+from signals import *
 
 #print("Importing numpy version"+np.__version__)
 
@@ -45,14 +45,13 @@ def format_save_path(prepath,signal_path,shot_num):
 	return prepath + signal_path  + '/{}.txt'.format(shot_num)
 
 
-def save_shot_signals(shot_num_queue,complete_queue,c,signals,save_prepath,machine):
+def save_shot(shot_num_queue,c,signals,save_prepath,machine,sentinel=-1):
 	missing_values = 0
 	# if machine == 'd3d':
 	# 	reload(gadata) #reloads Gadata object with connection
 	while True:
-		try:
-			shot_num = shot_num_queue.get(False)
-		except Queue.Empty:
+		shot_num = shot_num_queue.get()
+		if shot_num == sentinel:
 			break
 		shot_complete = True
 		for signal in signals:
@@ -61,12 +60,13 @@ def save_shot_signals(shot_num_queue,complete_queue,c,signals,save_prepath,machi
 			success = False
 			if os.path.isfile(save_path_full):
 				print('-',end='')
+				success = True
 			else:
 				try:
 					try:
 						time,data,mapping,success = machine.fetch_data(signal,shot_num,c) 
 					except:
-						missing_values += 1
+						#missing_values += 1
 						print('Signal {}, shot {} missing. Filling with zeros'.format(signal_path,shot_num))
 						time,data = create_missing_value_filler()
 
@@ -93,10 +93,49 @@ def save_shot_signals(shot_num_queue,complete_queue,c,signals,save_prepath,machi
 		#only add shot to list if it was complete
 		if shot_complete:
 			print('saved shot {}'.format(shot_num))
-			complete_queue.put(shot_num)
+			#complete_queue.put(shot_num)
 		else:
 			print('shot {} not complete. removing from list.'.format(shot_num))
 	print('Finished with {} missing values total'.format(missing_values))
+	return
+
+
+def download_shot_numbers(shot_numbers,save_prepath,machine,max_cores = 2):
+	sentinel = -1
+	fn = partial(save_shot,signals=signals,save_prepath=save_prepath,machine=machine,sentinel=sentinel)
+	num_cores = min(mp.cpu_count(),max_cores) #can only handle 8 connections at once :(
+	queue = mp.Queue()
+	#complete_shots = Array('i',zeros(len(shot_numbers)))# = mp.Queue()
+	
+	assert(len(shot_numbers) < 30000) # mp.queue can't handle larger queues yet!
+	for shot_num in shot_numbers:
+		queue.put(shot_num)
+	for i in range(num_cores):
+		queue.put(sentinel)
+	connections = [Connection(machine.server) for _ in range(num_cores)]
+	processes = [mp.Process(target=fn,args=(queue,connections[i])) for i in range(num_cores)]
+	
+	print('running in parallel on {} processes'.format(num_cores))
+	
+	for p in processes:
+		p.start()
+	for p in processes:
+		p.join()
+
+
+def download_all_shot_numbers(prepath,save_path,shot_numbers_path,shot_numbers_files,machine,max_cores):
+	max_len = 30000
+	save_prepath = prepath+save_path + '/' + machine.name + '/'
+	shot_numbers,_ = ShotList.get_multiple_shots_and_disruption_times(prepath + shot_numbers_path,shot_numbers_files)
+	shot_numbers_chunks = [shot_numbers[i:i+max_len] for i in xrange(0,len(shot_numbers),max_len)]#can only use queue of max size 30000
+	start_time = time.time()
+	for shot_numbers_chunk in shot_numbers_chunks:
+		download_shot_numbers(shot_numbers_chunk,save_prepath,machine,max_cores)
+	
+	print('Finished downloading {} shots in {} seconds'.format(len(shot_numbers),time.time()-start_time))
+
+
+
 
 
 
@@ -104,113 +143,32 @@ prepath = '/cscratch/share/frnn/'
 shot_numbers_path = 'shot_lists/'
 save_path = 'signal_data/'
 machine = d3d
-signals = all_signals
+signals = d3d_signals
+
+#nstx
+# 	shot_numbers_files = ['disrupt_nstx.txt']  #nstx
+
+#d3d
+shot_numbers_files = ['shotlist_JaysonBarr_clear.txt']
+shot_numbers_files += ['shotlist_JaysonBarr_disrupt.txt']
+# 	#shot_numbers_files = ['d3d_short_clear.txt']# ,'d3d_clear.txt', 'd3d_disrupt.txt']
+
+#jet
+# 	shot_numbers_files = ['CWall_clear.txt','CFC_unint.txt','BeWall_clear.txt','ILW_unint.txt']#jet
+
+max_cores = 32
+download_all_shot_numbers(prepath,save_path,shot_numbers_path,shot_numbers_files,machine,max_cores)
 
 
+#complete_shot_numbers = []
+#print(complete_queue)
+#print(complete_queue.qsize())
+#for i in range(len(complete_shots)):
+#	if complete_shots[i]:
+#		complete_shot_numbers.append(shot_numbers[i])
+#while not complete_queue.empty():
+#	complete_shot_numbers.append(complete_queue.get(False))
 
-
-save_prepath = prepath+save_path + '/' + machine + '/'
-
-shot_numbers,_ = ShotList.get_multiple_shots_and_disruption_times(prepath + shot_numbers_path,shot_numbers_files)
-
-
-fn = partial(save_shot,signals=signals,save_prepath=save_prepath,machine=machine)
-num_cores = min(mp.cpu_count(),32) #can only handle 8 connections at once :(
-queue = mp.Queue()
-complete_queue = mp.Queue()
-for shot_num in shot_numbers:
-	queue.put(shot_num)
-connections = [Connection(server_path) for _ in range(num_cores)]
-processes = [mp.Process(target=fn,args=(queue,connections[i])) for i in range(num_cores)]
-
-print('running in parallel on {} processes'.format(num_cores))
-start_time = time.time()
-
-for p in processes:
-	p.start()
-for p in processes:
-	p.join()
-
-complete_shot_numbers = list(complete_queue)
-print('Finished downloading {} ({} complete) shots in {} seconds'.format(len(shot_numbers),len(complete_shot_numbers),time.time()-start_time))
-
-
-# c = Connection(server_path)
-
-# pool = mp.Pool()
-# for shot_num in shot_numbers:
-# # 	save_shot(shot_num,signal_paths,save_prepath,machine,c)
-# for (i,_) in enumerate(pool.imap_unordered(fn,shot_numbers)):
-#     print('{}/{}'.format(i,len(shot_numbers)))
-
-# pool.close()
-# pool.join()
-
-
-
-
-
-# def save_shot(shot_num_queue,c,signal_paths,save_prepath,machine):
-# 	missing_values = 0
-# 	# if machine == 'd3d':
-# 	# 	reload(gadata) #reloads Gadata object with connection
-# 	while True:
-# 		try:
-# 			shot_num = shot_num_queue.get(False)
-# 		except Queue.Empty:
-# 			break
-# 		for signal_path in signal_paths:
-# 			save_path_full = format_save_path(save_prepath,signal_path,shot_num)
-# 			if os.path.isfile(save_path_full):
-# 				print('-',end='')
-# 			else:
-# 			    try:
-# 					if machine == 'nstx':
-# 						tree,tag = get_tree_and_tag(signal_path)
-# 						c.openTree(tree,shot_num)
-# 						data = c.get(tag).data()
-# 						time = c.get('dim_of('+tag+')').data()
-# 					elif machine == 'jet':
-# 						try:
-# 							data = c.get('_sig=jet("{}/",{})'.format(signal_path,shot_num)).data()
-# 							time = c.get('_sig=dim_of(jet("{}/",{}))'.format(signal_path,shot_num)).data()
-# 						except:
-# 							missing_values += 1
-# 							print('Signal {}, shot {} missing. Filling with zeros'.format(signal_path,shot_num))
-# 							time,data = create_missing_value_filler()
-# 					elif machine == 'd3d':
-# 						tree,tag = get_tree_and_tag_no_backslash(signal_path)
-# 						try:
-# 							ga1 = gadata.gadata('{}'.format(tag),shot_num,tree=tree,connection=c)
-# 							if not ga1.found:
-# 								raise
-# #							ga1 = gadata.gadata('\\{}'.format(signal_path),shot_num,tree='d3d',connection=c)
-# 							data = ga1.zdata
-# 							time = ga1.xdata					
-# 						except:
-# 							missing_values += 1
-# 							print('Signal {}, shot {} missing. Filling with zeros'.format(signal_path,shot_num))
-# 							time,data = create_missing_value_filler()
-
-# 					data_two_column = np.vstack((np.atleast_2d(time),np.atleast_2d(data))).transpose()
-# 					try: #can lead to race condition
-# 						mkdirdepth(save_path_full)
-# 					except OSError, e:
-# 					    if e.errno == errno.EEXIST:
-# 					        # File exists, and it's a directory, another process beat us to creating this dir, that's OK.
-# 					        pass
-# 					    else:
-# 					        # Our target dir exists as a file, or different error, reraise the error!
-# 					        raise
-# 					np.savetxt(save_path_full,data_two_column,fmt = '%.5e')#fmt = '%f %f')
-# 					print('.',end='')
-# 			    except:
-# 					print('Could not save shot {}, signal {}'.format(shot_num,signal_path))
-# 					print('Warning: Incomplete!!!')
-# 					raise
-# 			sys.stdout.flush()
-# 		print('saved shot {}'.format(shot_num))
-# 	print('Finished with {} missing values total'.format(missing_values))
 
 
 # if machine == 'nstx':
@@ -282,15 +240,5 @@ print('Finished downloading {} ({} complete) shots in {} seconds'.format(len(sho
 
 # 	#radial position of channel i mapped onto midplane vs time
 # 	signal_paths += ['ppf/kk3/rc{:02d}'.format(i) for i in range(1,97)]
-
-
-
-
-
-
-
-# else:
-# 	print('unkown machine. exiting')
-# 	exit(1)
 
 
