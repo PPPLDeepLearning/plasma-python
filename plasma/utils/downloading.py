@@ -133,7 +133,7 @@ def download_shot_numbers(shot_numbers,save_prepath,machine):
 def download_all_shot_numbers(prepath,save_path,shot_numbers_path,shot_numbers_files,machine):
 	max_len = 30000
 	save_prepath = prepath+save_path + '/' + machine.name + '/'
-	shot_numbers,_ = ShotList.get_multiple_shots_and_disruption_times(prepath + shot_numbers_path,shot_numbers_files)
+	shot_numbers,_,_ = ShotList.get_multiple_shots_and_disruption_times(prepath + shot_numbers_path,shot_numbers_files,[machine]*len(shot_numbers_files))
 	shot_numbers_chunks = [shot_numbers[i:i+max_len] for i in xrange(0,len(shot_numbers),max_len)]#can only use queue of max size 30000
 	start_time = time.time()
 	for shot_numbers_chunk in shot_numbers_chunks:
