@@ -186,14 +186,14 @@ all_machines = [d3d,jet]
 etemp_profile = Signal("Electron temperature profile",["ZIPFIT01/PROFILES.ETEMPFIT"],[d3d],causal_shifts=[10])
 edens_profile = Signal("Electron density profile",["ZIPFIT01/PROFILES.EDENSFIT"],[d3d],causal_shifts=[10])
 
-q95 = Signal("q95 safety factor",["EFIT01/RESULTS.AEQDSK.Q95"],[d3d],causal_shifts=[10])
+q95 = Signal("q95 safety factor",['ppf/efit/q95',"EFIT01/RESULTS.AEQDSK.Q95"],[jet,d3d],causal_shifts=[15,10])
 
 li = Signal("locked mode amplitude",["jpf/gs/bl-li<s","d3d/efsli"],[jet,d3d])
 ip = Signal("plasma current",["jpf/da/c2-ipla","d3d/ipsip"],[jet,d3d])
 betan = Signal("Normalized Beta",['d3d/efsbetan'],[d3d])
 energy = Signal("stored energy",['d3d/efswmhd'],[d3d])
 lm = Signal("Locked mode amplitude",['jpf/da/c2-loca','d3d/dusbradial'],[jet,d3d])
-dens = Signal("Plasma density",['jpf/df/g1r-lid:002','d3d/dssdenest'],[jet,d3d])
+dens = Signal("Plasma density",['jpf/df/g1r-lid:003','d3d/dssdenest'],[jet,d3d])
 
 pradcore = Signal("Radiated Power Core",['d3d/'+r'\bol_l15_p'],[d3d])
 pradedge = Signal("Radiated Power Edge",['d3d/'+r'\bol_l03_p'],[d3d])
