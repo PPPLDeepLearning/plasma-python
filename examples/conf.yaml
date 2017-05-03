@@ -1,5 +1,8 @@
 #conf.py will parse the yaml and extract parameters based on what is specified
 
+#will do stuff in fs_path / [username] / signal_data | shot_lists | processed shots, etc.
+
+# for example tigress/alexeys
 fs_path: '/tigress'
 target: 'hinge'
 

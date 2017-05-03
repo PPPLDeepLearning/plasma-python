@@ -1,86 +1,12 @@
-from MDSplus import *
+# try:
+	# from MDSplus import *
+# except ImportError:
+	# print("MDS+ not installed. Won't be able to download data")
 import numpy as np
 import time
 import sys
 
-# class SignalCollection:
-# 	"""GA Data Obj"""
-# 	def __init__(self,signal_descriptions,signal_paths):
-# 		self.signals = []
-# 		for i in range(len(signal_paths))
-# 			self.signals.append(Signal(signal_descriptions[i],signal_paths[i]))
-
-class Signal:
-	def __init__(self,description,paths,machines=['jet'],tex_label=None,causal_shifts=None):
-		assert(len(paths) == len(machines))
-		self.description = description
-		self.paths = paths
-		self.machines = machines #on which machines is the signal defined
-		if causal_shifts == None:
-			causal_shifts = [0 for m in machines]
-		self.causal_shifts = causal_shifts #causal shift in ms
-
-	def is_defined_on_machine(self,machine):
-		return machine in self.machines
-
-	def is_defined_on_machines(self,machines):
-		return all([m in self.machines for m in machines])
-
-	def get_path(self,machine):
-		idx = self.get_idx(machine)
-		return self.paths[idx]
-
-	def get_causal_shift(self,machine):
-		idx = self.get_idx(machine)
-		return self.causal_shifts[idx]
-
-	def get_idx(self,machine):
-		assert(machine in self.machines)
-		idx = self.machines.index(machine)	
-		return idx
-
-	def __str__(self):
-		return self.description
-	
-	def __repr__(self):
-		return self.description
-
-
-class Machine:
-	def __init__(self,name,server,fetch_data_fn,max_cores = 8):
-		self.name = name
-		self.server = server
-		self.max_cores = max_cores
-		self.fetch_data_fn = fetch_data_fn
-
-	def get_connection(self):
-		return Connection(server)
-
-	def fetch_data(self,signal,shot_num,c):
-		path = signal.get_path(self)
-		success = False
-		mapping = None
-		try:
-			time,data,mapping,success = self.fetch_data_fn(path,shot_num,c)
-		except Exception,e:
-			time,data = create_missing_value_filler()
-			print(e)
-			sys.stdout.flush()
-		time = np.array(time) + signal.get_causal_shift(self)
-		return time,np.array(data),mapping,success
-
-	def __eq__(self,other):
-		return self.name.__eq__(other.name)
-
-	
-	def __ne__(self,other):
-		return self.name.__ne__(other.name)
-	
-	def __hash__(self,other):
-		return self.name.__hash__()
-	
-	def __str__(self):
-		return self.name.__str__()
+from plasma.models.data import Signal,Machine
 
 
 def create_missing_value_filler():
@@ -105,8 +31,8 @@ def fetch_d3d_data(signal_path,shot,c=None):
 	if tree == None:
 		signal = c.get('findsig("'+signal+'",_fstree)').value
 		tree = c.get('_fstree').value 
-	if c is None:
-		c = MDSplus.Connection('atlas.gat.com')
+	# if c is None:
+		# c = MDSplus.Connection('atlas.gat.com')
 
 	# ## Retrieve Data 
 	t0 =  time.time()
@@ -186,8 +112,12 @@ def fetch_nstx_data(signal_path,shot_num,c):
 	found = True
 	return time,data,None,found
 
-d3d = Machine("d3d","atlas.gat.com",fetch_d3d_data,max_cores=32)
-jet = Machine("jet","mdsplus.jet.efda.org",fetch_jet_data,max_cores=8)
+
+
+
+
+d3d = Machine("d3d","atlas.gat.com",fetch_d3d_data,max_cores=32,current_threshold=1e-1)
+jet = Machine("jet","mdsplus.jet.efda.org",fetch_jet_data,max_cores=8,current_threshold=1e5)
 nstx = Machine("nstx","skylark.pppl.gov:8501::",fetch_nstx_data,max_cores=8)
 
 
@@ -198,7 +128,7 @@ edens_profile = Signal("Electron density profile",["ZIPFIT01/PROFILES.EDENSFIT"]
 
 q95 = Signal("q95 safety factor",['ppf/efit/q95',"EFIT01/RESULTS.AEQDSK.Q95"],[jet,d3d],causal_shifts=[15,10])
 
-ip = Signal("plasma current",["jpf/da/c2-ipla","d3d/ipsip"],[jet,d3d])
+ip = Signal("plasma current",["jpf/da/c2-ipla","d3d/ipsip"],[jet,d3d],is_ip=True)
 li = Signal("internal inductance",["jpf/gs/bl-li<s","d3d/efsli"],[jet,d3d])
 lm = Signal("Locked mode amplitude",['jpf/da/c2-loca','d3d/dusbradial'],[jet,d3d])
 dens = Signal("Plasma density",['jpf/df/g1r-lid:003','d3d/dssdenest'],[jet,d3d])
@@ -208,7 +138,8 @@ pin = Signal("Input Power (beam for d3d)",['jpf/gs/bl-ptot<s','d3d/bmspinj'],[je
 pradtot = Signal("Radiated Power",['jpf/db/b5r-ptot>out'],[jet])
 pradcore = Signal("Radiated Power Core",['d3d/'+r'\bol_l15_p'],[d3d])
 pradedge = Signal("Radiated Power Edge",['d3d/'+r'\bol_l03_p'],[d3d])
-pechin = Signal("ECH input power, not always on",['d3d/pcechpwrf'],[d3d])
+# pechin = Signal("ECH input power, not always on",['d3d/pcechpwrf'],[d3d])
+pechin = Signal("ECH input power, not always on",['d3d/echpwrc'],[d3d])
 
 betan = Signal("Normalized Beta",['d3d/efsbetan'],[d3d])
 energydt = Signal("stored energy time derivative",['jpf/gs/bl-fdwdt<s'],[jet])
@@ -225,6 +156,8 @@ betan,energy,lm,dens,pradcore,pradedge,pradtot,pin,
 torquein,tmamp1,tmamp2,tmfreq1,tmfreq2,pechin
 ]
 
+print('all signals:')
+print(all_signals)
 
 fully_defined_signals = [sig for sig in all_signals if sig.is_defined_on_machines(all_machines)]
 d3d_signals = [sig for sig in all_signals if sig.is_defined_on_machine(d3d)]
