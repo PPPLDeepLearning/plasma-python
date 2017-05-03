@@ -22,5 +22,5 @@ shot_numbers_files = ['d3d_clear_data_avail.txt', 'd3d_disrupt_data_avail.txt']
 #jet
 #shot_numbers_files = ['CWall_clear.txt','CFC_unint.txt','BeWall_clear.txt','ILW_unint.txt']#jet
 
-download_all_shot_numbers(prepath,save_path,shot_numbers_path,shot_numbers_files,machine)
+download_all_shot_numbers(prepath,save_path,shot_numbers_path,shot_numbers_files,machine,signals)
 
