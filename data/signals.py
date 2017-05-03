@@ -41,9 +41,10 @@ class Signal:
 
 
 class Machine:
-	def __init__(self,name,server,fetch_data_fn):
+	def __init__(self,name,server,fetch_data_fn,max_cores = 8):
 		self.name = name
 		self.server = server
+		self.max_cores = max_cores
 		self.fetch_data_fn = fetch_data_fn
 
 	def get_connection(self):
@@ -176,9 +177,9 @@ def fetch_nstx_data(signal_path,shot_num,c):
 	found = True
 	return time,data,None,found
 
-d3d = Machine("d3d","atlas.gat.com",fetch_d3d_data)
-jet = Machine("jet","mdsplus.jet.efda.org",fetch_jet_data)
-nstk = Machine("nstx","skylark.pppl.gov:8501::",fetch_nstx_data)
+d3d = Machine("d3d","atlas.gat.com",fetch_d3d_data,max_cores=32)
+jet = Machine("jet","mdsplus.jet.efda.org",fetch_jet_data,max_cores=8)
+nstx = Machine("nstx","skylark.pppl.gov:8501::",fetch_nstx_data,max_cores=8)
 
 
 all_machines = [d3d,jet]
@@ -217,6 +218,7 @@ torquein,tmamp1,tmamp2,tmfreq1,tmfreq2
 
 fully_defined_signals = [sig for sig in all_signals if sig.is_defined_on_machines(all_machines)]
 d3d_signals = [sig for sig in all_signals if sig.is_defined_on_machine(d3d)]
+jet_signals = [sig for sig in all_signals if sig.is_defined_on_machine(jet)]
 
 
 
