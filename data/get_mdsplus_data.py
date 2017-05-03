@@ -100,7 +100,8 @@ def save_shot(shot_num_queue,c,signals,save_prepath,machine,sentinel=-1):
 	return
 
 
-def download_shot_numbers(shot_numbers,save_prepath,machine,max_cores = 2):
+def download_shot_numbers(shot_numbers,save_prepath,machine):
+	max_cores = machine.max_cores
 	sentinel = -1
 	fn = partial(save_shot,signals=signals,save_prepath=save_prepath,machine=machine,sentinel=sentinel)
 	num_cores = min(mp.cpu_count(),max_cores) #can only handle 8 connections at once :(
@@ -123,14 +124,14 @@ def download_shot_numbers(shot_numbers,save_prepath,machine,max_cores = 2):
 		p.join()
 
 
-def download_all_shot_numbers(prepath,save_path,shot_numbers_path,shot_numbers_files,machine,max_cores):
+def download_all_shot_numbers(prepath,save_path,shot_numbers_path,shot_numbers_files,machine):
 	max_len = 30000
 	save_prepath = prepath+save_path + '/' + machine.name + '/'
 	shot_numbers,_ = ShotList.get_multiple_shots_and_disruption_times(prepath + shot_numbers_path,shot_numbers_files)
 	shot_numbers_chunks = [shot_numbers[i:i+max_len] for i in xrange(0,len(shot_numbers),max_len)]#can only use queue of max size 30000
 	start_time = time.time()
 	for shot_numbers_chunk in shot_numbers_chunks:
-		download_shot_numbers(shot_numbers_chunk,save_prepath,machine,max_cores)
+		download_shot_numbers(shot_numbers_chunk,save_prepath,machine)
 	
 	print('Finished downloading {} shots in {} seconds'.format(len(shot_numbers),time.time()-start_time))
 
@@ -139,25 +140,26 @@ def download_all_shot_numbers(prepath,save_path,shot_numbers_path,shot_numbers_f
 
 
 
-prepath = '/cscratch/share/frnn/'
+prepath = '/p/datad2/'
 shot_numbers_path = 'shot_lists/'
-save_path = 'signal_data/'
-machine = d3d
-signals = d3d_signals
+save_path = 'signal_data2/'
+machine = jet#d3d 
+signals = jet_signals#d3d_signals
+print('using signals: ')
+print(jet_signals)
 
 #nstx
 # 	shot_numbers_files = ['disrupt_nstx.txt']  #nstx
 
 #d3d
-shot_numbers_files = ['shotlist_JaysonBarr_clear.txt']
-shot_numbers_files += ['shotlist_JaysonBarr_disrupt.txt']
+#shot_numbers_files = ['shotlist_JaysonBarr_clear.txt']
+#shot_numbers_files += ['shotlist_JaysonBarr_disrupt.txt']
 # 	#shot_numbers_files = ['d3d_short_clear.txt']# ,'d3d_clear.txt', 'd3d_disrupt.txt']
 
 #jet
-# 	shot_numbers_files = ['CWall_clear.txt','CFC_unint.txt','BeWall_clear.txt','ILW_unint.txt']#jet
+shot_numbers_files = ['CWall_clear.txt','CFC_unint.txt','BeWall_clear.txt','ILW_unint.txt']#jet
 
-max_cores = 32
-download_all_shot_numbers(prepath,save_path,shot_numbers_path,shot_numbers_files,machine,max_cores)
+download_all_shot_numbers(prepath,save_path,shot_numbers_path,shot_numbers_files,machine)
 
 
 #complete_shot_numbers = []

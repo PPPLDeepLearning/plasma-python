@@ -39,6 +39,12 @@ class Signal:
 		idx = self.machines.index(machine)	
 		return idx
 
+	def __str__(self):
+		return self.description
+	
+	def __repr__(self):
+		return self.description
+
 
 class Machine:
 	def __init__(self,name,server,fetch_data_fn,max_cores = 8):
@@ -72,6 +78,9 @@ class Machine:
 	
 	def __hash__(self,other):
 		return self.name.__hash__()
+	
+	def __str__(self):
+		return self.name.__str__()
 
 
 def create_missing_value_filler():
@@ -189,18 +198,20 @@ edens_profile = Signal("Electron density profile",["ZIPFIT01/PROFILES.EDENSFIT"]
 
 q95 = Signal("q95 safety factor",['ppf/efit/q95',"EFIT01/RESULTS.AEQDSK.Q95"],[jet,d3d],causal_shifts=[15,10])
 
-li = Signal("locked mode amplitude",["jpf/gs/bl-li<s","d3d/efsli"],[jet,d3d])
 ip = Signal("plasma current",["jpf/da/c2-ipla","d3d/ipsip"],[jet,d3d])
-betan = Signal("Normalized Beta",['d3d/efsbetan'],[d3d])
-energy = Signal("stored energy",['d3d/efswmhd'],[d3d])
+li = Signal("locked mode amplitude",["jpf/gs/bl-li<s","d3d/efsli"],[jet,d3d])
 lm = Signal("Locked mode amplitude",['jpf/da/c2-loca','d3d/dusbradial'],[jet,d3d])
 dens = Signal("Plasma density",['jpf/df/g1r-lid:003','d3d/dssdenest'],[jet,d3d])
+energy = Signal("stored energy",['jpf/gs/bl-wmhd<s','d3d/efswmhd'],[jet,d3d])
+pin = Signal("Input Power (beam for d3d)",['jpf/gs/bl-ptot<s','d3d/bmspinj'],[jet,d3d]) #Total Beam Power
 
+pradtot = Signal("Radiated Power",['jpf/db/b5r-ptot>out'],[jet])
 pradcore = Signal("Radiated Power Core",['d3d/'+r'\bol_l15_p'],[d3d])
 pradedge = Signal("Radiated Power Edge",['d3d/'+r'\bol_l03_p'],[d3d])
-pradtot = Signal("Radiated Power",['jpf/db/b5r-ptot>out'],[jet])
-pin = Signal("Input Power (beam for d3d)",['jpf/gs/bl-ptot<s','d3d/bmspinj'],[jet,d3d]) #Total Beam Power
 pechin = Signal("ECH input power, not always on",['d3d/pcechpwrf'],[d3d])
+
+betan = Signal("Normalized Beta",['d3d/efsbetan'],[d3d])
+energydt = Signal("stored energy time derivative",['jpf/gs/bl-fdwdt<s'],[jet])
 
 torquein = Signal("Input Beam Torque",['d3d/bmstinj'],[d3d]) #Total Beam Power
 tmamp1 = Signal("Tearing Mode amplitude (rotating 2/1)", ['d3d/nssampn1l'],[d3d])
