@@ -36,25 +36,25 @@ class Signal:
 		file_path = self.get_file_path(prepath,shot)
 		return os.path.isfile(file_path)
 
-    def load_data(self,prepath,shot):
-    	if not self.is_saved(prepath,shot):
-    		return None,None,False
+	def load_data(self,prepath,shot):
+		if not self.is_saved(prepath,shot):
+			return None,None,False
 
 		file_path = self.get_file_path(prepath,shot)
 		data = np.loadtxt(file_path)
 		t = data[:,0]
-        sig = data[:,1:]
+		sig = data[:,1:]
 
-        if self.is_ip: #restrict shot to current threshold
-        	region = np.where(np.abs(sig) >= shot.machine.current_threshold)
-        	t = t[region]
-        	sig = sig[region,:]
+		if self.is_ip: #restrict shot to current threshold
+			region = np.where(np.abs(sig) >= shot.machine.current_threshold)
+			t = t[region]
+			sig = sig[region,:]
 
-        #make sure shot is not garbage data
-        if (np.max(sig) == 0.0 and np.min(sig) == 0.0) or len(t) <= 1:
-        	return None,None,False
+		#make sure shot is not garbage data
+		if (np.max(sig) == 0.0 and np.min(sig) == 0.0) or len(t) <= 1:
+			return None,None,False
 
-        return t,sig,True
+		return t,sig,True
 
 	def is_defined_on_machine(self,machine):
 		return machine in self.machines
