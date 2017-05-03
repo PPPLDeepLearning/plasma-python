@@ -58,6 +58,7 @@ def save_shot(shot_num_queue,c,signals,save_prepath,machine,sentinel=-1):
 			signal_path = signal.get_path(machine)
 			save_path_full = format_save_path(save_prepath,signal_path,shot_num)
 			success = False
+			mapping = None
 			if os.path.isfile(save_path_full):
 				print('-',end='')
 				success = True
@@ -69,8 +70,13 @@ def save_shot(shot_num_queue,c,signals,save_prepath,machine,sentinel=-1):
 						#missing_values += 1
 						print('Signal {}, shot {} missing. Filling with zeros'.format(signal_path,shot_num))
 						time,data = create_missing_value_filler()
+						mapping = None
 
+					
 					data_two_column = np.vstack((np.atleast_2d(time),np.atleast_2d(data))).transpose()
+					if mapping is not None:
+						mapping_two_column = np.hstack((np.array([[0.0]]),np.atleast_2d(mapping)))
+						data_two_column = np.vstack((mapping_two_column,data_two_column))
 					try: #can lead to race condition
 						mkdirdepth(save_path_full)
 					except OSError, e:
@@ -108,7 +114,7 @@ def download_shot_numbers(shot_numbers,save_prepath,machine):
 	queue = mp.Queue()
 	#complete_shots = Array('i',zeros(len(shot_numbers)))# = mp.Queue()
 	
-	assert(len(shot_numbers) < 30000) # mp.queue can't handle larger queues yet!
+	assert(len(shot_numbers) < 32000) # mp.queue can't handle larger queues yet!
 	for shot_num in shot_numbers:
 		queue.put(shot_num)
 	for i in range(num_cores):
@@ -140,13 +146,13 @@ def download_all_shot_numbers(prepath,save_path,shot_numbers_path,shot_numbers_f
 
 
 
-prepath = '/p/datad2/'
+prepath = '/cscratch/share/frnn/'#'/p/datad2/'
 shot_numbers_path = 'shot_lists/'
-save_path = 'signal_data2/'
-machine = jet#d3d 
-signals = jet_signals#d3d_signals
+save_path = 'signal_data/'
+machine = d3d#jet#d3d 
+signals = d3d_signals#jet_signals#d3d_signals
 print('using signals: ')
-print(jet_signals)
+print(signals)
 
 #nstx
 # 	shot_numbers_files = ['disrupt_nstx.txt']  #nstx
@@ -155,9 +161,10 @@ print(jet_signals)
 #shot_numbers_files = ['shotlist_JaysonBarr_clear.txt']
 #shot_numbers_files += ['shotlist_JaysonBarr_disrupt.txt']
 # 	#shot_numbers_files = ['d3d_short_clear.txt']# ,'d3d_clear.txt', 'd3d_disrupt.txt']
-
+#shot_numbers_files = ['d3d_clear.txt', 'd3d_disrupt.txt']#['d3d_short_clear.txt']# ,'d3d_clear.txt', 'd3d_disrupt.txt'] #data only available after shot 125500
+shot_numbers_files = ['d3d_clear_data_avail.txt', 'd3d_disrupt_data_avail.txt']
 #jet
-shot_numbers_files = ['CWall_clear.txt','CFC_unint.txt','BeWall_clear.txt','ILW_unint.txt']#jet
+#shot_numbers_files = ['CWall_clear.txt','CFC_unint.txt','BeWall_clear.txt','ILW_unint.txt']#jet
 
 download_all_shot_numbers(prepath,save_path,shot_numbers_path,shot_numbers_files,machine)
 

@@ -199,7 +199,7 @@ edens_profile = Signal("Electron density profile",["ZIPFIT01/PROFILES.EDENSFIT"]
 q95 = Signal("q95 safety factor",['ppf/efit/q95',"EFIT01/RESULTS.AEQDSK.Q95"],[jet,d3d],causal_shifts=[15,10])
 
 ip = Signal("plasma current",["jpf/da/c2-ipla","d3d/ipsip"],[jet,d3d])
-li = Signal("locked mode amplitude",["jpf/gs/bl-li<s","d3d/efsli"],[jet,d3d])
+li = Signal("internal inductance",["jpf/gs/bl-li<s","d3d/efsli"],[jet,d3d])
 lm = Signal("Locked mode amplitude",['jpf/da/c2-loca','d3d/dusbradial'],[jet,d3d])
 dens = Signal("Plasma density",['jpf/df/g1r-lid:003','d3d/dssdenest'],[jet,d3d])
 energy = Signal("stored energy",['jpf/gs/bl-wmhd<s','d3d/efswmhd'],[jet,d3d])
@@ -222,8 +222,7 @@ tmfreq2 = Signal("Tearing Mode frequency (rotating 3/2)", ['d3d/nssfrqn2l'],[d3d
 
 all_signals = [etemp_profile,edens_profile,q95,li,ip,
 betan,energy,lm,dens,pradcore,pradedge,pradtot,pin,
-torquein,tmamp1,tmamp2,tmfreq1,tmfreq2
-#pechin,
+torquein,tmamp1,tmamp2,tmfreq1,tmfreq2,pechin
 ]
 
 
