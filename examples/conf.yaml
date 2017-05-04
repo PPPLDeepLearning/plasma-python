@@ -3,7 +3,7 @@
 #will do stuff in fs_path / [username] / signal_data | shot_lists | processed shots, etc.
 
 # for example tigress/alexeys
-fs_path: '/tigress'
+fs_path: '/cscratch/share/frnn' #'/tigress'
 target: 'hinge'
 
 paths:
@@ -25,7 +25,7 @@ paths:
                  'jpf/df/g1r-lid:006',
                  'jpf/df/g1r-lid:007',
                  'jpf/df/g1r-lid:008']]
-    signal_prepath: '/signal_data/jet/'
+    signal_prepath: '/signal_data/' #/signal_data/jet/
     shot_list_dir: '/shot_lists/'
     signals_masks: [['jpf/df/g1r-lid:003',
                  'jpf/df/g1r-lid:004',

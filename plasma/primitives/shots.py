@@ -10,11 +10,13 @@ This work was supported by the DOE CSGF program.
 
 from __future__ import print_function
 import os
+import os.path
+import sys
 import random as rnd
 
 import numpy as np
 
-from plasma.utils.processing import train_test_split
+from plasma.utils.processing import train_test_split,cut_and_resample_signal
 
 
 
@@ -246,7 +248,7 @@ class Shot(object):
         string = 'number: {}\n'.format(self.number)
         string = 'machine: {}\n'.format(self.machine)
         string += 'signals: {}\n'.format(self.signals )
-        string += 'data: {}\n'.format(self.data )
+        string += 'signals_dict: {}\n'.format(self.signals_dict )
         string += 'ttd: {}\n'.format(self.ttd )
         string += 'valid: {}\n'.format(self.valid )
         string += 'is_disruptive: {}\n'.format(self.is_disruptive)
@@ -281,11 +283,13 @@ class Shot(object):
 
     def preprocess(self,conf):
         sys.stdout.write('\rrecomputing {}'.format(self.number))
+	sys.stdout.flush()
       #get minmax times
-        time_arrays,signal_arrays,t_min,t_max,t_thresh,valid = self.get_signals_and_times_from_file(conf) 
+        time_arrays,signal_arrays,t_min,t_max,valid = self.get_signals_and_times_from_file(conf) 
         self.valid = valid
         #cut and resample
-        self.cut_and_resample_signals(time_arrays,signal_arrays,t_min,t_max,conf)
+	if self.valid:
+	        self.cut_and_resample_signals(time_arrays,signal_arrays,t_min,t_max,conf)
 
     def get_signals_and_times_from_file(self,conf):
         valid = True
@@ -294,25 +298,25 @@ class Shot(object):
         t_thresh = -1
         signal_arrays = []
         time_arrays = []
-        conf = self.conf
 
-        disruptive = self.t_disrupt >= 0
+        #disruptive = self.t_disrupt >= 0
 
         signal_prepath = conf['paths']['signal_prepath']
-        for (i,dirname) in enumerate(self.signals):
+        for (i,signal) in enumerate(self.signals):
             t,sig,valid_signal = signal.load_data(signal_prepath,self)
-            assert(len(sig.shape) == 2)
-            assert(len(t.shape) == 1)
             if not valid_signal:
-                valid = False
+		return None,None,None,None,False
             else:
+            	assert(len(sig.shape) == 2)
+            	assert(len(t.shape) == 1)
+		assert(len(t) > 1)
                 t_min = max(t_min,t[0])
                 t_max = min(t_max,t[-1])
                 signal_arrays.append(sig)
                 time_arrays.append(t)
         assert(t_max > t_min or not valid)
-        if disruptive:
-            t_max = t_disrupt
+        if self.is_disruptive:
+            t_max = self.t_disrupt
             assert(self.t_disrupt <= t_max or not valid)
 
         return time_arrays,signal_arrays,t_min,t_max,valid
@@ -325,9 +329,12 @@ class Shot(object):
         #resample signals
         assert((len(signal_arrays) == len(time_arrays) == len(self.signals)) and len(signal_arrays) > 0)
         tr = 0
-        for i in range(len(signal_arrays)):
-            signal = self.signals[i]
-            tr,sigr = signal.cut_and_resample(time_arrays[i],signal_arrays[i],t_min,t_max,dt)
+        for (i,signal) in enumerate(self.signals):
+	    sys.stdout.write(time_arrays[i].shape.__str__())
+	    sys.stdout.write(signal_arrays[i].shape.__str__())
+            tr,sigr = cut_and_resample_signal(time_arrays[i],signal_arrays[i],t_min,t_max,dt)
+	    sys.stdout.write('success')
+	    sys.stdout.flush()
             signals_dict[signal] = sigr
 
         ttd = self.convert_to_ttd(tr,conf)
@@ -336,6 +343,7 @@ class Shot(object):
 
     def convert_to_ttd(self,tr,conf):
         T_max = conf['data']['T_max']
+	dt = conf['data']['dt']
         if self.is_disruptive:
             ttd = max(tr) - tr
             ttd = np.clip(ttd,0,T_max)

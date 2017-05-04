@@ -1,7 +1,11 @@
 import numpy as np
 import time
-import sys
+import sys,os
+
+from scipy.interpolate import UnivariateSpline
+
 from plasma.utils.processing import get_individual_shot_file
+from plasma.utils.downloading import format_save_path
 
 # class SignalCollection:
 # 	"""GA Data Obj"""
@@ -25,16 +29,16 @@ class Signal(object):
 	def is_ip(self):
 		return self.is_ip
 
-	def get_file_path(self,prepath,shot):
-		dirname = self.get_path(shot.machine)
-		return get_individual_shot_file(prepath+dirname + '/',shot)
+	def get_file_path(self,prepath,machine,shot_number):
+		dirname = self.get_path(machine)
+		return get_individual_shot_file(prepath + '/' + machine.name + '/' +dirname + '/',shot_number)
 
 	def is_valid(self,prepath,shot):
 		t,data,exists = self.load_data(prepath,shot)
 		return exists 
 
 	def is_saved(self,prepath,shot):
-		file_path = self.get_file_path(prepath,shot)
+		file_path = self.get_file_path(prepath,shot.machine,shot.number)
 		return os.path.isfile(file_path)
 
 	def load_data(self,prepath,shot):
@@ -42,13 +46,16 @@ class Signal(object):
 			print('Signal {}, shot {} was never downloaded'.format(self.description,shot.number))
 			return None,None,False
 
-		file_path = self.get_file_path(prepath,shot)
+		file_path = self.get_file_path(prepath,shot.machine,shot.number)
 		data = np.loadtxt(file_path)
+		if np.ndim(data) == 1:
+			data = np.expand_dims(data,axis=0)
+
 		t = data[:,0]
 		sig = data[:,1:]
 
 		if self.is_ip: #restrict shot to current threshold
-			region = np.where(np.abs(sig) >= shot.machine.current_threshold)
+			region = np.where(np.abs(sig) >= shot.machine.current_threshold)[0]
 			t = t[region]
 			sig = sig[region,:]
 
@@ -61,34 +68,6 @@ class Signal(object):
 			return None,None,False
 
 		return t,sig,True
-
-	def resample_signal(t,sig,tmin,tmax,dt):
-		order = np.argsort(t)
-		t = t[order]
-		sig = sig[order,:]
-		sig_width = sig.shape[1]
-		tt = np.arange(tmin,tmax,dt)
-		sig_interp = np.zeros((len(tt),sig_width))
-		for i in range(sig_width):
-			f = UnivariateSpline(t,sig[:,i],s=0,k=1,ext=0)
-			sig_interp[:,i] = f(tt)
-
-		if(np.any(np.isnan(sig_interp))):
-			print("signals contains nan")
-		if(np.any(t[1:] - t[:-1] <= 0)):
-			print("non increasing")
-			idx = np.where(t[1:] - t[:-1] <= 0)[0][0]
-			print(t[idx-10:idx+10])
-
-		return tt,sig_interp
-
-	def cut_signal(t,sig,tmin,tmax):
-		mask = np.logical_and(t >= tmin,  t <= tmax)
-		return t[mask],sig[mask,:]
-
-	def cut_and_resample_signal(t,sig,tmin,tmax,dt):
-		t,sig = cut_signal(t,sig,tmin,tmax)
-		return resample_signal(t,sig,tmin,tmax,dt)
 
 	def is_defined_on_machine(self,machine):
 		return machine in self.machines
@@ -116,7 +95,7 @@ class Signal(object):
 	def __ne__(self,other):
 		return self.description.__ne__(other.description)
 	
-	def __hash__(self,other):
+	def __hash__(self):
 		return self.description.__hash__()
 
 	def __str__(self):
@@ -136,8 +115,10 @@ class ProfileSignal(Signal):
 			print('Signal {}, shot {} was never downloaded'.format(self.description,shot.number))
 			return None,None,False
 
-		file_path = self.get_file_path(prepath,shot)
+		file_path = self.get_file_path(prepath,shot.machine,shot.number)
 		data = np.loadtxt(file_path)
+		if np.ndim(data) == 1:
+			data = np.expand_dims(data,axis=0)
 		_ = data[0,0]
 		mapping = data[0,1:]
 		remapping = np.linspace(self.mapping_range[0],self.mapping_range[1],self.num_channels)
@@ -187,7 +168,7 @@ class Machine(object):
 	def __ne__(self,other):
 		return self.name.__ne__(other.name)
 	
-	def __hash__(self,other):
+	def __hash__(self):
 		return self.name.__hash__()
 	
 	def __str__(self):

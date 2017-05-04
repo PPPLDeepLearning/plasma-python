@@ -7,7 +7,7 @@ import numpy as np
 from itertools import imap
 
 from hyperopt import hp, STATUS_OK
-from hyperas.distributions import conditional
+#from hyperas.distributions import conditional
 
 import time
 import sys

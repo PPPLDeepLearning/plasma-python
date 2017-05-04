@@ -68,8 +68,9 @@ class Preprocessor(object):
 
     def preprocess_from_files(self,shot_files,use_shots):
         #all shots, including invalid ones
-        all_signals = conf['paths']['all_signals'] 
-        shot_list = ShotList().load_from_shot_list_files_objects(shot_files,all_signals)
+        all_signals = self.conf['paths']['all_signals'] 
+	shot_list = ShotList()
+        shot_list.load_from_shot_list_files_objects(shot_files,all_signals)
         shot_list_picked = shot_list.random_sublist(use_shots)
 
         #empty
@@ -80,9 +81,11 @@ class Preprocessor(object):
         print('running in parallel on {} processes'.format(pool._processes))
         start_time = time.time()
         for (i,shot) in enumerate(pool.imap_unordered(self.preprocess_single_file,shot_list_picked)):
+        #for (i,shot) in enumerate(map(self.preprocess_single_file,shot_list_picked)):
             sys.stdout.write('\r{}/{}'.format(i,len(shot_list_picked)))
             used_shots.append_if_valid(shot)
 
+	pool.join()
         print('Finished Preprocessing {} files in {} seconds'.format(len(shot_list_picked),time.time()-start_time))
         print('Omitted {} shots of {} total.'.format(len(shot_list_picked) - len(used_shots),len(shot_list_picked)))
         print('{}/{} disruptive shots'.format(used_shots.num_disruptive(),len(used_shots)))
@@ -93,7 +96,7 @@ class Preprocessor(object):
         recompute = self.conf['data']['recompute']
         # print('({}/{}): '.format(num_processed,use_shots))
         if recompute or not shot.previously_saved(processed_prepath):
-            shot.preprocess()
+            shot.preprocess(self.conf)
             shot.save(processed_prepath)
 
         else:

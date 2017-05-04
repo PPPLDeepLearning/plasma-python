@@ -56,7 +56,7 @@ def save_shot(shot_num_queue,c,signals,save_prepath,machine,sentinel=-1):
 		shot_complete = True
 		for signal in signals:
 			signal_path = signal.get_path(machine)
-			save_path_full = format_save_path(save_prepath,signal_path,shot_num)
+			save_path_full = signal.get_file_path(save_prepath,machine,shot_num)
 			success = False
 			mapping = None
 			if os.path.isfile(save_path_full):
@@ -140,7 +140,7 @@ def download_all_shot_numbers(prepath,save_path,shot_list_files,signals_full):
 			print('Signal {} not defined on machine {}, omitting'.format(sig,machine))
 		else:
 			signals.append(sig)
-	save_prepath = prepath+save_path + '/' + machine.name + '/'
+	save_prepath = prepath+save_path + '/' 
 	shot_numbers,_ = shot_list_files.get_shot_numbers_and_disruption_times()
 	shot_numbers_chunks = [shot_numbers[i:i+max_len] for i in xrange(0,len(shot_numbers),max_len)]#can only use queue of max size 30000
 	start_time = time.time()

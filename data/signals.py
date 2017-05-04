@@ -95,6 +95,7 @@ def fetch_d3d_data(signal_path,shot,c=None):
 		pass
 
     # print '   GADATA Retrieval Time : ',time.time() - t0
+	xdata = xdata*1e-3#time is measued in ms
 	return xdata,data,ydata,found
 
 
