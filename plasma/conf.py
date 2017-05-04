@@ -1,5 +1,5 @@
 from plasma.conf_parser import parameters
-from plasma.primitives.shots import ShotListFile
+from plasma.primitives.shots import ShotListFiles
 import os
 import errno
 
@@ -23,16 +23,17 @@ conf['paths']['use_signals'] = [ip,lm,etemp_profile]
 conf['paths']['all_machines'] = all_machines
 
 #shot lists
-shot_list_dir = conf['paths']['shot_list_dir']
+#shot_list_dir = conf['paths']['shot_list_dir']
+shot_list_dir = '/cscratch/share/frnn/shot_lists/'
 
-jet_carbon_wall = ShotListFile(jet,shot_list_dir,['CWall_clear.txt','CFC_unint.txt'],'jet carbon wall data')
-jet_iterlike_wall = ShotListFile(jet,shot_list_dir,['ILW_unint.txt','BeWall_clear.txt'],'jet iter like wall data')
-jet_full = ShotListFile(jet,shot_list_dir,['ILW_unint.txt','BeWall_clear.txt','CWall_clear.txt','CFC_unint.txt'],'jet full data')
+jet_carbon_wall = ShotListFiles(jet,shot_list_dir,['CWall_clear.txt','CFC_unint.txt'],'jet carbon wall data')
+jet_iterlike_wall = ShotListFiles(jet,shot_list_dir,['ILW_unint.txt','BeWall_clear.txt'],'jet iter like wall data')
+jet_full = ShotListFiles(jet,shot_list_dir,['ILW_unint.txt','BeWall_clear.txt','CWall_clear.txt','CFC_unint.txt'],'jet full data')
 
-d3d_full = ShotListFile(d3d,shot_list_dir,['d3d_clear_data_avail.txt','d3d_disrupt_data_avail.txt'],'d3d data since shot 125500')
-d3d_jb_full = ShotListFile(d3d,shot_list_dir,['shotlist_JaysonBarr_clear.txt','shotlist_JaysonBarr_disrupt.txt'],'d3d shots since 160000-170000')
+d3d_full = ShotListFiles(d3d,shot_list_dir,['d3d_clear_data_avail.txt','d3d_disrupt_data_avail.txt'],'d3d data since shot 125500')
+d3d_jb_full = ShotListFiles(d3d,shot_list_dir,['shotlist_JaysonBarr_clear.txt','shotlist_JaysonBarr_disrupt.txt'],'d3d shots since 160000-170000')
 
-nstx_full = ShotListFile(nstx,shot_list_dir,['disrupt_nstx.txt'],'nstx shots (all are disruptive')
+nstx_full = ShotListFiles(nstx,shot_list_dir,['disrupt_nstx.txt'],'nstx shots (all are disruptive')
 
 conf['paths']['shot_files'] = [d3d_full]#[jet_carbon_wall]
 conf['paths']['shot_files_test'] = []#[jet_iterlike_wall]

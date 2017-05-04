@@ -134,11 +134,9 @@ def download_all_shot_numbers(prepath,save_path,shot_list_files,signals_full):
 	max_len = 30000
 
 	machine = shot_list_files.machine
-	signals = [sig for sig in signals if sig.is_defined_on_machine(machine)]
-
 	signals = []
 	for sig in signals_full:
-		if not signal.is_defined_on_machine(machine):
+		if not sig.is_defined_on_machine(machine):
 			print('Signal {} not defined on machine {}, omitting'.format(sig,machine))
 		else:
 			signals.append(sig)
