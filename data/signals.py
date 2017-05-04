@@ -6,7 +6,7 @@ import numpy as np
 import time
 import sys
 
-from plasma.models.data import Signal,Machine
+from plasma.models.data import Signal,ProfileSignal,Machine
 
 
 def create_missing_value_filler():
@@ -58,10 +58,10 @@ def fetch_d3d_data(signal_path,shot,c=None):
 			xdata = c.get('dim_of(_s,1)').data()
 			xunits = get_units('dim_of(_s,1)')
 			ydata 	= c.get('dim_of(_s)').data()
-	    		yunits = get_units('dim_of(_s)')
+			yunits = get_units('dim_of(_s)')
 		else:
 			xdata = c.get('dim_of(_s)').data()
-	    		xunits = get_units('dim_of(_s)')
+			xunits = get_units('dim_of(_s)')
 		found = True
 		# MDSplus seems to return 2-D arrays transposed.  Change them back.
 		if np.ndim(data) == 2: data = np.transpose(data)
@@ -123,8 +123,9 @@ nstx = Machine("nstx","skylark.pppl.gov:8501::",fetch_nstx_data,max_cores=8)
 
 all_machines = [d3d,jet]
 
-etemp_profile = Signal("Electron temperature profile",["ZIPFIT01/PROFILES.ETEMPFIT"],[d3d],causal_shifts=[10])
-edens_profile = Signal("Electron density profile",["ZIPFIT01/PROFILES.EDENSFIT"],[d3d],causal_shifts=[10])
+profile_num_channels = 32
+etemp_profile = ProfileSignal("Electron temperature profile",["ZIPFIT01/PROFILES.ETEMPFIT"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels)
+edens_profile = ProfileSignal("Electron density profile",["ZIPFIT01/PROFILES.EDENSFIT"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels)
 
 q95 = Signal("q95 safety factor",['ppf/efit/q95',"EFIT01/RESULTS.AEQDSK.Q95"],[jet,d3d],causal_shifts=[15,10])
 
@@ -139,7 +140,7 @@ pradtot = Signal("Radiated Power",['jpf/db/b5r-ptot>out'],[jet])
 pradcore = Signal("Radiated Power Core",['d3d/'+r'\bol_l15_p'],[d3d])
 pradedge = Signal("Radiated Power Edge",['d3d/'+r'\bol_l03_p'],[d3d])
 # pechin = Signal("ECH input power, not always on",['d3d/pcechpwrf'],[d3d])
-pechin = Signal("ECH input power, not always on",['d3d/echpwrc'],[d3d])
+pechin = Signal("ECH input power, not always on",['RF/ECH.TOTAL.ECHPWRC'],[d3d])
 
 betan = Signal("Normalized Beta",['d3d/efsbetan'],[d3d])
 energydt = Signal("stored energy time derivative",['jpf/gs/bl-fdwdt<s'],[jet])
@@ -149,19 +150,24 @@ tmamp1 = Signal("Tearing Mode amplitude (rotating 2/1)", ['d3d/nssampn1l'],[d3d]
 tmamp2 = Signal("Tearing Mode amplitude (rotating 3/2)", ['d3d/nssampn2l'],[d3d])
 tmfreq1 = Signal("Tearing Mode frequency (rotating 2/1)", ['d3d/nssfrqn1l'],[d3d])
 tmfreq2 = Signal("Tearing Mode frequency (rotating 3/2)", ['d3d/nssfrqn2l'],[d3d])
+ipdirect = Signal("plasma current direction",["d3d/iptdirect"],[d3d])
 
-
+#for downloading
 all_signals = [etemp_profile,edens_profile,q95,li,ip,
 betan,energy,lm,dens,pradcore,pradedge,pradtot,pin,
-torquein,tmamp1,tmamp2,tmfreq1,tmfreq2,pechin
+torquein,tmamp1,tmamp2,tmfreq1,tmfreq2,pechin,energydt,ipdirect
 ]
+
+#for actual data analysis
+all_signals_restricted = [etemp_profile,edens_profile,
+q95,li,ip,energy,lm,dens,pradcore,pradtot,pin]
 
 print('all signals:')
 print(all_signals)
 
-fully_defined_signals = [sig for sig in all_signals if sig.is_defined_on_machines(all_machines)]
-d3d_signals = [sig for sig in all_signals if sig.is_defined_on_machine(d3d)]
-jet_signals = [sig for sig in all_signals if sig.is_defined_on_machine(jet)]
+fully_defined_signals = [sig for sig in all_signals_restricted if sig.is_defined_on_machines(all_machines)]
+d3d_signals = [sig for sig in all_signals_restricted if sig.is_defined_on_machine(d3d)]
+jet_signals = [sig for sig in all_signals_restricted if sig.is_defined_on_machine(jet)]
 
 
 

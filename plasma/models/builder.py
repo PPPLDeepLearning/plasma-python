@@ -1,8 +1,11 @@
 from keras.models import Sequential
 from keras.layers.core import Dense, Activation, Dropout
 from keras.layers.recurrent import LSTM, SimpleRNN
+from keras.layers.convolutional import Conv1D
+from keras.layers.pooling import MaxPooling1D
 from keras.utils.data_utils import get_file
 from keras.layers.wrappers import TimeDistributed
+from keras.layers.merge import Concatenate
 from keras.callbacks import Callback
 from keras.optimizers import *
 from keras.regularizers import l1,l2,l1_l2
@@ -31,6 +34,26 @@ class ModelBuilder(object):
         this_conf['training']['num_epochs'] = 0
         unique_id =  hash(dill.dumps(this_conf))
         return unique_id
+
+    def get_0D_1D_indices(self):
+        use_signals = self.conf['paths']['use_signals']
+        indices_0d = []
+        indices_1d = []
+        num_0D = 0
+        num_1D = 0
+        curr_idx = 0
+        for sig in use_signals:
+            num_channels = sig.num_channels
+            indices = range(curr_idx,curr_idx+num_channels)
+            if num_channels > 1:
+                indices_1d += indices
+                num_1D += 1
+            else:
+                assert(num_channels == 1)
+                indices_0d += indices
+                num_0D += 1
+        return np.array(indices_0d), np.array(indices_1d),num_0D,num_1D
+
 
     def build_model(self,predict,custom_batch_size=None):
         conf = self.conf
@@ -64,7 +87,13 @@ class ModelBuilder(object):
         stateful = model_conf['stateful']
         return_sequences = model_conf['return_sequences']
         output_activation = conf['data']['target'].activation#model_conf['output_activation']
-        num_signals = conf['data']['num_signals']
+        use_signals = conf['paths']['use_signals']
+        num_signals = sum([sig.num_channels for sig in use_signals])
+        num_conv_filters = model_conf['num_conv_filters']
+        num_conv_layers = model_conf['num_conv_layers']
+        size_conv_filters = model_conf['size_conv_filters']
+        pool_size = model_conf['pool_size']
+        # num_signals = conf['data']['num_signals']
 
 
         batch_size = self.conf['training']['batch_size']
@@ -88,19 +117,45 @@ class ModelBuilder(object):
             exit(1)
         
         batch_input_shape=(batch_size,length, num_signals)
-        model = Sequential()
-                #Create layer for 7 density channels
-#                num_density_channels = 7
+
+        indices_0d,indices_1d,num_0D,num_1D = self.get_0D_1D_indices()
+        def slicer(x,indices):
+            return x[:,:,indices]
+
+        def slicer_output_shape(input_shape,indices):
+            shape = list(input_shape)
+            assert len(shape) == 3  # only valid for 3D tensors
+            shape[-1] = len(indices)
+            return tuple(shape)
+
+        x_input = Input(batch_shape=batch_input_shape)
+        if num_1D > 0:
+            x_0D = Lambda(lambda x: slicer(x,indices_0d),lambda s: slicer_output_shape(s,indices_0d)) (x_input)
+            x_1D = Lambda(lambda x: slicer(x,indices_1d),lambda s: slicer_output_shape(s,indices_1d)) (x_input)
+
+            x_1D = TimeDistributed(Reshape(num_1D,len(indices_1d)/num_1D)) (x_1D)
+            for i in range(model_conf['num_conv_layers']):
+                x_1D = TimeDistributed(Conv1D(num_conv_filters,size_conv_filters,activation='relu')) (x_1D)
+                x_1D = TimeDistributed(MaxPooling1D(pool_size)) (x_1D)
+            x_1D = TimeDistributed(Flatten()) (x_1D)
+            x_in = TimeDistributed(Concatenate) ([x_0D,x_1D])
+
+        else:
+            x_in = x_input
+        x_in = TimeDistributed(Dense(2*(num_0D+num_1D)),activation='relu') (x_in)
+        x_in = TimeDistributed(Dense(2*(num_0D+num_1D)),activation='relu') (x_in)
+        # x = TimeDistributed(Dense(2*(num_0D+num_1D)))
  #               model.add(TimeDistributed(Dense(num_density_channels,bias=True),batch_input_shape=batch_input_shape))
         for _ in range(model_conf['rnn_layers']):
-            model.add(rnn_model(rnn_size, return_sequences=return_sequences,batch_input_shape=batch_input_shape,
+            x_in = rnn_model(rnn_size, return_sequences=return_sequences,batch_input_shape=batch_input_shape,
              stateful=stateful,kernel_regularizer=l2(regularization),recurrent_regularizer=l2(regularization),
-             bias_regularizer=l2(regularization),dropout=dropout_prob,recurrent_dropout=dropout_prob))
-            model.add(Dropout(dropout_prob))
+             bias_regularizer=l2(regularization),dropout=dropout_prob,recurrent_dropout=dropout_prob) (x_in)
+            x_in = Dropout(dropout_prob) (x_in)
         if return_sequences:
-            model.add(TimeDistributed(Dense(1,activation=output_activation)))
+            x_out = TimeDistributed(Dense(1,activation=output_activation)) (x_in)
         else:
-            model.add(Dense(1,activation=output_activation))
+            x_out = Dense(1,activation=output_activation) (x_in)
+        model = Model(inputs=x_input,outputs=x_out)
         model.compile(loss=loss_fn, optimizer=optimizer)
         model.reset_states()
         #model.compile(loss='mean_squared_error', optimizer='sgd') #for numerical output

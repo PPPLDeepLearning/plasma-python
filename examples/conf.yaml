@@ -75,6 +75,10 @@ model:
     rnn_type: 'LSTM'
     #TODO optimize
     rnn_layers: 3
+    num_conv_filters: 10
+    size_conv_filters: 3
+    num_conv_layers: 2
+    pool_size: 2
     #have not found a difference yet
     optimizer: 'adam'
     clipnorm: 10.0

@@ -126,6 +126,7 @@ class Loader(object):
 
     def get_signals_results_from_shotlist(self,shot_list,prediction_mode=False):
         prepath = self.conf['paths']['processed_prepath']
+        use_signals = self.conf['paths']['use_signals']
         signals = []
         results = []
         disruptive = []
@@ -144,19 +145,17 @@ class Loader(object):
 
 
             if self.conf['training']['use_mock_data']:
-                sig,res = self.get_mock_data()
-                shot.signals = sig
-                shot.ttd = res
+                signal,ttd = self.get_mock_data()
+            ttd,signal = shot.get_data_arrays(use_signals)
 
-            total_length += len(shot.ttd)
-            signals.append(shot.signals)
-            res = shot.ttd
-            shot_lengths.append(len(shot.ttd))
+            total_length += len(ttd)
+            signals.append(signal)
+            shot_lengths.append(len(ttd))
             disruptive.append(shot.is_disruptive)
-            if len(res.shape) == 1:
-                results.append(np.expand_dims(res,axis=1))
+            if len(ttd.shape) == 1:
+                results.append(np.expand_dims(ttd,axis=1))
             else:
-                results.append(shot.ttd)
+                results.append(ttd)
             shot.make_light()
         if not prediction_mode:
             return signals,results,total_length

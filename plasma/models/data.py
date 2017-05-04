@@ -20,6 +20,7 @@ class Signal:
 			causal_shifts = [0 for m in machines]
 		self.causal_shifts = causal_shifts #causal shift in ms
 		self.is_ip = is_ip
+		self.num_channels = 1
 
 	def is_ip(self):
 		return self.is_ip
@@ -38,6 +39,7 @@ class Signal:
 
 	def load_data(self,prepath,shot):
 		if not self.is_saved(prepath,shot):
+			print('Signal {}, shot {} was never downloaded'.format(self.description,shot.number))
 			return None,None,False
 
 		file_path = self.get_file_path(prepath,shot)
@@ -51,10 +53,42 @@ class Signal:
 			sig = sig[region,:]
 
 		#make sure shot is not garbage data
-		if (np.max(sig) == 0.0 and np.min(sig) == 0.0) or len(t) <= 1:
+		if (np.max(sig) == 0.0 and np.min(sig) == 0.0) or len(t) <= 1::
+			if self.is_ip:
+				print('shot {} has no current'.format(shot.number))
+			else:
+				print('Signal {}, shot {} contains no data'.format(self.description,shot.number))
 			return None,None,False
 
 		return t,sig,True
+
+	def resample_signal(t,sig,tmin,tmax,dt):
+		order = np.argsort(t)
+		t = t[order]
+		sig = sig[order,:]
+		sig_width = sig.shape[1]
+		tt = np.arange(tmin,tmax,dt)
+		sig_interp = np.zeros((len(tt),sig_width))
+		for i in range(sig_width):
+			f = UnivariateSpline(t,sig[:,i],s=0,k=1,ext=0)
+			sig_interp[:,i] = f(tt)
+
+		if(np.any(np.isnan(sig_interp))):
+			print("signals contains nan")
+		if(np.any(t[1:] - t[:-1] <= 0)):
+			print("non increasing")
+			idx = np.where(t[1:] - t[:-1] <= 0)[0][0]
+			print(t[idx-10:idx+10])
+
+		return tt,sig_interp
+
+	def cut_signal(t,sig,tmin,tmax):
+		mask = np.logical_and(t >= tmin,  t <= tmax)
+		return t[mask],sig[mask,:]
+
+	def cut_and_resample_signal(t,sig,tmin,tmax,dt):
+		t,sig = cut_signal(t,sig,tmin,tmax)
+		return resample_signal(t,sig,tmin,tmax,dt)
 
 	def is_defined_on_machine(self,machine):
 		return machine in self.machines
@@ -90,6 +124,36 @@ class Signal:
 	
 	def __repr__(self):
 		return self.description
+
+class ProfileSignal(Signal):
+	def __init__(self,description,paths,machines,tex_label=None,causal_shifts=None,mapping_range=(0,1),num_channels=32):
+		super(ProfileSignal, self).__init__(description,paths,machines,tex_label,causal_shifts,is_ip=False)
+		self.mapping_range = mapping_range
+		self.num_channels = num_channels
+
+	def load_data(self,prepath,shot):
+		if not self.is_saved(prepath,shot):
+			print('Signal {}, shot {} was never downloaded'.format(self.description,shot.number))
+			return None,None,False
+
+		file_path = self.get_file_path(prepath,shot)
+		data = np.loadtxt(file_path)
+		_ = data[0,0]
+		mapping = data[0,1:]
+		remapping = np.linspace(self.mapping_range[0],self.mapping_range[1],self.num_channels)
+		t = data[1:,0]
+		sig = data[1:,1:]
+		if len(t) <= 1 or (np.max(sig) == 0.0 and np.min(sig) == 0.0):
+			print('Signal {}, shot {} contains no data'.format(self.description,shot.number))
+			return None,None,False
+
+		timesteps = len(t)
+		sig_interp = np.zeros((timesteps,self.num_channels))
+		for i in range(timesteps):
+			f = UnivariateSpline(mapping,sig[i,:],s=0,k=1,ext=0)
+			sig_interp[i,:] = f(remapping)
+
+		return t,sig_interp,True
 
 
 class Machine:
@@ -127,8 +191,10 @@ class Machine:
 		return self.name.__hash__()
 	
 	def __str__(self):
-		return self.name.__str__()
+		return self.name
 
+	def __repr__(self):
+		return self.__str__()
 
 def create_missing_value_filler():
 	time = np.linspace(0,100,100)

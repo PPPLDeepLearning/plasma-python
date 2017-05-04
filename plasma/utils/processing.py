@@ -15,30 +15,30 @@ import numpy as np
 from scipy.interpolate import UnivariateSpline
 
 
-def resample_signal(t,sig,tmin,tmax,dt):
-    order = np.argsort(t)
-    t = t[order]
-    sig = sig[order]
-    tt = np.arange(tmin,tmax,dt)
-    f = UnivariateSpline(t,sig,s=0,k=1,ext=0)
-    sig_interp = f(tt)
+# def resample_signal(t,sig,tmin,tmax,dt):
+#     order = np.argsort(t)
+#     t = t[order]
+#     sig = sig[order]
+#     tt = np.arange(tmin,tmax,dt)
+#     f = UnivariateSpline(t,sig,s=0,k=1,ext=0)
+#     sig_interp = f(tt)
 
-    if(np.any(np.isnan(sig_interp))):
-        print("signals contains nan")
-    if(np.any(t[1:] - t[:-1] <= 0)):
-        print("non increasing")
-        idx = np.where(t[1:] - t[:-1] <= 0)[0][0]
-        print(t[idx-10:idx+10])
+#     if(np.any(np.isnan(sig_interp))):
+#         print("signals contains nan")
+#     if(np.any(t[1:] - t[:-1] <= 0)):
+#         print("non increasing")
+#         idx = np.where(t[1:] - t[:-1] <= 0)[0][0]
+#         print(t[idx-10:idx+10])
 
-    return tt,sig_interp
+#     return tt,sig_interp
 
-def cut_signal(t,sig,tmin,tmax):
-    mask = np.logical_and(t >= tmin,  t <= tmax)
-    return t[mask],sig[mask]
+# def cut_signal(t,sig,tmin,tmax):
+#     mask = np.logical_and(t >= tmin,  t <= tmax)
+#     return t[mask],sig[mask]
 
-def cut_and_resample_signal(t,sig,tmin,tmax,dt):
-    t,sig = cut_signal(t,sig,tmin,tmax)
-    return resample_signal(t,sig,tmin,tmax,dt)
+# def cut_and_resample_signal(t,sig,tmin,tmax,dt):
+#     t,sig = cut_signal(t,sig,tmin,tmax)
+#     return resample_signal(t,sig,tmin,tmax,dt)
 
 def get_individual_shot_file(prepath,shot_num,ext='.txt'):
     return prepath + str(shot_num) + ext 

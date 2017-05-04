@@ -25,7 +25,7 @@ import errno
 
 # import gadata
 
-from plasma.primitives.shots import ShotList
+# from plasma.primitives.shots import ShotList
 
 #from signals import *
 
@@ -130,10 +130,20 @@ def download_shot_numbers(shot_numbers,save_prepath,machine,signals):
 		p.join()
 
 
-def download_all_shot_numbers(prepath,save_path,shot_numbers_path,shot_numbers_files,machine,signals):
+def download_all_shot_numbers(prepath,save_path,shot_list_files,signals_full):
 	max_len = 30000
+
+	machine = shot_list_files.machine
+	signals = [sig for sig in signals if sig.is_defined_on_machine(machine)]
+
+	signals = []
+	for sig in signals_full:
+		if not signal.is_defined_on_machine(machine):
+			print('Signal {} not defined on machine {}, omitting'.format(sig,machine))
+		else:
+			signals.append(sig)
 	save_prepath = prepath+save_path + '/' + machine.name + '/'
-	shot_numbers,_,_ = ShotList.get_multiple_shots_and_disruption_times(prepath + shot_numbers_path,shot_numbers_files,[machine]*len(shot_numbers_files))
+	shot_numbers,_ = shot_list_files.get_shot_numbers_and_disruption_times()
 	shot_numbers_chunks = [shot_numbers[i:i+max_len] for i in xrange(0,len(shot_numbers),max_len)]#can only use queue of max size 30000
 	start_time = time.time()
 	for shot_numbers_chunk in shot_numbers_chunks:

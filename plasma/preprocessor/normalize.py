@@ -64,18 +64,18 @@ class Normalizer(object):
         conf = self.conf
         #only use training shots here!! "Don't touch testing shots"
         shot_files = conf['paths']['shot_files']# + conf['paths']['shot_files_test']
-        shot_list_dir = conf['paths']['shot_list_dir']
-        use_shots = max(400,int(round(0.1*conf['data']['use_shots'])))
+        # shot_list_dir = conf['paths']['shot_list_dir']
+        use_shots = max(400,conf['data']['use_shots'])
         return self.train_on_files(shot_list_dir,shot_files,use_shots)
 
 
-    def train_on_files(self,shot_list_dir,shot_files,use_shots):
+    def train_on_files(self,shot_files,use_shots):
         conf = self.conf
-        shot_list = ShotList()
-        shot_list.load_from_files(shot_list_dir,shot_files)
+        all_signals = conf['paths']['all_signals'] 
+        shot_list = ShotList().load_from_shot_list_files_objects(shot_files,all_signals)
+        shot_list_picked = shot_list.random_sublist(use_shots) 
 
         recompute = conf['data']['recompute_normalization']
-        shot_list_picked = shot_list.random_sublist(use_shots) 
 
         if recompute or not self.previously_saved_stats():
             use_cores = max(1,mp.cpu_count()-2)
@@ -98,20 +98,19 @@ class Normalizer(object):
 
     def cut_end_of_shot(self,shot):
         T_min_warn = self.conf['data']['T_min_warn']
-        shot.signals = shot.signals[:-T_min_warn]
+        for key in shot.signals_dict:
+            shot.signals_dict[key] = shot.signals_dict[key][:-T_min_warn,:]
         shot.ttd = shot.ttd[:-T_min_warn]
 
-    def apply_mask(self,shot):
-        mask = self.conf['paths']['signals_masks']
-        mask = [np.array(subl) for subl in mask]
-        indices = np.concatenate([indices_sublist[mask[i]] for i,indices_sublist in enumerate(self.get_indices_list())])
-        shot.signals = shot.signals[:,indices]
+    # def apply_mask(self,shot):
+    #     use_signals = self.conf['paths']['use_signals']
+    #     return shot.get_data_arrays(use_signals)
 
-    def apply_positivity_mask(self,shot):
-        mask = self.conf['paths']['positivity_mask']
-        mask = [np.array(subl) for subl in mask]
-        indices = np.concatenate([indices_sublist[mask[i]] for i,indices_sublist in enumerate(self.get_indices_list())])
-        shot.signals[:,indices] = np.clip(shot.signals[:,indices],0,np.Inf)
+    # def apply_positivity_mask(self,shot):
+    #     mask = self.conf['paths']['positivity_mask']
+    #     mask = [np.array(subl) for subl in mask]
+    #     indices = np.concatenate([indices_sublist[mask[i]] for i,indices_sublist in enumerate(self.get_indices_list())])
+    #     shot.signals[:,indices] = np.clip(shot.signals[:,indices],0,np.Inf)
 
     def train_on_single_shot(self,shot):
         assert isinstance(shot,Shot), 'should be instance of shot'
@@ -125,8 +124,8 @@ class Normalizer(object):
     def previously_saved_stats(self):
         return os.path.isfile(self.path)
 
-    def get_indices_list(self):
-        return get_signal_slices(self.conf['paths']['signals_dirs'])
+    # def get_indices_list(self):
+    #     return get_signal_slices(self.conf['paths']['signals_dirs'])
 
 
 
@@ -146,9 +145,10 @@ class MeanVarNormalizer(Normalizer):
     def extract_stats(self,shot):
         stats = Stats()
         if shot.valid:
-            indices_list = self.get_indices_list()
-            stats.means = np.reshape(np.array([np.mean(shot.signals[:,indices]) for indices in indices_list]),(1,len(indices_list)))
-            stats.stds = np.reshape(np.array([np.std(shot.signals[:,indices]) for indices in indices_list]),(1,len(indices_list)))
+            list_of_signals = shot.get_individual_signal_arrays()
+            num_signals = len(list_of_signals)
+            stats.means = np.reshape(np.array([np.mean(sig) for sig in list_of_signals]),(1,num_signals))
+            stats.stds = np.reshape(np.array([np.std(sig) for sig in list_of_signals]),(1,num_signals))
             stats.is_disruptive = shot.is_disruptive
         else:
             print('Warning: shot {} not valid, omitting'.format(shot.number))
@@ -174,12 +174,12 @@ class MeanVarNormalizer(Normalizer):
         assert self.means is not None and self.stds is not None, "self.means or self.stds not initialized"
         means = np.median(self.means,axis=0)
         stds = np.median(self.stds,axis=0)
-        for (i,indices) in enumerate(self.get_indices_list()):
-            shot.signals[:,indices] = (shot.signals[:,indices] - means[i])/stds[i]
+        for (i,sig) in enumerate(shot.signals):
+            shot.signals_dict[sig] = (shot.signals_dict[sig] - means[i])/stds[i]
         shot.ttd = self.remapper(shot.ttd,self.conf['data']['T_warning'])
-        self.apply_positivity_mask(shot)
         self.cut_end_of_shot(shot)
-        self.apply_mask(shot)
+        # self.apply_positivity_mask(shot)
+        # self.apply_mask(shot)
 
 
     def save_stats(self):
@@ -205,12 +205,10 @@ class VarNormalizer(MeanVarNormalizer):
     def apply(self,shot):
         assert self.means is not None and self.stds is not None, "self.means or self.stds not initialized"
         stds = np.median(self.stds,axis=0)
-        for (i,indices) in enumerate(self.get_indices_list()):
-            shot.signals[:,indices] = (shot.signals[:,indices])/stds[i]
+        for (i,sig) in enumerate(shot.signals):
+            shot.signals_dict[sig] = (shot.signals_dict[sig])/stds[i]
         shot.ttd = self.remapper(shot.ttd,self.conf['data']['T_warning'])
-        self.apply_positivity_mask(shot)
         self.cut_end_of_shot(shot)
-        self.apply_mask(shot)
 
     def __str__(self):
         stds = np.median(self.stds,axis=0)
@@ -225,7 +223,8 @@ class AveragingVarNormalizer(VarNormalizer):
         window_size = self.conf['data']['window_size']
         window = exponential(window_size,0,window_decay,False)
         window /= np.sum(window)
-        shot.signals = apply_along_axis(lambda m : correlate(m,window,'valid'),axis=0,arr=shot.signals)
+        for (i,sig) in enumerate(shot.signals):
+            shot.signals_dict[sig] = apply_along_axis(lambda m : correlate(m,window,'valid'),axis=0,arr=shot.signals_dict[sig])
         shot.ttd = shot.ttd[-shot.signals.shape[0]:]
 
     def __str__(self):
@@ -249,8 +248,9 @@ class MinMaxNormalizer(Normalizer):
     def extract_stats(self,shot):
         stats = Stats()
         if shot.valid:
-            stats.minimums = np.min(shot.signals,0)
-            stats.maximums = np.max(shot.signals,0)
+            list_of_signals = shot.get_individual_signal_arrays()
+            stats.minimums = np.array([np.min(sig) for sig in list_of_signals])
+            stats.maximums = np.array([np.max(sig) for sig in list_of_signals])
             stats.is_disruptive = shot.is_disruptive
         else:
             print('Warning: shot {} not valid, omitting'.format(shot.number))
@@ -275,10 +275,12 @@ class MinMaxNormalizer(Normalizer):
     def apply(self,shot):
         assert(self.minimums is not None and self.maximums is not None) 
         shot.signals = (shot.signals - self.minimums)/(self.maximums - self.minimums)
+        for (i,sig) in enumerate(shot.signals):
+            shot.signals_dict[sig] = (shot.signals_dict[sig] - self.minimums)/(self.maximums - self.minimums)
         shot.ttd = self.remapper(shot.ttd,self.conf['data']['T_warning'])
-        self.apply_positivity_mask(shot)
         self.cut_end_of_shot(shot)
-        self.apply_mask(shot)
+        # self.apply_positivity_mask(shot)
+        # self.apply_mask(shot)
 
     def save_stats(self):
         # standard_deviations = dat['standard_deviations']

@@ -49,27 +49,27 @@ class Preprocessor(object):
 
     def preprocess_all(self):
         conf = self.conf
-        shot_files_train = conf['paths']['shot_files']
-        shot_files_test = conf['paths']['shot_files_test']
-        shot_list_dir = conf['paths']['shot_list_dir']
+        shot_files_all = conf['paths']['shot_files_all']
+        # shot_files_train = conf['paths']['shot_files']
+        # shot_files_test = conf['paths']['shot_files_test']
+        # shot_list_dir = conf['paths']['shot_list_dir']
         use_shots = conf['data']['use_shots']
         train_frac = conf['training']['train_frac']
         use_shots_train = int(round(train_frac*use_shots))
         use_shots_test = int(round((1-train_frac)*use_shots))
 #        print(use_shots_train)
 #        print(use_shots_test) #each print out 100,000
-        if len(shot_files_test) > 0:
-            return self.preprocess_from_files(shot_list_dir,shot_files_train,use_shots_train) + \
-               self.preprocess_from_files(shot_list_dir,shot_files_test,use_shots_test)
-        else:
-            return self.preprocess_from_files(shot_list_dir,shot_files_train,use_shots_train)
+        # if len(shot_files_test) > 0:
+        #     return self.preprocess_from_files(shot_list_dir,shot_files_train,machines_train,use_shots_train) + \
+        #        self.preprocess_from_files(shot_list_dir,shot_files_test,machines_train,use_shots_test)
+        # else:
+        return self.preprocess_from_files(shot_files_all,use_shots)
 
 
-    def preprocess_from_files(self,shot_list_dir,shot_files,use_shots):
+    def preprocess_from_files(self,shot_files,use_shots):
         #all shots, including invalid ones
-        shot_list = ShotList()
-        shot_list.load_from_files(shot_list_dir,shot_files)
-
+        all_signals = conf['paths']['all_signals'] 
+        shot_list = ShotList().load_from_shot_list_files_objects(shot_files,all_signals)
         shot_list_picked = shot_list.random_sublist(use_shots)
 
         #empty
@@ -93,15 +93,7 @@ class Preprocessor(object):
         recompute = self.conf['data']['recompute']
         # print('({}/{}): '.format(num_processed,use_shots))
         if recompute or not shot.previously_saved(processed_prepath):
-            sys.stdout.write('\rrecomputing {}'.format(shot.number))
-          #get minmax times
-            signals,times,t_min,t_max,t_thresh,valid = self.get_signals_and_times_from_file(shot.number,shot.t_disrupt) 
-            #cut and resample
-            signals,ttd = self.cut_and_resample_signals(times,signals,t_min,t_max,shot.is_disruptive)
-
-            shot.signals = signals
-            shot.ttd = ttd
-            shot.valid = valid
+            shot.preprocess()
             shot.save(processed_prepath)
 
         else:
@@ -115,82 +107,82 @@ class Preprocessor(object):
         signals_dirs = self.conf['paths']['signals_dirs']
 
 
-    def get_signals_and_times_from_file(self,shot,t_disrupt):
-        valid = True
-        t_min = -1
-        t_max = np.Inf
-        t_thresh = -1
-        signals = []
-        times = []
-        conf = self.conf
+    # def get_signals_and_times_from_file(self,shot,t_disrupt):
+    #     valid = True
+    #     t_min = -1
+    #     t_max = np.Inf
+    #     t_thresh = -1
+    #     signals = []
+    #     times = []
+    #     conf = self.conf
 
-        disruptive = t_disrupt >= 0
+    #     disruptive = t_disrupt >= 0
 
-        signal_prepath = conf['paths']['signal_prepath']
-        signals_dirs = concatenate_sublists(conf['paths']['signals_dirs'])
-        current_index = conf['data']['current_index']
-        current_thresh = conf['data']['current_thresh']
-        current_end_thresh = conf['data']['current_end_thresh']
-        for (i,dirname) in enumerate(signals_dirs):
-            data = np.loadtxt(get_individual_shot_file(signal_prepath+dirname + '/',shot))
-            t = data[:,0]
-            sig = data[:,1]
-            t_min = max(t_min,t[0])
-            t_max = min(t_max,t[-1])
-            if i == current_index:
-                #throw out shots that never reach curren threshold
-                if not (np.any(abs(sig) > current_thresh)):
-                    valid = False
-                    print('Shot {} does not exceed current threshold... invalid.'.format(shot))
-                else:
-                    #begin shot once current reaches threshold
-                    index_thresh = np.argwhere(abs(sig) > current_thresh)[0][0]
-                    t_thresh = t[index_thresh]
-                    #end shot once current drops below current_end_thresh
-                    if not disruptive:
-                        acceptable_region = np.zeros_like(sig,dtype=bool)
-                        acceptable_region[index_thresh:] = True
-                        index_end_thresh = np.argwhere(np.logical_and(abs(sig) < current_end_thresh,acceptable_region))[0][0]
-                        t_end_thresh = t[index_end_thresh]
-                        assert(t_thresh < t_end_thresh < t_max)
-                        t_max = t_end_thresh
-            signals.append(sig)
-            times.append(t)
-        if not valid:
-            t_thresh = t_min
-        assert(t_thresh >= t_min)
-        assert(t_disrupt <= t_max)
-        if disruptive:
-            assert(t_thresh < t_disrupt)
-            t_max = t_disrupt
-        t_min = t_thresh
+    #     signal_prepath = conf['paths']['signal_prepath']
+    #     signals_dirs = concatenate_sublists(conf['paths']['signals_dirs'])
+    #     current_index = conf['data']['current_index']
+    #     current_thresh = conf['data']['current_thresh']
+    #     current_end_thresh = conf['data']['current_end_thresh']
+    #     for (i,dirname) in enumerate(signals_dirs):
+    #         data = np.loadtxt(get_individual_shot_file(signal_prepath+dirname + '/',shot))
+    #         t = data[:,0]
+    #         sig = data[:,1]
+    #         t_min = max(t_min,t[0])
+    #         t_max = min(t_max,t[-1])
+    #         if i == current_index:
+    #             #throw out shots that never reach curren threshold
+    #             if not (np.any(abs(sig) > current_thresh)):
+    #                 valid = False
+    #                 print('Shot {} does not exceed current threshold... invalid.'.format(shot))
+    #             else:
+    #                 #begin shot once current reaches threshold
+    #                 index_thresh = np.argwhere(abs(sig) > current_thresh)[0][0]
+    #                 t_thresh = t[index_thresh]
+    #                 #end shot once current drops below current_end_thresh
+    #                 if not disruptive:
+    #                     acceptable_region = np.zeros_like(sig,dtype=bool)
+    #                     acceptable_region[index_thresh:] = True
+    #                     index_end_thresh = np.argwhere(np.logical_and(abs(sig) < current_end_thresh,acceptable_region))[0][0]
+    #                     t_end_thresh = t[index_end_thresh]
+    #                     assert(t_thresh < t_end_thresh < t_max)
+    #                     t_max = t_end_thresh
+    #         signals.append(sig)
+    #         times.append(t)
+    #     if not valid:
+    #         t_thresh = t_min
+    #     assert(t_thresh >= t_min)
+    #     assert(t_disrupt <= t_max)
+    #     if disruptive:
+    #         assert(t_thresh < t_disrupt)
+    #         t_max = t_disrupt
+    #     t_min = t_thresh
 
-        return signals,times,t_min,t_max,t_thresh,valid
+    #     return signals,times,t_min,t_max,t_thresh,valid
 
 
 
-    def cut_and_resample_signals(self,times,signals,t_min,t_max,is_disruptive):
-        dt = self.conf['data']['dt']
-        T_max = self.conf['data']['T_max']
+    # def cut_and_resample_signals(self,times,signals,t_min,t_max,is_disruptive):
+    #     dt = self.conf['data']['dt']
+    #     T_max = self.conf['data']['T_max']
 
-        #resample signals
-        signals_processed = []
-        assert(len(signals) == len(times) and len(signals) > 0)
-        tr = 0
-        for i in range(len(signals)):
-            tr,sigr = cut_and_resample_signal(times[i],signals[i],t_min,t_max,dt)
-            signals_processed.append(sigr)
+    #     #resample signals
+    #     signals_processed = []
+    #     assert(len(signals) == len(times) and len(signals) > 0)
+    #     tr = 0
+    #     for i in range(len(signals)):
+    #         tr,sigr = cut_and_resample_signal(times[i],signals[i],t_min,t_max,dt)
+    #         signals_processed.append(sigr)
 
-        signals = signals_processed
-        signals = np.column_stack(signals)
+    #     signals = signals_processed
+    #     signals = np.column_stack(signals)
 
-        if is_disruptive:
-            ttd = max(tr) - tr
-            ttd = np.clip(ttd,0,T_max)
-        else:
-            ttd = T_max*np.ones_like(tr)
-        ttd = np.log10(ttd + 1.0*dt/10)
-        return signals,ttd
+    #     if is_disruptive:
+    #         ttd = max(tr) - tr
+    #         ttd = np.clip(ttd,0,T_max)
+    #     else:
+    #         ttd = T_max*np.ones_like(tr)
+    #     ttd = np.log10(ttd + 1.0*dt/10)
+    #     return signals,ttd
 
 
     def get_shot_list_path(self,conf):
