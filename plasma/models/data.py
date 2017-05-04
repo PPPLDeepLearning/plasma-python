@@ -10,7 +10,7 @@ from plasma.utils.processing import get_individual_shot_file
 # 		for i in range(len(signal_paths))
 # 			self.signals.append(Signal(signal_descriptions[i],signal_paths[i]))
 
-class Signal:
+class Signal(object):
 	def __init__(self,description,paths,machines,tex_label=None,causal_shifts=None,is_ip=False):
 		assert(len(paths) == len(machines))
 		self.description = description
@@ -156,7 +156,7 @@ class ProfileSignal(Signal):
 		return t,sig_interp,True
 
 
-class Machine:
+class Machine(object):
 	def __init__(self,name,server,fetch_data_fn,max_cores = 8,current_threshold=0):
 		self.name = name
 		self.server = server
