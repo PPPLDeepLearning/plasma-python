@@ -334,7 +334,7 @@ class Shot(object):
         self.signals_dict =signals_dict 
         self.ttd = ttd
 
-    def convert_to_ttd(self,tr,conf)
+    def convert_to_ttd(self,tr,conf):
         T_max = conf['data']['T_max']
         if self.is_disruptive:
             ttd = max(tr) - tr

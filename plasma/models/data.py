@@ -53,7 +53,7 @@ class Signal:
 			sig = sig[region,:]
 
 		#make sure shot is not garbage data
-		if (np.max(sig) == 0.0 and np.min(sig) == 0.0) or len(t) <= 1::
+		if (np.max(sig) == 0.0 and np.min(sig) == 0.0) or len(t) <= 1:
 			if self.is_ip:
 				print('shot {} has no current'.format(shot.number))
 			else:
