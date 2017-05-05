@@ -97,7 +97,7 @@ def train(conf,shot_list_train,loader):
         specific_builder.save_model_weights(train_model,e)
 
         if conf['training']['validation_frac'] > 0.0:
-            roc_area,loss = make_predictions_and_evaluate_gpu(conf,shot_list_validate,loader)
+            _,_,_,roc_area,loss = make_predictions_and_evaluate_gpu(conf,shot_list_validate,loader)
             validation_losses.append(loss)
             validation_roc.append(roc_area)
 
@@ -172,7 +172,7 @@ class HyperRunner(object):
             training_losses.append(np.mean(training_losses_tmp))
             specific_builder.save_model_weights(train_model,e)
 
-            roc_area,loss = make_predictions_and_evaluate_gpu(self.conf,shot_list_validate,self.loader)
+            _,_,_,roc_area,loss = make_predictions_and_evaluate_gpu(self.conf,shot_list_validate,self.loader)
             print("Epoch: {}, loss: {}, validation_losses_size: {}".format(e,loss,len(validation_losses)))
             validation_losses.append(loss)
             validation_roc.append(roc_area)
@@ -340,7 +340,7 @@ def make_predictions_and_evaluate_gpu(conf,shot_list,loader):
     analyzer = PerformanceAnalyzer(conf=conf)
     roc_area = analyzer.get_roc_area(y_prime,y_gold,disruptive)
     loss = get_loss_from_list(y_prime,y_gold,conf['data']['target'].loss)
-    return roc_area,loss
+    return y_prime,y_gold,disruptive,roc_area,loss
 
 def make_evaluations_gpu(conf,shot_list,loader):
 

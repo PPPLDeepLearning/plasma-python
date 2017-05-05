@@ -550,7 +550,7 @@ def mpi_make_predictions_and_evaluate(conf,shot_list,loader):
     analyzer = PerformanceAnalyzer(conf=conf)
     roc_area = analyzer.get_roc_area(y_prime,y_gold,disruptive)
     loss = get_loss_from_list(y_prime,y_gold,conf['data']['target'].loss)
-    return roc_area,loss
+    return y_prime,y_gold,disruptive,roc_area,loss
 
 
 def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=None):   
@@ -598,7 +598,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
             specific_builder.save_model_weights(train_model,int(round(e)))
 
         epoch_logs = {}
-        roc_area,loss = mpi_make_predictions_and_evaluate(conf,shot_list_validate,loader)
+        _,_,_,roc_area,loss = mpi_make_predictions_and_evaluate(conf,shot_list_validate,loader)
 
         #validation_losses.append(loss)
         #validation_roc.append(roc_area)

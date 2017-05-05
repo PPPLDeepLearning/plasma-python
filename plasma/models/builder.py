@@ -166,8 +166,8 @@ class ModelBuilder(object):
             pre_rnn = Concatenate() ([pre_rnn_0D,pre_rnn_1D])
 	else:
 	    pre_rnn = pre_rnn_input	
-	pre_rnn = Dense(dense_size,activation='relu') (pre_rnn)
-	pre_rnn = Dense(dense_size,activation='relu') (pre_rnn)
+	#pre_rnn = Dense(dense_size,activation='relu') (pre_rnn)
+	#pre_rnn = Dense(dense_size,activation='relu') (pre_rnn)
 	
 	pre_rnn_model = Model(inputs = pre_rnn_input,outputs=pre_rnn)
 	x_input = Input(batch_shape = batch_input_shape)
