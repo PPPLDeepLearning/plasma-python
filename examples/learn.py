@@ -122,7 +122,7 @@ print('=========Summary========')
 print('Train Loss: {:.3e}'.format(loss_train))
 print('Train ROC: {:.4f}'.format(roc_train))
 print('Test Loss: {:.3e}'.format(loss_test))
-print('Test Loss: {:.4f}'.format(roc_test))
+print('Test ROC: {:.4f}'.format(roc_test))
 
 
 

@@ -83,14 +83,15 @@ disruptive= []
 # y_prime_train,y_gold_train,disruptive_train = make_predictions(conf,shot_list_train,loader)
 # y_prime_test,y_gold_test,disruptive_test = make_predictions(conf,shot_list_test,loader)
 
-y_prime_train,y_gold_train,disruptive_train,loss_train,roc_train = mpi_make_predictions_and_evaluate(conf,shot_list_train,loader)
-y_prime_test,y_gold_test,disruptive_test,loss_test,roc_test = mpi_make_predictions_and_evaluate(conf,shot_list_test,loader)
+y_prime_train,y_gold_train,disruptive_train,roc_train,loss_train = mpi_make_predictions_and_evaluate(conf,shot_list_train,loader)
+y_prime_test,y_gold_test,disruptive_test,roc_test,loss_test = mpi_make_predictions_and_evaluate(conf,shot_list_test,loader)
 
-print('=========Summary========')
-print('Train Loss: {:.3e}'.format(loss_train))
-print('Train ROC: {:.4f}'.format(roc_train))
-print('Test Loss: {:.3e}'.format(loss_test))
-print('Test Loss: {:.4f}'.format(roc_test))
+if task_index == 0:
+	print('=========Summary========')
+	print('Train Loss: {:.3e}'.format(loss_train))
+	print('Train ROC: {:.4f}'.format(roc_train))
+	print('Test Loss: {:.3e}'.format(loss_test))
+	print('Test ROC: {:.4f}'.format(roc_test))
 
 
 
