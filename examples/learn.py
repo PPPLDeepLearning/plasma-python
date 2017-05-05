@@ -89,6 +89,7 @@ print('Training on {} shots, testing on {} shots'.format(len(shot_list_train),le
 #####################################################
 ######################TRAINING#######################
 #####################################################
+#train(conf,shot_list_train,loader)
 p = old_mp.Process(target = train,args=(conf,shot_list_train,loader))
 p.start()
 p.join()

@@ -17,14 +17,16 @@ else:
 from data.signals import *#d3d,jet,d3d_signals,jet_signals,all_signals
 #signals
 conf['paths']['all_signals'] = d3d_signals
-conf['paths']['use_signals'] = [ip,lm,etemp_profile]
+#make sure all 1D signals appear last!
+conf['paths']['use_signals'] = [ip,lm,edens_profile,etemp_profile]
 
 #machines
 conf['paths']['all_machines'] = all_machines
 
 #shot lists
 #shot_list_dir = conf['paths']['shot_list_dir']
-shot_list_dir = '/cscratch/share/frnn/shot_lists/'
+#shot_list_dir = '/cscratch/share/frnn/shot_lists/'
+shot_list_dir = '/tigress/jk7/shot_lists/'
 
 jet_carbon_wall = ShotListFiles(jet,shot_list_dir,['CWall_clear.txt','CFC_unint.txt'],'jet carbon wall data')
 jet_iterlike_wall = ShotListFiles(jet,shot_list_dir,['ILW_unint.txt','BeWall_clear.txt'],'jet iter like wall data')

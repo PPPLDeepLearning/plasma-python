@@ -208,7 +208,7 @@ class ShotList(object):
             self.append(shot)
             return True
         else:
-            print('Warning: shot {} not valid, omitting'.format(shot.number))
+            #print('Warning: shot {} not valid, omitting'.format(shot.number))
             return False
 
         
@@ -270,10 +270,10 @@ class Shot(object):
 
     def get_data_arrays(self,use_signals):
         t_array = self.ttd
-        signal_array = np.zeros((len(ttd),sum([sig.num_channels for sig in use_signals])))
+        signal_array = np.zeros((len(t_array),sum([sig.num_channels for sig in use_signals])))
         curr_idx = 0
         for sig in use_signals:
-            signal_array[curr_idx:curr_idx+sig.num_channels] = self.signals_dict[sig]
+            signal_array[:,curr_idx:curr_idx+sig.num_channels] = self.signals_dict[sig]
             curr_idx += sig.num_channels
         return t_array,signal_array
 

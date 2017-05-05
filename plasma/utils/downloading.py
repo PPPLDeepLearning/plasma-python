@@ -13,7 +13,10 @@ http://www.mdsplus.org/index.php?title=Documentation:Tutorial:MdsObjects&open=76
 - handling of missing data in shots?
 - TEST
 '''
-from MDSplus import *
+try:
+	from MDSplus import *
+except ImportError:
+	pass
 #from pylab import *
 import numpy as np
 import sys
