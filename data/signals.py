@@ -37,9 +37,9 @@ def fetch_d3d_data(signal_path,shot,c=None):
 	# ## Retrieve Data 
 	t0 =  time.time()
 	found = False
-	xdata = [0]
+	xdata = np.array([0])
 	ydata = None
-	data = [0]
+	data = np.array([0])
 
 	# Retrieve data from MDSplus (thin)
 	#first try, retrieve directly from tree andsignal 
@@ -76,17 +76,17 @@ def fetch_d3d_data(signal_path,shot,c=None):
 	# Retrieve data from PTDATA if node not found
 	if not found:
 		#print("not in full path {}".format(signal))
-		data = c.get('_s = ptdata2("'+signal+'",'+str(shot)+')')
+		data = c.get('_s = ptdata2("'+signal+'",'+str(shot)+')').data()
 		if len(data) != 1:
-			xdata = c.get('dim_of(_s)')
+			xdata = c.get('dim_of(_s)').data()
 			rank = 1
 			found = True
 	# Retrieve data from Pseudo-pointname if not in ptdata
 	if not found:
 		#print("not in PTDATA {}".format(signal))
-		data = c.get('_s = pseudo("'+signal+'",'+str(shot)+')')
+		data = c.get('_s = pseudo("'+signal+'",'+str(shot)+')').data()
 		if len(data) != 1:
-			xdata = c.get('dim_of(_s)')
+			xdata = c.get('dim_of(_s)').data()
 			rank = 1
 			found = True
 	#this means the signal wasn't found

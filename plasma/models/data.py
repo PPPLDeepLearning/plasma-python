@@ -60,11 +60,16 @@ class Signal(object):
 			sig = sig[region,:]
 
 		#make sure shot is not garbage data
-		if (np.max(sig) == 0.0 and np.min(sig) == 0.0) or len(t) <= 1:
+		if len(t) <= 1 or (np.max(sig) == 0.0 and np.min(sig) == 0.0):
 			if self.is_ip:
 				print('shot {} has no current'.format(shot.number))
 			else:
 				print('Signal {}, shot {} contains no data'.format(self.description,shot.number))
+			return None,None,False
+		
+		#make sure data doesn't contain nan
+		if np.any(np.isnan(t)) or np.any(np.isnan(sig)):
+			print('Signal {}, shot {} contains NAN'.format(self.description,shot.number))
 			return None,None,False
 
 		return t,sig,True
@@ -124,8 +129,15 @@ class ProfileSignal(Signal):
 		remapping = np.linspace(self.mapping_range[0],self.mapping_range[1],self.num_channels)
 		t = data[1:,0]
 		sig = data[1:,1:]
+		if sig.shape[1] < 2:
+			print('Signal {}, shot {} should be profile but has only one channel. Possibly only one profile fit was run for the duration of the shot and was transposed during downloading. Need at least 2.'.format(self.description,shot.number))
+			return None,None,False
 		if len(t) <= 1 or (np.max(sig) == 0.0 and np.min(sig) == 0.0):
 			print('Signal {}, shot {} contains no data'.format(self.description,shot.number))
+			return None,None,False
+
+		if np.any(np.isnan(t)) or np.any(np.isnan(sig)):
+			print('Signal {}, shot {} contains NAN'.format(self.description,shot.number))
 			return None,None,False
 
 		timesteps = len(t)
@@ -158,7 +170,7 @@ class Machine(object):
 			time,data = create_missing_value_filler()
 			print(e)
 			sys.stdout.flush()
-		time = np.array(time) + signal.get_causal_shift(self)
+		time = np.array(time) + 1e-3*signal.get_causal_shift(self)
 		return time,np.array(data),mapping,success
 
 	def __eq__(self,other):

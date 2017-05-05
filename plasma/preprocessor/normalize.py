@@ -66,7 +66,7 @@ class Normalizer(object):
         shot_files = conf['paths']['shot_files']# + conf['paths']['shot_files_test']
         # shot_list_dir = conf['paths']['shot_list_dir']
         use_shots = max(400,conf['data']['use_shots'])
-        return self.train_on_files(shot_list_dir,shot_files,use_shots)
+        return self.train_on_files(shot_files,use_shots)
 
 
     def train_on_files(self,shot_files,use_shots):
@@ -85,6 +85,7 @@ class Normalizer(object):
             start_time = time.time()
 
             for (i,stats) in enumerate(pool.imap_unordered(self.train_on_single_shot,shot_list_picked)):
+            #for (i,stats) in enumerate(map(self.train_on_single_shot,shot_list_picked)):
                 self.incorporate_stats(stats)
                 sys.stdout.write('\r' + '{}/{}'.format(i,len(shot_list_picked)))
 
@@ -120,7 +121,11 @@ class Normalizer(object):
         stats = self.extract_stats(shot) 
         shot.make_light()
         return stats
-
+    
+    def ensure_save_directory(self):
+        prepath = os.path.dirname(self.path)
+        if not os.path.exists(prepath):
+            os.makedirs(prepath)
 
     def previously_saved_stats(self):
         return os.path.isfile(self.path)
@@ -187,6 +192,7 @@ class MeanVarNormalizer(Normalizer):
         # standard_deviations = dat['standard_deviations']
         # num_processed = dat['num_processed']
         # num_disruptive = dat['num_disruptive']
+        self.ensure_save_directory()
         np.savez(self.path,means = self.means,stds = self.stds,
          num_processed=self.num_processed,num_disruptive=self.num_disruptive)
         print('saved normalization data from {} shots ( {} disruptive )'.format(self.num_processed,self.num_disruptive))
@@ -287,6 +293,7 @@ class MinMaxNormalizer(Normalizer):
         # standard_deviations = dat['standard_deviations']
         # num_processed = dat['num_processed']
         # num_disruptive = dat['num_disruptive']
+        self.ensure_save_directory()
         np.savez(self.path,minimums = self.minimums,maximums = self.maximums,
          num_processed=self.num_processed,num_disruptive=self.num_disruptive)
         print('saved normalization data from {} shots ( {} disruptive )'.format(self.num_processed,self.num_disruptive))

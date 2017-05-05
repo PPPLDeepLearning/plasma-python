@@ -315,6 +315,7 @@ class Shot(object):
                 signal_arrays.append(sig)
                 time_arrays.append(t)
         assert(t_max > t_min or not valid)
+	
         if self.is_disruptive:
             t_max = self.t_disrupt
             assert(self.t_disrupt <= t_max or not valid)
@@ -330,11 +331,7 @@ class Shot(object):
         assert((len(signal_arrays) == len(time_arrays) == len(self.signals)) and len(signal_arrays) > 0)
         tr = 0
         for (i,signal) in enumerate(self.signals):
-	    sys.stdout.write(time_arrays[i].shape.__str__())
-	    sys.stdout.write(signal_arrays[i].shape.__str__())
             tr,sigr = cut_and_resample_signal(time_arrays[i],signal_arrays[i],t_min,t_max,dt)
-	    sys.stdout.write('success')
-	    sys.stdout.flush()
             signals_dict[signal] = sigr
 
         ttd = self.convert_to_ttd(tr,conf)
@@ -375,7 +372,7 @@ class Shot(object):
             self.signals_dict = None
             self.ttd = None 
         else:
-            self.signals_dict = dat['signals_dict']
+            self.signals_dict = dat['signals_dict'][()]
             self.ttd = dat['ttd']
   
     def previously_saved(self,prepath):

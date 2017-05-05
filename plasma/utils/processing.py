@@ -40,8 +40,6 @@ def resample_signal(t,sig,tmin,tmax,dt):
 
 def cut_signal(t,sig,tmin,tmax):
 	mask = np.logical_and(t >= tmin,  t <= tmax)
-	sys.stdout.write((tmin,tmax).__str__())
-	sys.stdout.flush()
 	return t[mask],sig[mask,:]
 
 def cut_and_resample_signal(t,sig,tmin,tmax,dt):

@@ -12,7 +12,8 @@ print('using signals: ')
 print(signals)
 
 # shot_list_files = plasma.conf.jet_full
-shot_list_files = plasma.conf.d3d_full
+#shot_list_files = plasma.conf.d3d_full
+shot_list_files = plasma.conf.d3d_1000
 
 download_all_shot_numbers(prepath,save_path,shot_list_files,signals)
 
