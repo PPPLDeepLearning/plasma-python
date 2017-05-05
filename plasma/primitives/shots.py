@@ -315,6 +315,12 @@ class Shot(object):
                 signal_arrays.append(sig)
                 time_arrays.append(t)
         assert(t_max > t_min or not valid)
+	#make sure the shot is long enough.
+	dt = conf['data']['dt']
+	if (t_max - t_min)/dt < conf['model']['length']:
+	    print('Shot {} contains insufficient data'.format(self.number))
+	    valid = False
+		
 	
         if self.is_disruptive:
             t_max = self.t_disrupt

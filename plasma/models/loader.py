@@ -147,6 +147,10 @@ class Loader(object):
             if self.conf['training']['use_mock_data']:
                 signal,ttd = self.get_mock_data()
             ttd,signal = shot.get_data_arrays(use_signals)
+	    if len(ttd) == 9:
+		print(ttd)
+		print(shot)
+		print(shot.number)
 
             total_length += len(ttd)
             signals.append(signal)
@@ -195,6 +199,8 @@ class Loader(object):
     def make_deterministic_patches_from_single_array(self,sig,res,min_len):
         sig_patches = []
         res_patches = []
+	if len(sig) <= min_len:
+		print('signal length: {}'.format(len(sig)))
         assert(min_len <= len(sig))
         for start in range(0,len(sig)-min_len,min_len):
             sig_patches.append(sig[start:start+min_len])

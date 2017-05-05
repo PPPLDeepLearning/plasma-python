@@ -160,7 +160,7 @@ class ModelBuilder(object):
             
 	    #pre_rnn_1D = Conv1D(num_conv_filters,size_conv_filters,padding='same',activation='relu',dilation_rate=1) (pre_rnn_1D)
             for i in range(model_conf['num_conv_layers']):
-                pre_rnn_1D = Convolution1D(num_conv_filters,size_conv_filters,padding='same',activation='relu') (pre_rnn_1D)
+                pre_rnn_1D = Convolution1D(num_conv_filters,size_conv_filters,padding='valid',activation='relu') (pre_rnn_1D)
                 pre_rnn_1D = MaxPooling1D(pool_size) (pre_rnn_1D)
             pre_rnn_1D = Flatten() (pre_rnn_1D)
             pre_rnn = Concatenate() ([pre_rnn_0D,pre_rnn_1D])
