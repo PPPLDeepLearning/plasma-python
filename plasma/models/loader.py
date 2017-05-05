@@ -147,7 +147,7 @@ class Loader(object):
             if self.conf['training']['use_mock_data']:
                 signal,ttd = self.get_mock_data()
             ttd,signal = shot.get_data_arrays(use_signals)
-	    if len(ttd) == 9:
+	    if len(ttd) < self.conf['model']['length']:
 		print(ttd)
 		print(shot)
 		print(shot.number)
