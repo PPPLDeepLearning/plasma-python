@@ -105,6 +105,7 @@ callbacks:
     mode: 'max'
     monitor: 'val_loss'
     patience: 2
+    tensorboard_save_path: 'Graph'
 
 plots:
     #LaTeX strings for performance analysis, sorted in lists by signal_group
