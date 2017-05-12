@@ -306,15 +306,18 @@ class MPIModel():
       mode = conf['callbacks']['mode']
       monitor = conf['callbacks']['monitor']
       patience = conf['callbacks']['patience']
-      callback_save_path = conf['paths']['callback_save_path']
+      csvlog_save_path = conf['paths']['csvlog_save_path']
+      tensorboard_save_path = conf['paths']['tensorboard_save_path']
       callbacks_list = conf['callbacks']['list']
 
       callbacks = [cbks.BaseLogger()]
       callbacks += [self.history]
-      callbacks += [cbks.CSVLogger("{}callbacks-{}.log".format(callback_save_path,datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")))]
+      callbacks += [cbks.CSVLogger("{}callbacks-{}.log".format(csvlog_save_path,datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")))]
 
       if "earlystop" in callbacks_list: 
           callbacks += [cbks.EarlyStopping(patience=patience, monitor=monitor, mode=mode)]
+      if "tensorboard" in callbacks_list and not backend == "theano":
+          callbacks += [cbks.TensorBoard(log_dir=tensorboard_save_path, histogram_freq=1, write_graph=True)]
       if "lr_scheduler" in callbacks_list: 
           pass
       
