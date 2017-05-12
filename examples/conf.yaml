@@ -17,7 +17,7 @@ paths:
                  'jpf/df/g1r-lid:008']]
     positivity_mask: [['jpf/da/c2-ipla'], 
                      ['jpf/gs/bl-fdwdt<s']]
-    tensorboard_save_path: 'Graph'
+    tensorboard_save_path: '/Graph/'
 
 data:
     T_min_warn: 30
@@ -86,7 +86,7 @@ training:
     use_mock_data: False
     data_parallel: False
 callbacks:
-    list: ['earlystop']
+    list: ['earlystop','tensorboard']
     metrics: ['val_loss','val_roc','train_loss']
     mode: 'max'
     monitor: 'val_loss'
