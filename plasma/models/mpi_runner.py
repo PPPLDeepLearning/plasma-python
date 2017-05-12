@@ -307,6 +307,10 @@ class MPIModel():
       monitor = conf['callbacks']['monitor']
       patience = conf['callbacks']['patience']
       csvlog_save_path = conf['paths']['csvlog_save_path']
+      #CSV callback is on by default
+      if not os.path.exists(csvlog_save_path):
+          os.makedirs(csvlog_save_path)
+
       tensorboard_save_path = conf['paths']['tensorboard_save_path']
       callbacks_list = conf['callbacks']['list']
 
