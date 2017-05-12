@@ -320,7 +320,7 @@ class MPIModel():
 
       if "earlystop" in callbacks_list: 
           callbacks += [cbks.EarlyStopping(patience=patience, monitor=monitor, mode=mode)]
-      if "tensorboard" in callbacks_list and not backend == "theano":
+      if "tensorboard" in callbacks_list and backend != "theano":
           callbacks += [cbks.TensorBoard(log_dir=tensorboard_save_path, histogram_freq=1, write_graph=True)]
       if "lr_scheduler" in callbacks_list: 
           pass
@@ -579,6 +579,9 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
     batch_generator = partial(loader.training_batch_generator,shot_list=shot_list_train)
 
     mpi_model = MPIModel(train_model,optimizer,comm,batch_generator,batch_size,lr=lr,warmup_steps = warmup_steps)
+    if backend != "theano":
+        mpi_model.model.summary()
+
     mpi_model.compile(loss=conf['data']['target'].loss)
 
     callbacks = mpi_model.build_callbacks(conf,callbacks_list)
