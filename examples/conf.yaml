@@ -6,22 +6,7 @@ target: 'hinge'
 paths:
     shot_files: ['CWall_clear.txt','CFC_unint.txt']
     shot_files_test: ['BeWall_clear.txt','ILW_unint.txt']
-    signals_dirs: [['jpf/da/c2-ipla'], # Plasma Current [A]
-                ['jpf/da/c2-loca'], # Mode Lock Amplitude [A]
-                ['jpf/db/b5r-ptot>out'], #Radiated Power [W]
-                ['jpf/gs/bl-li<s'], #Plasma Internal Inductance
-                ['jpf/gs/bl-fdwdt<s'], #Stored Diamagnetic Energy (time derivative) [W] Might cause a lot of false positives!
-                ['jpf/gs/bl-ptot<s'], #total input power [W]
-                ['jpf/gs/bl-wmhd<s'], #total stored diamagnetic energy
-                #density signals [m^-2]
-                #4 vertical channels and 4 horizontal channels
-                ['jpf/df/g1r-lid:002',
-                 'jpf/df/g1r-lid:003',
-                 'jpf/df/g1r-lid:004',
-                 'jpf/df/g1r-lid:005',
-                 'jpf/df/g1r-lid:006',
-                 'jpf/df/g1r-lid:007',
-                 'jpf/df/g1r-lid:008']]
+    signals_dirs: [['jpf/da/c2-ipla']]
     signal_prepath: '/signal_data/jet/'
     shot_list_dir: '/shot_lists/'
     signals_masks: [['jpf/df/g1r-lid:003',
@@ -32,6 +17,7 @@ paths:
                  'jpf/df/g1r-lid:008']]
     positivity_mask: [['jpf/da/c2-ipla'], 
                      ['jpf/gs/bl-fdwdt<s']]
+    tensorboard_save_path: 'Graph'
 
 data:
     T_min_warn: 30
@@ -84,7 +70,7 @@ model:
     dropout_prob: 0.3
     #only relevant if we want to do mpi training. The number of steps with a single replica
     warmup_steps: 0
-    backend: 'theano'
+    backend: 'tensorflow'
 
 training:
     as_array_of_shots: True
@@ -105,7 +91,6 @@ callbacks:
     mode: 'max'
     monitor: 'val_loss'
     patience: 2
-    tensorboard_save_path: 'Graph'
 
 plots:
     #LaTeX strings for performance analysis, sorted in lists by signal_group
