@@ -101,8 +101,14 @@ class Preprocessor(object):
             shot.save(processed_prepath)
 
         else:
-            shot.restore(processed_prepath,light=True)
-            sys.stdout.write('\r{} exists.'.format(shot.number))
+	    try:
+	    	shot.restore(processed_prepath,light=True)
+            	sys.stdout.write('\r{} exists.'.format(shot.number))
+	    except:
+            	shot.preprocess(self.conf)
+            	shot.save(processed_prepath)
+            	sys.stdout.write('\r{} exists but corrupted, resaved.'.format(shot.number))
+		
         shot.make_light()
         return shot 
 

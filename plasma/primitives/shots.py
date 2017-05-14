@@ -79,7 +79,7 @@ class ShotList(object):
         machine = shot_list_files_object.machine
         shot_numbers,disruption_times = shot_list_files_object.get_shot_numbers_and_disruption_times()
         for number,t in list(zip(shot_numbers,disruption_times)):
-            self.append(Shot(number=number,t_disrupt=t,machine=machine,signals=signals))
+            self.append(Shot(number=number,t_disrupt=t,machine=machine,signals=[s for s in signals if s.is_defined_on_machine(machine)]))
 
 
 
@@ -315,8 +315,9 @@ class Shot(object):
             	assert(len(sig.shape) == 2)
             	assert(len(t.shape) == 1)
 		assert(len(t) > 1)
-                t_min = max(t_min,t[0])
-                t_max = min(t_max,t[-1])
+                t_min = max(t_min,np.min(t))
+                t_max = min(t_max,np.max(t))
+			
                 signal_arrays.append(sig)
                 time_arrays.append(t)
         assert(t_max > t_min or not valid)
