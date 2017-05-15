@@ -51,15 +51,37 @@ class PerformanceAnalyzer():
 
 
     def get_metrics_vs_p_thresh_custom(self,all_preds,all_truths,all_disruptive):
+        return get_metrics_vs_p_thresh_fast(all_reds,all_truths,all_disruptive)
+        # P_thresh_range = self.get_p_thresh_range()
+        # correct_range = np.zeros_like(P_thresh_range)
+        # accuracy_range = np.zeros_like(P_thresh_range)
+        # fp_range = np.zeros_like(P_thresh_range)
+        # missed_range = np.zeros_like(P_thresh_range)
+        # early_alarm_range = np.zeros_like(P_thresh_range)
+        
+        # for i,P_thresh in enumerate(P_thresh_range):
+        #     correct,accuracy,fp_rate,missed,early_alarm_rate = self.summarize_shot_prediction_stats(P_thresh,all_preds,all_truths,all_disruptive)
+        #     correct_range[i] = correct
+        #     accuracy_range[i] = accuracy 
+        #     fp_range[i] = fp_rate 
+        #     missed_range[i] = missed
+        #     early_alarm_range[i] = early_alarm_rate
+        
+        # return correct_range,accuracy_range,fp_range,missed_range,early_alarm_range
+
+    def get_metrics_vs_p_thresh_fast(self,all_preds,all_truths,all_disruptive):
         P_thresh_range = self.get_p_thresh_range()
         correct_range = np.zeros_like(P_thresh_range)
         accuracy_range = np.zeros_like(P_thresh_range)
         fp_range = np.zeros_like(P_thresh_range)
         missed_range = np.zeros_like(P_thresh_range)
         early_alarm_range = np.zeros_like(P_thresh_range)
-        
-        for i,P_thresh in enumerate(P_thresh_range):
-            correct,accuracy,fp_rate,missed,early_alarm_rate = self.summarize_shot_prediction_stats(P_thresh,all_preds,all_truths,all_disruptive)
+
+        early_th,correct_th,late_th,nd_th = self.get_threshold_arrays(all_preds,all_truths,all_disruptive)
+        all_thresholds = np.concatenate((early_th,correct_th,late_th,nd_th))
+        for i,thresh in enumerate(all_thresholds):
+            #correct,accuracy,fp_rate,missed,early_alarm_rate = self.summarize_shot_prediction_stats(P_thresh,all_preds,all_truths,all_disruptive)
+            correct,accuracy,fp_rate,missed,early_alarm_rate = self.get_shot_prediction_stats_from_threshold_arrays(early_th,correct_th,late_th,nd_th,thresh)
             correct_range[i] = correct
             accuracy_range[i] = accuracy 
             fp_range[i] = fp_rate 
@@ -67,6 +89,49 @@ class PerformanceAnalyzer():
             early_alarm_range[i] = early_alarm_rate
         
         return correct_range,accuracy_range,fp_range,missed_range,early_alarm_range
+
+    def get_shot_prediction_stats_from_threshold_arrays(self,early_th,correct_th,late_th,nd_th,thresh):
+        FPs = np.sum(nd_th > thresh)
+        TNs = len(nd_th) - FPs 
+
+        earlies = np.sum(early_th > thresh) 
+        TPs = np.sum(np.logical_and(early_th <= thresh,correct_th > thresh)) 
+        lates = np.sum(np.logical_and(np.logical_and(early_th <= thresh,correct_th <= thresh),late_th > thresh))
+        FNs = np.sum(np.logical_and(np.logical_and(early_th <= thresh,correct_th <= thresh),late_th <= thresh))
+
+        return self.get_accuracy_and_fp_rate_from_stats(TPs,FPs,FNs,TNs,earlies,lates,verbose)
+
+
+
+    def get_threshold_arrays(self,preds,truths,disruptives):
+        num_d = np.sum(disruptives)
+        num_nd = np.sum(~disruptives)
+        nd_thresholds = [] 
+        d_early_thresholds = [] 
+        d_correct_thresholds = [] 
+        d_late_thresholds = [] 
+        for i in range(len(all_preds)):
+            pred = preds[i]
+            truth = truths[i]
+            is_disruptive = disruptives[i] 
+            if is_disruptive:
+                max_acceptable = self.create_acceptable_region(truth,'max')
+                min_acceptable = self.create_acceptable_region(truth,'min')
+                correct_indices = np.logical_and(max_acceptable[first_pred_idx], ~min_acceptable[first_pred_idx])
+                early_indices = ~min_acceptable
+                late_indices = min_acceptable
+                d_early_thresholds.append(np.max(preds[early_indices]))
+                d_late_thresholds.append(np.max(preds[late_indices]))
+                d_correct_thresholds.append(np.max(preds[correct_indices]))
+            else:
+                nd_thresholds.append(np.max(preds))
+        return np.array(d_early_thresholds), np.array(d_correct_thresholds),
+         np.array(d_late_thresholds), np.array(nd_thresholds)
+     
+
+
+
+
 
     def summarize_shot_prediction_stats_by_mode(self,P_thresh,mode,verbose=False):
 
