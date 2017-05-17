@@ -563,37 +563,55 @@ class PerformanceAnalyzer():
             is_disruptive =  shot.is_disruptive
             if normalize:
                 self.normalizer.apply(shot)
-            #shot.signals is a 2D numpy array with the rows containing the unlabeled timeseries data
-            signals = np.empty((len(shot.signals),0)) #None
 
-            labels = []
-            signals_index = 0
-            signals_masks = conf['paths']['signals_masks']
-            plot_masks = conf['plots']['plot_masks']
-            group_labels = conf['plots']['group_labels']
-            for i, group in enumerate(conf['paths']['signals_dirs']):
-                for j,signal_name in enumerate(group):
-                    if signals_masks[i][j]: #signal was used in training/testing
-                        if plot_masks[i][j]: #subset of signals to be plotted
-                            labels += group_labels[i] #original object was 2D by PPFvs.JPF x signal group
-                            signals = np.column_stack((signals,shot.signals.T[signals_index]))
-                        signals_index += 1
-
-            if is_disruptive:
-                print('disruptive')
-            else:
-                print('non disruptive')
-
-            f,axarr = subplots(len(signals.T)+1,1,sharex=True,figsize=(13,13))#, squeeze=False)
+            use_signals = self.conf['paths']['use_signals']
+            f,axarr = subplots(len(use_signals)+1,1,sharex=True,figsize=(13,13))#, squeeze=False)
             title(prediction_type)
-            for (i,sig) in enumerate(signals.T):
+            assert(shot.ttd == truth)
+            for sig in use_signals:
+                num_channels = sig.num_channels
                 ax = axarr[i]
-                ax.plot(sig[::-1],label = labels[i])
+                sig_arr = shot.signals_dict[sig]
+                if num_channels == 1
+                    ax.plot(sig_arr[::-1,0],label = sig.description)
+                else:
+                    ax.imshow(sig_arr[::-1,:],label = sig.description)
                 ax.legend(loc='best',fontsize=8)
                 setp(ax.get_xticklabels(),visible=False)
                 setp(ax.get_yticklabels(),fontsize=7)
                 f.subplots_adjust(hspace=0)
-                print('min: {}, max: {}'.format(min(sig), max(sig)))
+                print('min: {}, max: {}'.format(np.min(sig_arr), np.max(sig_arr)))
+            #shot.signals is a 2D numpy array with the rows containing the unlabeled timeseries data
+            # signals = np.empty((len(shot.signals),0)) #None
+
+            # labels = []
+            # signals_index = 0
+            # signals_masks = conf['paths']['signals_masks']
+            # plot_masks = conf['plots']['plot_masks']
+            # group_labels = conf['plots']['group_labels']
+            # for i, group in enumerate(conf['paths']['signals_dirs']):
+            #     for j,signal_name in enumerate(group):
+            #         if signals_masks[i][j]: #signal was used in training/testing
+            #             if plot_masks[i][j]: #subset of signals to be plotted
+            #                 labels += group_labels[i] #original object was 2D by PPFvs.JPF x signal group
+            #                 signals = np.column_stack((signals,shot.signals.T[signals_index]))
+            #             signals_index += 1
+
+            # if is_disruptive:
+            #     print('disruptive')
+            # else:
+            #     print('non disruptive')
+
+            # f,axarr = subplots(len(signals.T)+1,1,sharex=True,figsize=(13,13))#, squeeze=False)
+            # title(prediction_type)
+            # for (i,sig) in enumerate(signals.T):
+            #     ax = axarr[i]
+            #     ax.plot(sig[::-1],label = labels[i])
+            #     ax.legend(loc='best',fontsize=8)
+            #     setp(ax.get_xticklabels(),visible=False)
+            #     setp(ax.get_yticklabels(),fontsize=7)
+            #     f.subplots_adjust(hspace=0)
+            #     print('min: {}, max: {}'.format(min(sig), max(sig)))
             ax = axarr[-1] 
             if self.pred_ttd:
                 ax.semilogy((-truth+0.0001)[::-1],label='ground truth')
