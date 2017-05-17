@@ -77,9 +77,19 @@ class Normalizer(object):
         conf = self.conf
         #only use training shots here!! "Don't touch testing shots"
         shot_files = conf['paths']['shot_files']# + conf['paths']['shot_files_test']
+        shot_files_all = conf['paths']['shot_files_all']
+        all_machines = set([file.machine for file in shot_files_all])
+        train_machines = set([file.machine for file in shot_files])
+
+        if train_machines >= all_machines:
+            shot_files_use = shot_files
+        else:
+            print('Testing set contains new machine, using testing set to train normalizer for that machine.')
+            shot_files_use = shot_files_all
+
         # shot_list_dir = conf['paths']['shot_list_dir']
         use_shots = max(400,conf['data']['use_shots'])
-        return self.train_on_files(shot_files,use_shots)
+        return self.train_on_files(shot_files_use,use_shots)
 
 
     def train_on_files(self,shot_files,use_shots):
