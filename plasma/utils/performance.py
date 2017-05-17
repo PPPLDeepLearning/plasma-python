@@ -571,8 +571,6 @@ class PerformanceAnalyzer():
             use_signals = self.conf['paths']['use_signals']
             f,axarr = plt.subplots(len(use_signals)+1,1,sharex=True,figsize=(13,13))#, squeeze=False)
             plt.title(prediction_type)
-	    print(shot.ttd.flatten())
-	    print(truth.flatten())
             assert(np.all(shot.ttd.flatten() == truth.flatten()))
             for i,sig in enumerate(use_signals):
                 num_channels = sig.num_channels
