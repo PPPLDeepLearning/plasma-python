@@ -141,12 +141,12 @@ class ModelBuilder(object):
             return tuple(shape_curr)
 
 	pre_rnn_input = Input(shape=(num_signals,))
-	print(batch_shape_non_temporal)
-	print(batch_input_shape)
-	print(indices_0d)
-	print(indices_1d)
-	print(num_0D)
-	print(num_1D)
+	#print(batch_shape_non_temporal)
+	#print(batch_input_shape)
+	#print(indices_0d)
+	#print(indices_1d)
+	#print(num_0D)
+	#print(num_1D)
 	
 	if num_1D > 0:
             #pre_rnn_0D = Lambda(lambda x: slicer(x,indices_0d),lambda s: slicer_output_shape(s,indices_0d))(pre_rnn_input)
