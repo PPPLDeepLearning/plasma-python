@@ -86,14 +86,18 @@ class PerformanceAnalyzer():
 	
 	        early_th_tr,correct_th_tr,late_th_tr,nd_th_tr = self.get_threshold_arrays(all_preds_tr,all_truths_tr,all_disruptive_tr)
 	        early_th_te,correct_th_te,late_th_te,nd_th_te = self.get_threshold_arrays(all_preds_te,all_truths_te,all_disruptive_te)
-
 	        all_thresholds = np.sort(np.concatenate((early_th_tr,correct_th_tr,late_th_tr,nd_th_tr,early_th_te,correct_th_te,late_th_te,nd_th_te)))
 		self.p_thresh_range = all_thresholds
 	return self.p_thresh_range
 		
 
     def get_metrics_vs_p_thresh_fast(self,all_preds,all_truths,all_disruptive):
-	p_thresh_range = self.get_p_thresh_range()
+	all_disruptive = np.array(all_disruptive)	
+	if self.pred_train is not None:
+		p_thresh_range = self.get_p_thresh_range()
+	else:
+	        early_th,correct_th,late_th,nd_th = self.get_threshold_arrays(all_preds,all_truths,all_disruptive)
+	        p_thresh_range = np.sort(np.concatenate((early_th,correct_th,late_th,nd_th)))
         correct_range = np.zeros_like(p_thresh_range)
         accuracy_range = np.zeros_like(p_thresh_range)
         fp_range = np.zeros_like(p_thresh_range)
@@ -565,22 +569,26 @@ class PerformanceAnalyzer():
                 self.normalizer.apply(shot)
 
             use_signals = self.conf['paths']['use_signals']
-            f,axarr = subplots(len(use_signals)+1,1,sharex=True,figsize=(13,13))#, squeeze=False)
-            title(prediction_type)
-            assert(shot.ttd == truth)
-            for sig in use_signals:
+            f,axarr = plt.subplots(len(use_signals)+1,1,sharex=True,figsize=(13,13))#, squeeze=False)
+            plt.title(prediction_type)
+	    print(shot.ttd.flatten())
+	    print(truth.flatten())
+            assert(np.all(shot.ttd.flatten() == truth.flatten()))
+            for i,sig in enumerate(use_signals):
                 num_channels = sig.num_channels
                 ax = axarr[i]
                 sig_arr = shot.signals_dict[sig]
-                if num_channels == 1
-                    ax.plot(sig_arr[::-1,0],label = sig.description)
+                if num_channels == 1:
+                    ax.plot(sig_arr[:,0],label = sig.description)
                 else:
-                    ax.imshow(sig_arr[::-1,:],label = sig.description)
-                ax.legend(loc='best',fontsize=8)
-                setp(ax.get_xticklabels(),visible=False)
-                setp(ax.get_yticklabels(),fontsize=7)
+                    ax.imshow(sig_arr[:,:].T, aspect='auto', label = sig.description + " (profile)")
+		    ax.set_ylim([0,num_channels])
+                ax.legend(loc='upper center',fontsize=8)
+                plt.setp(ax.get_xticklabels(),visible=False)
+                plt.setp(ax.get_yticklabels(),fontsize=7)
                 f.subplots_adjust(hspace=0)
-                print('min: {}, max: {}'.format(np.min(sig_arr), np.max(sig_arr)))
+		#print(sig)
+                #print('min: {}, max: {}'.format(np.min(sig_arr), np.max(sig_arr)))
             #shot.signals is a 2D numpy array with the rows containing the unlabeled timeseries data
             # signals = np.empty((len(shot.signals),0)) #None
 
@@ -614,17 +622,17 @@ class PerformanceAnalyzer():
             #     print('min: {}, max: {}'.format(min(sig), max(sig)))
             ax = axarr[-1] 
             if self.pred_ttd:
-                ax.semilogy((-truth+0.0001)[::-1],label='ground truth')
-                ax.plot(-prediction[::-1]+0.0001,'g',label='neural net prediction')
+                ax.semilogy((-truth+0.0001),label='ground truth')
+                ax.plot(-prediction+0.0001,'g',label='neural net prediction')
                 ax.axhline(-P_thresh_opt,color='k',label='trigger threshold')
             else:
-                ax.plot((truth+0.001)[::-1],label='ground truth')
-                ax.plot(prediction[::-1],'g',label='neural net prediction')
+                ax.plot((truth+0.001),label='ground truth')
+                ax.plot(prediction,'g',label='neural net prediction')
                 ax.axhline(P_thresh_opt,color='k',label='trigger threshold')
             #ax.set_ylim([1e-5,1.1e0])
             ax.set_ylim([-2,2])
-            ax.axvline(self.T_min_warn,color='r',label='max warning time')
-            ax.axvline(self.T_max_warn,color='r',label='min warning time')
+            ax.axvline(len(truth)-self.T_min_warn,color='r',label='max warning time')
+            ax.axvline(len(truth)-self.T_max_warn,color='r',label='min warning time')
             ax.set_xlabel('TTD [ms]')
             ax.legend(loc = 'best',fontsize=10)
             plt.setp(ax.get_yticklabels(),fontsize=7)

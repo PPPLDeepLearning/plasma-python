@@ -148,6 +148,9 @@ class MPIModel():
   def __init__(self,model,optimizer,comm,batch_iterator,batch_size,num_replicas=None,warmup_steps=1000,lr=0.01):
     # random.seed(task_index)
     self.epoch = 0
+    self.num_so_far = 0
+    self.num_so_far_accum = 0
+    self.num_so_far_indiv = 0
     self.model = model
     self.optimizer = optimizer
     self.max_lr = 0.1
@@ -351,8 +354,6 @@ class MPIModel():
     t_start = time.time()
 
     batch_iterator_func = self.batch_iterator_func
-    num_so_far = 0
-    num_so_far_accum = 0
     num_total = 1
     ave_loss = -1
     curr_loss = -1
@@ -363,15 +364,16 @@ class MPIModel():
     num_batches_minimum = 50
     num_batches_current = 0
 
-    while (num_so_far-self.epoch*num_total) < num_total or num_batches_current < num_batches_minimum:
+    while (self.num_so_far-self.epoch*num_total) < num_total or num_batches_current < num_batches_minimum:
 
       try:
           batch_xs,batch_ys,reset_states_now,num_so_far_curr,num_total = next(batch_iterator_func)
       except StopIteration:
-          num_so_far_accum = num_so_far
+	  print("Resetting batch iterator.")
+          self.num_so_far_accum = self.num_so_far_indiv
           batch_iterator_func = self.batch_iterator()
           batch_xs,batch_ys,reset_states_now,num_so_far_curr,num_total = next(batch_iterator_func)
-      num_so_far = num_so_far_accum+num_so_far_curr
+      self.num_so_far_indiv = self.num_so_far_accum+num_so_far_curr
 
       num_batches_current +=1 
 
@@ -381,7 +383,7 @@ class MPIModel():
       warmup_phase = (step < self.warmup_steps and self.epoch == 0)
       num_replicas = 1 if warmup_phase else self.num_replicas
 
-      num_so_far = self.mpi_sum_scalars(num_so_far,num_replicas)
+      self.num_so_far = self.mpi_sum_scalars(self.num_so_far_indiv,num_replicas)
 
       #run the model once to force compilation. Don't actually use these values.
       if step == 0 and self.epoch == 0:
@@ -401,18 +403,20 @@ class MPIModel():
       write_str_0 = self.calculate_speed(t0,t1,t2,num_replicas)
 
       curr_loss = self.mpi_average_scalars(1.0*loss,num_replicas)
+      #if self.task_index == 0:
+	#print(self.model.get_weights()[0][0][:4])
       loss_averager.add_val(curr_loss)
       ave_loss = loss_averager.get_val()
-      eta = self.estimate_remaining_time(t0 - t_start,num_so_far-self.epoch*num_total,num_total)
-      write_str = '\r[{}] step: {} [ETA: {:.2f}s] [{:.2f}/{}], loss: {:.5f} [{:.5f}] | '.format(self.task_index,step,eta,1.0*num_so_far,num_total,ave_loss,curr_loss)
+      eta = self.estimate_remaining_time(t0 - t_start,self.num_so_far-self.epoch*num_total,num_total)
+      write_str = '\r[{}] step: {} [ETA: {:.2f}s] [{:.2f}/{}], loss: {:.5f} [{:.5f}] | '.format(self.task_index,step,eta,1.0*self.num_so_far,num_total,ave_loss,curr_loss)
       print_unique(write_str + write_str_0)
       step += 1
 
-    effective_epochs = 1.0*num_so_far/num_total
+    effective_epochs = 1.0*self.num_so_far/num_total
     epoch_previous = self.epoch
     self.epoch = effective_epochs
     print_unique('\nEpoch {:.2f} finished ({:.2f} epochs passed) in {:.2f} seconds.\n'.format(1.0*self.epoch,self.epoch-epoch_previous,t2 - t_start))
-    return (step,ave_loss,curr_loss,num_so_far,effective_epochs)
+    return (step,ave_loss,curr_loss,self.num_so_far,effective_epochs)
 
 
   def estimate_remaining_time(self,time_so_far,work_so_far,work_total):

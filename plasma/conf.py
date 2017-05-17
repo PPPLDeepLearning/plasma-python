@@ -18,10 +18,7 @@ from data.signals import *#d3d,jet,d3d_signals,jet_signals,all_signals
 #signals
 conf['paths']['all_signals'] = all_signals#jet_signals#d3d_signals#all_signals
 #make sure all 1D signals appear last!
-conf['paths']['use_signals'] = d3d_signals#fully_defined_signals# [ip,lm,li,dens,q95,energy,pin,pradcore]#,edens_profile,etemp_profile]#jet_signals#
-
-#machines
-conf['paths']['all_machines'] = all_machines
+conf['paths']['use_signals'] = d3d_signals#fully_defined_signals #d3d_signals#fully_defined_signals# [ip,lm,li,dens,q95,energy,pin,pradcore]#,edens_profile,etemp_profile]#jet_signals#
 
 #shot lists
 #shot_list_dir = conf['paths']['shot_list_dir']
@@ -40,9 +37,10 @@ d3d_jb_full = ShotListFiles(d3d,shot_list_dir,['shotlist_JaysonBarr_clear.txt','
 
 nstx_full = ShotListFiles(nstx,shot_list_dir,['disrupt_nstx.txt'],'nstx shots (all are disruptive')
 
-conf['paths']['shot_files'] = [d3d_1000]#,jet_iterlike_wall,jet_carbon_wall]#,jet_iterlike_wall]#[d3d_full]#[jet_carbon_wall]
+conf['paths']['shot_files'] = [d3d_full]#d3d_full,jet_iterlike_wall,jet_carbon_wall]#,jet_iterlike_wall,jet_carbon_wall]#,jet_iterlike_wall]#[d3d_full]#[jet_carbon_wall]
 conf['paths']['shot_files_test'] = []
 conf['paths']['shot_files_all'] = conf['paths']['shot_files']+conf['paths']['shot_files_test']
+conf['paths']['all_machines'] = list(set([file.machine for file in conf['paths']['shot_files_all']]))
 
 #shot_numbers_files = ['d3d_short_clear.txt']# ,'d3d_clear.txt', 'd3d_disrupt.txt']
 #shot_numbers_files = ['d3d_clear.txt', 'd3d_disrupt.txt']#['d3d_short_clear.txt']# ]

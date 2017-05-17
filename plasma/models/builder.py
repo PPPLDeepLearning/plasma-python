@@ -205,10 +205,10 @@ class ModelBuilder(object):
         model.compile(loss=loss_fn, optimizer=optimizer)
 	#bug with tensorflow/Keras
 	if conf['model']['backend'] == 'tf' or conf['model']['backend'] == 'tensorflow':
-        first_time = "tensorflow" not in sys.modules
+        	first_time = "tensorflow" not in sys.modules
 		import tensorflow as tf
-        if first_time:
-    		K.get_session().run(tf.global_variables_initializer())
+	        if first_time:
+    			K.get_session().run(tf.global_variables_initializer())
 
         model.reset_states()
         #model.compile(loss='mean_squared_error', optimizer='sgd') #for numerical output

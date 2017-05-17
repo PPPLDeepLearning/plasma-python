@@ -50,7 +50,11 @@ class Signal(object):
 		try:
 			data = np.loadtxt(file_path)
 		except:
-			print('Couldnt load signal {} shot {}'.format(file_path,shot.number))
+			print('Couldnt load signal {} shot {}. Removing.'.format(file_path,shot.number))
+			os.remove(file_path)
+			return None, None, False
+			
+			
 		if np.ndim(data) == 1:
 			data = np.expand_dims(data,axis=0)
 
