@@ -20,6 +20,15 @@ import pathos.multiprocessing as mp
 from plasma.primitives.shots import ShotList, Shot
 from plasma.utils.processing import get_signal_slices
 
+'''TODO
+- incorporate stats, pass machine (perhaps save machine in stats object!)
+- incorporate stats, have a dictionary of aggregate stats for every machine.
+- check "is_previously_saved" by making sure there is a normalizer for every machine
+'''
+
+
+
+
 #######NORMALIZATION##########
 class Stats(object):
     pass
