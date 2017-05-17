@@ -352,6 +352,7 @@ class MPIModel():
 
     batch_iterator_func = self.batch_iterator_func
     num_so_far = 0
+    num_so_far_accum = 0
     num_total = 1
     ave_loss = -1
     curr_loss = -1
@@ -365,10 +366,12 @@ class MPIModel():
     while (num_so_far-self.epoch*num_total) < num_total or num_batches_current < num_batches_minimum:
 
       try:
-          batch_xs,batch_ys,reset_states_now,num_so_far,num_total = next(batch_iterator_func)
+          batch_xs,batch_ys,reset_states_now,num_so_far_curr,num_total = next(batch_iterator_func)
       except StopIteration:
+          num_so_far_accum = num_so_far
           batch_iterator_func = self.batch_iterator()
-          batch_xs,batch_ys,reset_states_now,num_so_far,num_total = next(batch_iterator_func)
+          batch_xs,batch_ys,reset_states_now,num_so_far_curr,num_total = next(batch_iterator_func)
+      num_so_far = num_so_far_accum+num_so_far_curr
 
       num_batches_current +=1 
 
