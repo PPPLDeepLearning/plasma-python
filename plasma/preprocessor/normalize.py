@@ -110,6 +110,7 @@ class Normalizer(object):
             for (i,stats) in enumerate(pool.imap_unordered(self.train_on_single_shot,shot_list_picked)):
             #for (i,stats) in enumerate(map(self.train_on_single_shot,shot_list_picked)):
                 self.incorporate_stats(stats)
+		self.machines.add(stats.machine)
                 sys.stdout.write('\r' + '{}/{}'.format(i,len(shot_list_picked)))
 
             pool.close()
@@ -141,7 +142,6 @@ class Normalizer(object):
         assert isinstance(shot,Shot), 'should be instance of shot'
         processed_prepath = self.conf['paths']['processed_prepath']
         shot.restore(processed_prepath)
-        self.machines.add(shot.machine)
 	#print(shot)
         stats = self.extract_stats(shot) 
         shot.make_light()
@@ -160,6 +160,8 @@ class Normalizer(object):
             machines = dat['machines'][()]
             ret =  all([m in machines for m in self.conf['paths']['all_machines']])
             if not ret:
+		print(machines)
+		print(self.conf['paths']['all_machines'])
                 print('Not all machines present. Recomputing normalizer.')
             return ret
 

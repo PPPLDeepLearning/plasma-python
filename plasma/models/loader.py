@@ -51,8 +51,8 @@ class Loader(object):
         batch_size = self.conf['training']['batch_size']
         num_at_once = self.conf['training']['num_shots_at_once']
         epoch = 0
+        num_so_far = 0
         while True:
-            num_so_far = 0
             # the list of all shots
             shot_list.shuffle() 
             # split the list into equal-length sublists (random shots will be reused to make them equal length).
@@ -78,8 +78,8 @@ class Loader(object):
                         reset_states_now = (k == 0)
                         start = k*batch_size
                         end = (k + 1)*batch_size
-                        yield X[start:end],y[start:end],reset_states_now,num_so_far,num_total
                         num_so_far += 1.0*len(shot_sublist)/(len(X_list)*num_chunks)
+                        yield X[start:end],y[start:end],reset_states_now,num_so_far,num_total
             epoch += 1
 
 

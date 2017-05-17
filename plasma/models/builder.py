@@ -141,12 +141,12 @@ class ModelBuilder(object):
             return tuple(shape_curr)
 
 	pre_rnn_input = Input(shape=(num_signals,))
-	print(batch_shape_non_temporal)
-	print(batch_input_shape)
-	print(indices_0d)
-	print(indices_1d)
-	print(num_0D)
-	print(num_1D)
+	#print(batch_shape_non_temporal)
+	#print(batch_input_shape)
+	#print(indices_0d)
+	#print(indices_1d)
+	#print(num_0D)
+	#print(num_1D)
 	
 	if num_1D > 0:
             #pre_rnn_0D = Lambda(lambda x: slicer(x,indices_0d),lambda s: slicer_output_shape(s,indices_0d))(pre_rnn_input)
@@ -205,10 +205,10 @@ class ModelBuilder(object):
         model.compile(loss=loss_fn, optimizer=optimizer)
 	#bug with tensorflow/Keras
 	if conf['model']['backend'] == 'tf' or conf['model']['backend'] == 'tensorflow':
-        first_time = "tensorflow" not in sys.modules
+        	first_time = "tensorflow" not in sys.modules
 		import tensorflow as tf
-        if first_time:
-    		K.get_session().run(tf.global_variables_initializer())
+	        if first_time:
+    			K.get_session().run(tf.global_variables_initializer())
 
         model.reset_states()
         #model.compile(loss='mean_squared_error', optimizer='sgd') #for numerical output

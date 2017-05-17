@@ -9,6 +9,8 @@ def parameters(input_file):
         params = yaml.load(yaml_file)
 
         signals_dirs = params['paths']['signals_dirs']
+	
+
 
         #signal masks
         to_mask = params['paths']['signals_masks']
