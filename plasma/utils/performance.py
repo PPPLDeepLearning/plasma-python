@@ -654,7 +654,7 @@ class PerformanceAnalyzer():
         if save_figure:
             plt.savefig(title_str + '.png',bbox_inches='tight')
         plt.close('all')
-        plt.plot(fp_range,1-missed_range,'o-b')
+        plt.plot(fp_range,1-missed_range,'-b')
         ax = plt.gca()
         plt.xlabel('FP rate')
         plt.ylabel('TP rate')
