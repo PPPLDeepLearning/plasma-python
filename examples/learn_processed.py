@@ -61,14 +61,14 @@ np.random.seed(1)
 ####################PREPROCESSING####################
 #####################################################
 
-print("preprocessing all shots",end='')
-pp = Preprocessor(conf)
-pp.clean_shot_lists()
-shot_list = pp.preprocess_all()
-sorted(shot_list)
-shot_list_train,shot_list_test = shot_list.split_train_test(conf)
-num_shots = len(shot_list_train) + len(shot_list_test)
-print("...done")
+#print("preprocessing all shots",end='')
+#pp = Preprocessor(conf)
+#pp.clean_shot_lists()
+#shot_list = pp.preprocess_all()
+#sorted(shot_list)
+#shot_list_train,shot_list_test = shot_list.split_train_test(conf)
+#num_shots = len(shot_list_train) + len(shot_list_test)
+#print("...done")
 
 
 #####################################################
@@ -82,6 +82,7 @@ nn.train()
 loader = Loader(conf,nn)
 print("...done")
 
+shot_list_train,shot_list_validate,shot_list_test = loader.load_shotlists(conf)
 
 print('Training on {} shots, testing on {} shots'.format(len(shot_list_train),len(shot_list_test)))
 
@@ -90,6 +91,10 @@ print('Training on {} shots, testing on {} shots'.format(len(shot_list_train),le
 ######################TRAINING#######################
 #####################################################
 #train(conf,shot_list_train,loader)
+
+
+
+
 p = old_mp.Process(target = train,args=(conf,shot_list_train,loader))
 p.start()
 p.join()
@@ -123,8 +128,6 @@ print('Train Loss: {:.3e}'.format(loss_train))
 print('Train ROC: {:.4f}'.format(roc_train))
 print('Test Loss: {:.3e}'.format(loss_test))
 print('Test ROC: {:.4f}'.format(roc_test))
-
-
 
 disruptive_train = np.array(disruptive_train)
 disruptive_test = np.array(disruptive_test)

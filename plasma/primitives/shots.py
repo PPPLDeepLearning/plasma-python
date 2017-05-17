@@ -79,7 +79,7 @@ class ShotList(object):
         machine = shot_list_files_object.machine
         shot_numbers,disruption_times = shot_list_files_object.get_shot_numbers_and_disruption_times()
         for number,t in list(zip(shot_numbers,disruption_times)):
-            self.append(Shot(number=number,t_disrupt=t,machine=machine,signals=signals))
+            self.append(Shot(number=number,t_disrupt=t,machine=machine,signals=[s for s in signals if s.is_defined_on_machine(machine)]))
 
 
 
@@ -119,20 +119,25 @@ class ShotList(object):
         train_frac = conf['training']['train_frac']
         shuffle_training = conf['training']['shuffle_training']
         use_shots = conf['data']['use_shots']
+	all_signals = conf['paths']['all_signals']
         #split randomly
         use_shots_train = int(round(train_frac*use_shots))
         use_shots_test = int(round((1-train_frac)*use_shots))
         if len(shot_files_test) == 0:
             shot_list_train,shot_list_test = train_test_split(self.shots,train_frac,shuffle_training)
-            shot_numbers_train = [shot.number for shot in shot_list_train]
-            shot_numbers_test = [shot.number for shot in shot_list_test]
         #train and test list given
         else:
-            shot_numbers_train,_ = ShotList.get_multiple_shots_and_disruption_times(shot_list_dir,shot_files)
-            shot_numbers_test,_ = ShotList.get_multiple_shots_and_disruption_times(shot_list_dir,shot_files_test)
-
+	    shot_list_train = ShotList()
+	    shot_list_train.load_from_shot_list_files_objects(shot_files,all_signals)
+		
+	    shot_list_test = ShotList()
+	    shot_list_test.load_from_shot_list_files_objects(shot_files_test,all_signals)
         
+	
+        shot_numbers_train = [shot.number for shot in shot_list_train]
+        shot_numbers_test = [shot.number for shot in shot_list_test]
         print(len(shot_numbers_train),len(shot_numbers_test))
+	#make sure we only use pre-filtered valid shots
         shots_train = self.filter_by_number(shot_numbers_train)
         shots_test = self.filter_by_number(shot_numbers_test)
         return shots_train.random_sublist(use_shots_train),shots_test.random_sublist(use_shots_test)
@@ -310,8 +315,9 @@ class Shot(object):
             	assert(len(sig.shape) == 2)
             	assert(len(t.shape) == 1)
 		assert(len(t) > 1)
-                t_min = max(t_min,t[0])
-                t_max = min(t_max,t[-1])
+                t_min = max(t_min,np.min(t))
+                t_max = min(t_max,np.max(t))
+			
                 signal_arrays.append(sig)
                 time_arrays.append(t)
         assert(t_max > t_min or not valid)

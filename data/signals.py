@@ -154,14 +154,14 @@ tmfreq2 = Signal("Tearing Mode frequency (rotating 3/2)", ['d3d/nssfrqn2l'],[d3d
 ipdirect = Signal("plasma current direction",["d3d/iptdirect"],[d3d])
 
 #for downloading
-all_signals = [etemp_profile,edens_profile,q95,li,ip,
+all_signals = [q95,li,ip,
 betan,energy,lm,dens,pradcore,pradedge,pradtot,pin,
-torquein,tmamp1,tmamp2,tmfreq1,tmfreq2,pechin,energydt,ipdirect
+torquein,tmamp1,tmamp2,tmfreq1,tmfreq2,pechin,energydt,ipdirect,etemp_profile,edens_profile,
 ]
 
 #for actual data analysis
-all_signals_restricted = [etemp_profile,edens_profile,
-q95,li,ip,energy,lm,dens,pradcore,pradtot,pin]
+all_signals_restricted = [
+q95,li,ip,energy,lm,dens,pradcore,pradtot,pin,etemp_profile,edens_profile]
 
 print('all signals:')
 print(all_signals)
