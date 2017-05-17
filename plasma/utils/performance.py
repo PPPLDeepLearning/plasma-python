@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('Agg')#for machines that don't have a display
 import matplotlib.pyplot as plt
 import os
 from pprint import pprint
