@@ -41,7 +41,7 @@ class Normalizer(object):
         self.conf = conf
         self.path = conf['paths']['normalizer_path']
         self.remapper = conf['data']['target'].remapper
-
+        self.machines = set()
 
     @abc.abstractmethod
     def __str__(self):
@@ -131,6 +131,7 @@ class Normalizer(object):
         assert isinstance(shot,Shot), 'should be instance of shot'
         processed_prepath = self.conf['paths']['processed_prepath']
         shot.restore(processed_prepath)
+        self.machines.add(shot.machine)
 	#print(shot)
         stats = self.extract_stats(shot) 
         shot.make_light()
@@ -142,7 +143,15 @@ class Normalizer(object):
             os.makedirs(prepath)
 
     def previously_saved_stats(self):
-        return os.path.isfile(self.path)
+        if not os.path.isfile(self.path):
+            return False
+        else:
+            dat = np.load(self.path)
+            machines = dat['machines'][()]
+            ret =  all([m in machines for m in self.conf['paths']['all_machines']])
+            if not ret:
+                print('Not all machines present. Recomputing normalizer.')
+            return ret
 
     # def get_indices_list(self):
     #     return get_signal_slices(self.conf['paths']['signals_dirs'])
@@ -219,7 +228,7 @@ class MeanVarNormalizer(Normalizer):
         # num_disruptive = dat['num_disruptive']
         self.ensure_save_directory()
         np.savez(self.path,means = self.means,stds = self.stds,
-         num_processed=self.num_processed,num_disruptive=self.num_disruptive)
+         num_processed=self.num_processed,num_disruptive=self.num_disruptive,machines=self.machines)
         print('saved normalization data from {} shots ( {} disruptive )'.format(self.num_processed,self.num_disruptive))
 
     def load_stats(self):
@@ -229,6 +238,7 @@ class MeanVarNormalizer(Normalizer):
         self.stds = dat['stds'][()]
         self.num_processed = dat['num_processed'][()]
         self.num_disruptive = dat['num_disruptive'][()]
+        self.machines = dat['machines'][()]
 	for machine in self.means:
 		print('Machine {}:'.format(machine))
 	        print('loaded normalization data from {} shots ( {} disruptive )'.format(self.num_processed,self.num_disruptive))
@@ -343,7 +353,7 @@ class MinMaxNormalizer(Normalizer):
         # num_disruptive = dat['num_disruptive']
         self.ensure_save_directory()
         np.savez(self.path,minimums = self.minimums,maximums = self.maximums,
-         num_processed=self.num_processed,num_disruptive=self.num_disruptive)
+         num_processed=self.num_processed,num_disruptive=self.num_disruptive,machines=self.machines)
         print('saved normalization data from {} shots ( {} disruptive )'.format(self.num_processed,self.num_disruptive))
 
     def load_stats(self):
@@ -353,6 +363,7 @@ class MinMaxNormalizer(Normalizer):
         self.maximums = dat['maximums'][()]
         self.num_processed = dat['num_processed'][()]
         self.num_disruptive = dat['num_disruptive'][()]
+        self.machines = dat['machines'][()]
         print('loaded normalization data from {} shots ( {} disruptive )'.format(self.num_processed,self.num_disruptive))
         #print('loading normalization data from {} shots, {} disruptive'.format(num_processed,num_disruptive))
 
