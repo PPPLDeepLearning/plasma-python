@@ -23,8 +23,8 @@ analyzer.load_ith_file()
 
 P_thresh_opt = analyzer.compute_tradeoffs_and_print_from_training()
 
-analyzer.compute_tradeoffs_and_plot('train',save_figure=save_figure,plot_string='_train')
 analyzer.compute_tradeoffs_and_plot('test',save_figure=save_figure,plot_string='_test')
+analyzer.compute_tradeoffs_and_plot('train',save_figure=save_figure,plot_string='_train')
 
 analyzer.summarize_shot_prediction_stats_by_mode(P_thresh_opt,'test')
 

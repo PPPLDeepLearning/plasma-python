@@ -51,31 +51,29 @@ class PerformanceAnalyzer():
         return self.get_metrics_vs_p_thresh_custom(all_preds,all_truths,all_disruptive)
 
 
-    #def get_p_thresh_range(self):
-    #    return self.conf['data']['target'].threshold_range(self.conf['data']['T_warning'])
-
 
     def get_metrics_vs_p_thresh_custom(self,all_preds,all_truths,all_disruptive):
         return self.get_metrics_vs_p_thresh_fast(all_preds,all_truths,all_disruptive)
-        # P_thresh_range = self.get_p_thresh_range()
-        # correct_range = np.zeros_like(P_thresh_range)
-        # accuracy_range = np.zeros_like(P_thresh_range)
-        # fp_range = np.zeros_like(P_thresh_range)
-        # missed_range = np.zeros_like(P_thresh_range)
-        # early_alarm_range = np.zeros_like(P_thresh_range)
+        P_thresh_range = self.get_p_thresh_range()
+        correct_range = np.zeros_like(P_thresh_range)
+        accuracy_range = np.zeros_like(P_thresh_range)
+        fp_range = np.zeros_like(P_thresh_range)
+        missed_range = np.zeros_like(P_thresh_range)
+        early_alarm_range = np.zeros_like(P_thresh_range)
         
-        # for i,P_thresh in enumerate(P_thresh_range):
-        #     correct,accuracy,fp_rate,missed,early_alarm_rate = self.summarize_shot_prediction_stats(P_thresh,all_preds,all_truths,all_disruptive)
-        #     correct_range[i] = correct
-        #     accuracy_range[i] = accuracy 
-        #     fp_range[i] = fp_rate 
-        #     missed_range[i] = missed
-        #     early_alarm_range[i] = early_alarm_rate
+        for i,P_thresh in enumerate(P_thresh_range):
+            correct,accuracy,fp_rate,missed,early_alarm_rate = self.summarize_shot_prediction_stats(P_thresh,all_preds,all_truths,all_disruptive)
+            correct_range[i] = correct
+            accuracy_range[i] = accuracy 
+            fp_range[i] = fp_rate 
+            missed_range[i] = missed
+            early_alarm_range[i] = early_alarm_rate
         
-        # return correct_range,accuracy_range,fp_range,missed_range,early_alarm_range
+        return correct_range,accuracy_range,fp_range,missed_range,early_alarm_range
 
 
     def get_p_thresh_range(self):
+    	#return self.conf['data']['target'].threshold_range(self.conf['data']['T_warning'])
 	if self.p_thresh_range == None:
 		all_preds_tr = self.pred_train
 		all_truths_tr = self.truth_train
@@ -107,7 +105,7 @@ class PerformanceAnalyzer():
 	early_th,correct_th,late_th,nd_th = self.get_threshold_arrays(all_preds,all_truths,all_disruptive)
 
         for i,thresh in enumerate(p_thresh_range):
-            #correct,accuracy,fp_rate,missed,early_alarm_rate = self.summarize_shot_prediction_stats(P_thresh,all_preds,all_truths,all_disruptive)
+            #correct,accuracy,fp_rate,missed,early_alarm_rate = self.summarize_shot_prediction_stats(thresh,all_preds,all_truths,all_disruptive)
             correct,accuracy,fp_rate,missed,early_alarm_rate = self.get_shot_prediction_stats_from_threshold_arrays(early_th,correct_th,late_th,nd_th,thresh)
             correct_range[i] = correct
             accuracy_range[i] = accuracy 
@@ -118,6 +116,7 @@ class PerformanceAnalyzer():
         return correct_range,accuracy_range,fp_range,missed_range,early_alarm_range
 
     def get_shot_prediction_stats_from_threshold_arrays(self,early_th,correct_th,late_th,nd_th,thresh):
+	indices = np.where(np.logical_and(correct_th > thresh,early_th <= thresh))[0]
         FPs = np.sum(nd_th > thresh)
         TNs = len(nd_th) - FPs 
 
@@ -138,8 +137,9 @@ class PerformanceAnalyzer():
         d_correct_thresholds = [] 
         d_late_thresholds = [] 
         for i in range(len(preds)):
-            pred = preds[i]
+            pred = 1.0*preds[i]
             truth = truths[i]
+	    pred[:self.get_ignore_indices()] = -np.inf
             is_disruptive = disruptives[i] 
             if is_disruptive:
                 max_acceptable = self.create_acceptable_region(truth,'max')
@@ -148,11 +148,11 @@ class PerformanceAnalyzer():
                 early_indices = ~max_acceptable
                 late_indices = min_acceptable
 		if np.sum(late_indices) == 0:
-                	d_late_thresholds.append(np.min(pred))
+                	d_late_thresholds.append(-np.inf)
 		else:
 	                d_late_thresholds.append(np.max(pred[late_indices]))
 		if np.sum(early_indices) == 0:
-                	d_early_thresholds.append(np.min(pred))
+                	d_early_thresholds.append(-np.inf)
 		else:
                 	d_early_thresholds.append(np.max(pred[early_indices]))
 			
@@ -240,10 +240,13 @@ class PerformanceAnalyzer():
                 FP = 1
         return TP,FP,FN,TN,early,late
 
+    def get_ignore_indices(self):
+	return conf['model']['ignore_timesteps']
+
 
     def get_positives(self,predictions):
         indices = np.arange(len(predictions))
-        return np.where(np.logical_and(predictions,indices >= 100))[0]
+        return np.where(np.logical_and(predictions,indices >= self.get_ignore_indices()))[0]
 
 
     def create_acceptable_region(self,truth,mode):
@@ -295,6 +298,10 @@ class PerformanceAnalyzer():
         results_files = os.listdir(self.results_dir)
         print(results_files)
         dat = np.load(self.results_dir + results_files[self.i])
+	print("Loading results file {}".format(self.results_dir + results_files[self.i]))
+	#self.assert_same_lists(dat['shot_list_test'][()],dat['y_gold_test'])
+	#self.assert_same_lists(dat['shot_list_train'][()],ypt)
+	#self.assert_same_lists(dat['shot_list_train'][()],dat['y_gold_train'])
 
         if self.verbose:
             print('configuration: {} '.format(dat['conf']))
@@ -311,6 +318,21 @@ class PerformanceAnalyzer():
         for mode in ['test','train']:
             print('{}: loaded {} shot ({}) disruptive'.format(mode,self.get_num_shots(mode),self.get_num_disruptive_shots(mode)))
         self.print_conf()
+	#print("1")
+	#self.assert_same_lists(self.shot_list_test,self.truth_test,self.disruptive_test)
+	#self.assert_same_lists(self.shot_list_train,self.truth_train,self.disruptive_train)
+
+    def assert_same_lists(self,shot_list,truth_arr,disr_arr):
+	assert(len(shot_list) == len(truth_arr))
+	for i in range(len(shot_list)):
+		shot_list.shots[i].restore("/tigress/jk7/processed_shots/")
+		s = shot_list.shots[i].ttd
+		if not truth_arr[i].shape[0] == s.shape[0]-30:
+			print(i)
+			print(shot_list.shots[i].number)
+			print((s.shape,truth_arr[i].shape,disr_arr[i]))
+		assert(truth_arr[i].shape[0] == s.shape[0]-30)
+	print("Same Shape!")
    
     def print_conf(self):
         pprint(self.conf) 
@@ -531,6 +553,7 @@ class PerformanceAnalyzer():
             p = pred[i]
             is_disr = is_disruptive[i]
             shot = shot_list.shots[i]
+
             TP,FP,FN,TN,early,late =self.get_shot_prediction_stats(P_thresh_opt,p,t,is_disr)
             prediction_type = self.get_prediction_type(TP,FP,FN,TN,early,late)
             if not all(_ in set(['FP','TP','FN','TN','late','early','any']) for _ in types_to_plot):
@@ -762,4 +785,5 @@ class PerformanceAnalyzer():
 #         correct,accuracy,fp_rate,missed,early_alarm_rate = summarize_shot_prediction_stats(P_thresh,ttd_prime_by_shot, \
 #                                 ttd_by_shot,disr,length,T_min_warn,T_max_warn,verbose=verbose)
 #         return fp_rate
+
 

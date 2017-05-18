@@ -4,7 +4,7 @@
 
 # for example tigress/alexeys
 fs_path: '/tigress' #'/cscratch/share/frnn' #'/tigress'
-target: 'hinge'
+target: 'binary' #'ttd' #'hinge'
 
 paths:
     shot_files: ['CWall_clear.txt','CFC_unint.txt']
@@ -45,13 +45,13 @@ data:
     plotting: False
     #train/validate split
     #how many shots to use
-    use_shots: 200000
+    use_shots: 200000 #1000 #200000
     #normalization timescale
     dt: 0.001
     #maximum TTD considered
     T_max: 1000.0
     #The shortest works best so far: less overfitting. log TTd prediction also works well. 0.5 better than 0.2
-    T_warning: 1.0
+    T_warning: 50.0 #1.0 #1.0 #warning time in seconds
     current_thresh: 750000
     current_end_thresh: 10000
     #the characteristic decay length of the decaying moving average window
@@ -70,11 +70,11 @@ model:
     skip: 1
     #hidden layer size
     #TODO optimize  
-    rnn_size: 300
+    rnn_size: 200
     #size 100 slight overfitting, size 20 no overfitting. 200 is not better than 100. Prediction much better with size 100, size 20 cannot capture the data.
     rnn_type: 'LSTM'
     #TODO optimize
-    rnn_layers: 3
+    rnn_layers: 2
     num_conv_filters: 10
     size_conv_filters: 3
     num_conv_layers: 2
@@ -85,26 +85,27 @@ model:
     clipnorm: 10.0
     regularization: 0.0
     #1e-4 is too high, 5e-7 is too low. 5e-5 seems best at 256 batch size, full dataset and ~10 epochs, and lr decay of 0.90. 1e-4 also works well if we decay a lot (i.e ~0.7 or more)
-    lr: 0.001 #0.00005
-    lr_decay: 0.9
+    lr: 0.0001 #0.00005 #0.00005
+    lr_decay: 0.99 #0.9
     stateful: True
     return_sequences: True
-    dropout_prob: 0.3
+    dropout_prob: 0.2
     #only relevant if we want to do mpi training. The number of steps with a single replica
     warmup_steps: 0
+    ignore_timesteps: 100 #how many initial timesteps to ignore during evaluation (to let the internal state settle)
     backend: 'tensorflow' #'theano' #'tensorflow' #theano
 
 training:
     as_array_of_shots: True
     shuffle_training: True
-    train_frac: 0.5
-    validation_frac: 0.05
+    train_frac: 0.75
+    validation_frac: 0.33
     batch_size: 256
     #THIS WAS THE CULPRIT FOR NO TRAINING! Lower than 1000 performs very poorly
     max_patch_length: 100000
     #How many shots are we loading at once?
     num_shots_at_once: 200
-    num_epochs: 5
+    num_epochs: 3
     use_mock_data: False
     data_parallel: False
 callbacks:
