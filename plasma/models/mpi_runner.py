@@ -313,6 +313,7 @@ class MPIModel():
 
       tensorboard_save_path = conf['paths']['tensorboard_save_path']
       callbacks_list = conf['callbacks']['list']
+      write_grads = conf['callbacks']['write_grads']
 
       callbacks = [cbks.BaseLogger()]
       callbacks += [self.history]
@@ -321,8 +322,7 @@ class MPIModel():
       if "earlystop" in callbacks_list: 
           callbacks += [cbks.EarlyStopping(patience=patience, monitor=monitor, mode=mode)]
       if "tensorboard" in callbacks_list and backend != "theano" and task_index == 0:
-          callbacks += [cbks.TensorBoard(log_dir=tensorboard_save_path, histogram_freq=1, write_graph=True, write_grads=True)]
-          #keras.callbacks.TensorBoard(log_dir='./logs', histogram_freq=0, write_graph=True, write_grads=False, write_images=False, embeddings_freq=0, embeddings_layer_names=None, embeddings_metadata=None)
+          callbacks += [cbks.TensorBoard(log_dir=tensorboard_save_path, histogram_freq=1, write_graph=True, write_grads=write_grads, embeddings_freq=1)]
       if "lr_scheduler" in callbacks_list: 
           pass
       
