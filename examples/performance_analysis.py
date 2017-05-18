@@ -34,6 +34,11 @@ analyzer.example_plots(P_thresh_opt,'test',['FN'])
 analyzer.example_plots(P_thresh_opt,'test',['TP'])
 analyzer.example_plots(P_thresh_opt,'test',['late'])
 
+analyzer.example_plots(P_thresh_opt,'train',['FP'])
+analyzer.example_plots(P_thresh_opt,'train',['FN'])
+analyzer.example_plots(P_thresh_opt,'train',['TP'])
+analyzer.example_plots(P_thresh_opt,'train',['late'])
+
 
 #alarms,disr_alarms,nondisr_alarms = analyzer.gather_first_alarms(P_thresh_opt,'test')
 #analyzer.hist_alarms(disr_alarms,'disruptive alarms, P_thresh = {}'.format(P_thresh_opt),save_figure=save_figure)

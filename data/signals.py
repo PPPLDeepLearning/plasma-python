@@ -160,8 +160,9 @@ torquein,tmamp1,tmamp2,tmfreq1,tmfreq2,pechin,energydt,ipdirect,etemp_profile,ed
 ]
 
 #for actual data analysis
-all_signals_restricted = [
-q95,li,ip,energy,lm,dens,pradcore,pradtot,pin,etemp_profile,edens_profile]
+#all_signals_restricted = [q95,li,ip,energy,lm,dens,pradcore,pradtot,pin,etemp_profile,edens_profile]
+
+all_signals_restricted = all_signals
 
 print('all signals:')
 print(all_signals)
