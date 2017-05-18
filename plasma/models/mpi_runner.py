@@ -361,7 +361,7 @@ class MPIModel():
     t1 = 0 
     t2 = 0
 
-    num_batches_minimum = 50
+    num_batches_minimum = 100
     num_batches_current = 0
 
     while (self.num_so_far-self.epoch*num_total) < num_total or num_batches_current < num_batches_minimum:
