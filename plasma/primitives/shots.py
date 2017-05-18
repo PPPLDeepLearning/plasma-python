@@ -197,6 +197,9 @@ class ShotList(object):
     def shuffle(self):
         np.random.shuffle(self.shots)
 
+    def sort(self):
+        self.shots.sort() #will sort based on machine and number
+
     def as_list(self):
         return self.shots
 
@@ -248,6 +251,19 @@ class Shot(object):
             self.is_disruptive = Shot.is_disruptive_given_disruption_time(t_disrupt)
         else:
             print('Warning, disruption time (disruptivity) not set! Either set t_disrupt or is_disruptive')
+
+    def get_id_str(self):
+        return '{} : {}'.format(self.machine,self.number)
+
+    def __lt__(self,other):
+        return self.get_id_str().__lt__(other.get_id_str())
+
+    def __eq__(self,other):
+        return self.get_id_str().__eq__(other.get_id_str())
+
+    def __hash__(self):
+        return self.get_id_str().__hash__()
+
 
     def __str__(self):
         string = 'number: {}\n'.format(self.number)

@@ -490,7 +490,7 @@ def load_shotlists(conf):
 #shot_list_train,shot_list_validate,shot_list_test = load_shotlists(conf)
 
 def mpi_make_predictions(conf,shot_list,loader):
-
+    shot_list.sort()#make sure all replicas have the same list
     specific_builder = builder.ModelBuilder(conf) 
 
     y_prime = []
