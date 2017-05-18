@@ -516,12 +516,23 @@ def mpi_make_predictions(conf,shot_list,loader):
 
         if i % num_workers == task_index:
             X,y,shot_lengths,disr = loader.load_as_X_y_pred(shot_sublist)
+
+
+	
             #load data and fit on data
             y_p = model.predict(X,
                 batch_size=conf['model']['pred_batch_size'])
             model.reset_states()
             y_p = loader.batch_output_to_array(y_p)
             y = loader.batch_output_to_array(y)
+
+    	    for j in range(len(shot_sublist)):
+    	        if shot_sublist.shots[j].number == 74051:
+    		    sys.stdout.write("Length: {}".format(shot_lengths[j]))
+    		    sys.stdout.write("Pred Length: {}".format(len(y[j])))
+		    sys.stdout.flush()
+
+
             #cut arrays back
             y_p = [arr[:shot_lengths[j]] for (j,arr) in enumerate(y_p)]
             y = [arr[:shot_lengths[j]] for (j,arr) in enumerate(y)]
@@ -549,6 +560,10 @@ def mpi_make_predictions(conf,shot_list,loader):
     y_prime_global = y_prime_global[:len(shot_list)]
     y_gold_global = y_gold_global[:len(shot_list)]
     disruptive_global = disruptive_global[:len(shot_list)]
+
+
+
+
     return y_prime_global,y_gold_global,disruptive_global
 
 
