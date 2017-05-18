@@ -320,8 +320,9 @@ class MPIModel():
 
       if "earlystop" in callbacks_list: 
           callbacks += [cbks.EarlyStopping(patience=patience, monitor=monitor, mode=mode)]
-      if "tensorboard" in callbacks_list and backend != "theano":
-          callbacks += [cbks.TensorBoard(log_dir=tensorboard_save_path, histogram_freq=1, write_graph=True)]
+      if "tensorboard" in callbacks_list and backend != "theano" and task_index == 0:
+          callbacks += [cbks.TensorBoard(log_dir=tensorboard_save_path, histogram_freq=1, write_graph=True, write_grads=True)]
+          #keras.callbacks.TensorBoard(log_dir='./logs', histogram_freq=0, write_graph=True, write_grads=False, write_images=False, embeddings_freq=0, embeddings_layer_names=None, embeddings_metadata=None)
       if "lr_scheduler" in callbacks_list: 
           pass
       
@@ -579,7 +580,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
     batch_generator = partial(loader.training_batch_generator,shot_list=shot_list_train)
 
     mpi_model = MPIModel(train_model,optimizer,comm,batch_generator,batch_size,lr=lr,warmup_steps = warmup_steps)
-    if backend != "theano":
+    if backend != "theano" and task_index == 0:
         mpi_model.model.summary()
 
     mpi_model.compile(loss=conf['data']['target'].loss)
