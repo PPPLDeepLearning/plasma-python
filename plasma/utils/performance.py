@@ -299,9 +299,6 @@ class PerformanceAnalyzer():
         print(results_files)
         dat = np.load(self.results_dir + results_files[self.i])
 	print("Loading results file {}".format(self.results_dir + results_files[self.i]))
-	#self.assert_same_lists(dat['shot_list_test'][()],dat['y_gold_test'])
-	#self.assert_same_lists(dat['shot_list_train'][()],ypt)
-	#self.assert_same_lists(dat['shot_list_train'][()],dat['y_gold_train'])
 
         if self.verbose:
             print('configuration: {} '.format(dat['conf']))
@@ -318,7 +315,6 @@ class PerformanceAnalyzer():
         for mode in ['test','train']:
             print('{}: loaded {} shot ({}) disruptive'.format(mode,self.get_num_shots(mode),self.get_num_disruptive_shots(mode)))
         self.print_conf()
-	#print("1")
 	#self.assert_same_lists(self.shot_list_test,self.truth_test,self.disruptive_test)
 	#self.assert_same_lists(self.shot_list_train,self.truth_train,self.disruptive_train)
 

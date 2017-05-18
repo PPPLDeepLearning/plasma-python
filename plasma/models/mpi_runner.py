@@ -526,13 +526,6 @@ def mpi_make_predictions(conf,shot_list,loader):
             y_p = loader.batch_output_to_array(y_p)
             y = loader.batch_output_to_array(y)
 
-    	    for j in range(len(shot_sublist)):
-    	        if shot_sublist.shots[j].number == 74051:
-    		    sys.stdout.write("Length: {}".format(shot_lengths[j]))
-    		    sys.stdout.write("Pred Length: {}".format(len(y[j])))
-		    sys.stdout.flush()
-
-
             #cut arrays back
             y_p = [arr[:shot_lengths[j]] for (j,arr) in enumerate(y_p)]
             y = [arr[:shot_lengths[j]] for (j,arr) in enumerate(y)]
