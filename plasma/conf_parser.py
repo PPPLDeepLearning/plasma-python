@@ -46,6 +46,8 @@ def parameters(input_file):
         params['data']['num_signals'] = sum([sum([1 for predicate in subl if predicate]) for subl in signals_masks])
         if params['target'] == 'hinge':
             params['data']['target'] = t.HingeTarget
+        elif params['target'] == 'maxhinge':
+            params['data']['target'] = t.MaxHingeTarget
         elif params['target'] == 'binary':
             params['data']['target'] = t.BinaryTarget
         elif params['target'] == 'ttd':

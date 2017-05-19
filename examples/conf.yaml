@@ -4,7 +4,7 @@
 
 # for example tigress/alexeys
 fs_path: '/tigress' #'/cscratch/share/frnn' #'/tigress'
-target: 'binary' #'ttd' #'hinge'
+target: 'maxhinge' #'binary' #'ttd' #'hinge'
 
 paths:
     shot_files: ['CWall_clear.txt','CFC_unint.txt']
@@ -51,7 +51,7 @@ data:
     #maximum TTD considered
     T_max: 1000.0
     #The shortest works best so far: less overfitting. log TTd prediction also works well. 0.5 better than 0.2
-    T_warning: 0.1 #1.0 #1.0 #warning time in seconds
+    T_warning: 1.0 #0.25 #1.0 #1.0 #warning time in seconds
     current_thresh: 750000
     current_end_thresh: 10000
     #the characteristic decay length of the decaying moving average window
@@ -85,11 +85,11 @@ model:
     clipnorm: 10.0
     regularization: 0.0
     #1e-4 is too high, 5e-7 is too low. 5e-5 seems best at 256 batch size, full dataset and ~10 epochs, and lr decay of 0.90. 1e-4 also works well if we decay a lot (i.e ~0.7 or more)
-    lr: 0.00001 #0.00005 #0.00005
-    lr_decay: 0.99 #0.9
+    lr: 0.00005 #0.00005 #0.00005
+    lr_decay: 0.9 #0.9
     stateful: True
     return_sequences: True
-    dropout_prob: 0.2
+    dropout_prob: 0.3
     #only relevant if we want to do mpi training. The number of steps with a single replica
     warmup_steps: 0
     ignore_timesteps: 100 #how many initial timesteps to ignore during evaluation (to let the internal state settle)
@@ -105,7 +105,7 @@ training:
     max_patch_length: 100000
     #How many shots are we loading at once?
     num_shots_at_once: 200
-    num_epochs: 3
+    num_epochs: 2
     use_mock_data: False
     data_parallel: False
 callbacks:

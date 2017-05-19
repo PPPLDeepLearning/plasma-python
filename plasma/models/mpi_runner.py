@@ -564,7 +564,7 @@ def mpi_make_predictions_and_evaluate(conf,shot_list,loader):
     y_prime,y_gold,disruptive = mpi_make_predictions(conf,shot_list,loader)
     analyzer = PerformanceAnalyzer(conf=conf)
     roc_area = analyzer.get_roc_area(y_prime,y_gold,disruptive)
-    loss = get_loss_from_list(y_prime,y_gold,conf['data']['target'].loss)
+    loss = get_loss_from_list(y_prime,y_gold,conf['data']['target'])
     return y_prime,y_gold,disruptive,roc_area,loss
 
 
