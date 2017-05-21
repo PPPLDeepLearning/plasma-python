@@ -589,7 +589,8 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
     print('{} epochs left to go'.format(num_epochs - 1 - e))
 
     # batch_generator = partial(loader.training_batch_generator,shot_list=shot_list_train)
-    batch_generator = partial(loader.training_batch_generator_partial_reset,shot_list=shot_list_train)
+    #batch_generator = partial(loader.training_batch_generator_partial_reset,shot_list=shot_list_train)
+    batch_generator = partial(loader.training_batch_generator_process,shot_list=shot_list_train)
 
     mpi_model = MPIModel(train_model,optimizer,comm,batch_generator,batch_size,lr=lr,warmup_steps = warmup_steps)
     mpi_model.compile(loss=conf['data']['target'].loss)

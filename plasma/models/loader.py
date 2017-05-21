@@ -12,6 +12,7 @@ from __future__ import print_function, division
 import numpy as np
 
 from plasma.primitives.shots import Shot
+import multiprocessing as mp
 
 class Loader(object):
     '''
@@ -169,8 +170,23 @@ class Loader(object):
                     num_so_far += 1
             # epoch += 1
 
+    def fill_batch_queue(self,shot_list,queue):
+	print("Starting thread to fill queue")
+        gen = self.training_batch_generator_partial_reset(shot_list)
+	while True:
+	    ret = next(gen)
+	    queue.put(ret,block=True,timeout=-1)
 
 
+    def training_batch_generator_process(self,shot_list):
+	queue = mp.Queue()
+	proc = mp.Process(target = self.fill_batch_queue,args=(shot_list,queue))
+	proc.start()
+	while True:
+	    yield queue.get(True)
+	proc.join()
+	queue.close()
+	
 
     def load_as_X_y_list(self,shot_list,verbose=False,prediction_mode=False):
         """
