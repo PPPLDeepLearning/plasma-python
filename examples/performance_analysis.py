@@ -9,8 +9,13 @@ file_num = 0
 save_figure = True
 pred_ttd = False
 
-T_max_warn = 1000
-T_min_warn = 0
+cut_shot_ends = conf['data']['cut_shot_ends']
+dt = conf['data']['dt']
+T_max_warn = int(round(conf['data']['T_warning']/dt))
+T_min_warn = int(round(conf['data']['T_min_warn']/dt))
+if cut_shot_ends:
+	T_max_warn = T_max_warn-T_min_warn
+	T_min_warn = 0
 
 verbose=False
 results_dir = conf['paths']['results_prepath']

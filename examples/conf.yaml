@@ -37,6 +37,7 @@ paths:
                      ['jpf/gs/bl-fdwdt<s']]
 
 data:
+    cut_shot_ends: True
     T_min_warn: 30
     recompute: False
     recompute_normalization: False

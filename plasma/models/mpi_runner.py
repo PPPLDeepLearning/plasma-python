@@ -37,6 +37,7 @@ MY_GPU = task_index % NUM_GPUS
 
 from pprint import pprint
 from plasma.conf import conf
+from plasma.utils.state_reset import reset_states
 
 backend = conf['model']['backend']
 
@@ -367,18 +368,21 @@ class MPIModel():
     while (self.num_so_far-self.epoch*num_total) < num_total or num_batches_current < num_batches_minimum:
 
       try:
-          batch_xs,batch_ys,reset_states_now,num_so_far_curr,num_total = next(batch_iterator_func)
+          batch_xs,batch_ys,batches_to_reset,num_so_far_curr,num_total = next(batch_iterator_func)
       except StopIteration:
 	  print("Resetting batch iterator.")
           self.num_so_far_accum = self.num_so_far_indiv
           batch_iterator_func = self.batch_iterator()
-          batch_xs,batch_ys,reset_states_now,num_so_far_curr,num_total = next(batch_iterator_func)
+          batch_xs,batch_ys,batches_to_reset,num_so_far_curr,num_total = next(batch_iterator_func)
       self.num_so_far_indiv = self.num_so_far_accum+num_so_far_curr
 
       num_batches_current +=1 
 
-      if reset_states_now:
-        self.model.reset_states()
+      # if batches_to_reset:
+        # self.model.reset_states(batches_to_reset)
+      if np.any(batches_to_reset):
+        print("Resetting batch {}".format(np.where(batches_to_reset)))
+        reset_states(model,batches_to_reset)
 
       warmup_phase = (step < self.warmup_steps and self.epoch == 0)
       num_replicas = 1 if warmup_phase else self.num_replicas
@@ -576,7 +580,8 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
     optimizer = MPIAdam(lr=lr)
     print('{} epochs left to go'.format(num_epochs - 1 - e))
 
-    batch_generator = partial(loader.training_batch_generator,shot_list=shot_list_train)
+    # batch_generator = partial(loader.training_batch_generator,shot_list=shot_list_train)
+    batch_generator = partial(loader.training_batch_generator_partial_reset,shot_list=shot_list_train)
 
     mpi_model = MPIModel(train_model,optimizer,comm,batch_generator,batch_size,lr=lr,warmup_steps = warmup_steps)
     mpi_model.compile(loss=conf['data']['target'].loss)

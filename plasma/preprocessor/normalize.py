@@ -123,10 +123,12 @@ class Normalizer(object):
 
 
     def cut_end_of_shot(self,shot):
-        T_min_warn = self.conf['data']['T_min_warn']
-        for key in shot.signals_dict:
-            shot.signals_dict[key] = shot.signals_dict[key][:-T_min_warn,:]
-        shot.ttd = shot.ttd[:-T_min_warn]
+        cut_shot_ends = self.conf['data']['cut_shot_ends']
+        if cut_shot_ends:
+            T_min_warn = self.conf['data']['T_min_warn']
+            for key in shot.signals_dict:
+                shot.signals_dict[key] = shot.signals_dict[key][:-T_min_warn,:]
+            shot.ttd = shot.ttd[:-T_min_warn]
 
     # def apply_mask(self,shot):
     #     use_signals = self.conf['paths']['use_signals']
