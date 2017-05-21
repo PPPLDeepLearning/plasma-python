@@ -90,13 +90,13 @@ class Loader(object):
         assert(sig_len > 0)
         batch_idx = np.where(end_indices == 0)[0][0]
         if sig_len > Xbuff.shape[1]:
-            self.resize_buffer(Xbuff,new_length+length)
-            self.resize_buffer(Ybuff,new_length+length)
+            Xbuff = self.resize_buffer(Xbuff,sig_len+length)
+            Ybuff = self.resize_buffer(Ybuff,sig_len+length)
         Xbuff[batch_idx,:sig_len,:] = sig[-sig_len:]
         Ybuff[batch_idx,:sig_len,:] = res[-sig_len:]
         end_indices[batch_idx] += sig_len
-        print("Filling buffer at index {}".format(batch_idx))
-        return batch_idx
+        #print("Filling buffer at index {}".format(batch_idx))
+        return Xbuff,Ybuff,batch_idx
 
     def return_from_training_buffer(self,Xbuff,Ybuff,end_indices):
         length = self.conf['model']['length']
@@ -109,14 +109,16 @@ class Loader(object):
         return X,Y
 
     def shift_buffer(self,buff,length):
-        Xbuff[:,:-length,:] = Xbuff[:,length:,:]
+        buff[:,:-length,:] = buff[:,length:,:]
 
 
     def resize_buffer(self,buff,new_length):
         old_length = buff.shape[1]
+        batch_size = buff.shape[0]
+        num_signals = buff.shape[2]
         new_buff = np.empty((batch_size,new_length,num_signals))
         new_buff[:,:old_length,:] = buff
-        print("Resizing buffer to new length {}".format(new_length))
+        #print("Resizing buffer to new length {}".format(new_length))
         return new_buff
 
 
@@ -140,7 +142,6 @@ class Loader(object):
         """
         batch_size = self.conf['training']['batch_size']
         length = self.conf['model']['length']
-        num_signals = sum([sig.num_channels for sig in use_signals])
         sig,res = self.get_signal_result_from_shot(shot_list.shots[0])
         Xbuff = np.empty((batch_size,) + sig.shape)
         Ybuff = np.empty((batch_size,) + res.shape)
@@ -157,12 +158,12 @@ class Loader(object):
             for shot in shot_list:
                 while not np.any(end_indices == 0):
                     X,Y = self.return_from_training_buffer(Xbuff,Ybuff,end_indices)
-                    reset_states_now,num_so_far,num_total 
+		    #print(end_indices)
                     yield X,Y,batches_to_reset,num_so_far,num_total
                     returned = True
                     batches_to_reset[:] = False
 
-                batch_idx = self.fill_training_buffer(Xbuff,Ybuff,end_indices,shot)
+                Xbuff,Ybuff,batch_idx = self.fill_training_buffer(Xbuff,Ybuff,end_indices,shot)
                 batches_to_reset[batch_idx] = True
                 if returned:
                     num_so_far += 1

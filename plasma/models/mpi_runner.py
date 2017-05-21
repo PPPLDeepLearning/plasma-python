@@ -381,8 +381,8 @@ class MPIModel():
       # if batches_to_reset:
         # self.model.reset_states(batches_to_reset)
       if np.any(batches_to_reset):
-        print("Resetting batch {}".format(np.where(batches_to_reset)))
-        reset_states(model,batches_to_reset)
+        #print("Resetting batch {}".format(np.where(batches_to_reset)))
+        reset_states(self.model,batches_to_reset)
 
       warmup_phase = (step < self.warmup_steps and self.epoch == 0)
       num_replicas = 1 if warmup_phase else self.num_replicas

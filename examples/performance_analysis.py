@@ -12,7 +12,7 @@ pred_ttd = False
 cut_shot_ends = conf['data']['cut_shot_ends']
 dt = conf['data']['dt']
 T_max_warn = int(round(conf['data']['T_warning']/dt))
-T_min_warn = int(round(conf['data']['T_min_warn']/dt))
+T_min_warn = conf['data']['T_min_warn']#int(round(conf['data']['T_min_warn']/dt))
 if cut_shot_ends:
 	T_max_warn = T_max_warn-T_min_warn
 	T_min_warn = 0

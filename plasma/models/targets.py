@@ -94,7 +94,7 @@ class MaxHingeTarget(Target):
 
     @staticmethod
     def loss(y_true, y_pred):
-	fac = 100.0
+	fac = 10.0
 	#overall_fac = np.prod(np.array(K.shape(y_pred)[1:]).astype(np.float32))
 	overall_fac = K.prod(K.cast(K.shape(y_pred)[1:],K.floatx()))
         max_val = K.max(y_pred,axis=-2) #temporal axis!
@@ -109,7 +109,7 @@ class MaxHingeTarget(Target):
 
     @staticmethod
     def loss_np(y_true, y_pred):
-	fac = 100.0
+	fac = 10.0
 	#print(y_pred.shape)
 	overall_fac = np.prod(np.array(y_pred.shape).astype(np.float32))
    	max_val = np.max(y_pred,axis=-2) #temporal axis!
