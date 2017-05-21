@@ -204,7 +204,6 @@ class ModelBuilder(object):
         else:
             x_out = Dense(1,activation=output_activation) (x_in)
         model = Model(inputs=x_input,outputs=x_out)
-	print(loss_fn)
         model.compile(loss=loss_fn, optimizer=optimizer)
 	#bug with tensorflow/Keras
 	if conf['model']['backend'] == 'tf' or conf['model']['backend'] == 'tensorflow':
