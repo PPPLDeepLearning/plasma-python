@@ -37,8 +37,8 @@ d3d_jb_full = ShotListFiles(d3d,shot_list_dir,['shotlist_JaysonBarr_clear.txt','
 
 nstx_full = ShotListFiles(nstx,shot_list_dir,['disrupt_nstx.txt'],'nstx shots (all are disruptive')
 
-conf['paths']['shot_files'] = [jet_carbon_wall]#[d3d_full]#d3d_full,jet_iterlike_wall,jet_carbon_wall]#,jet_iterlike_wall,jet_carbon_wall]#,jet_iterlike_wall]#[d3d_full]#[jet_carbon_wall]
-conf['paths']['shot_files_test'] = [d3d_full]#[jet_iterlike_wall]
+conf['paths']['shot_files'] = [d3d_full]#d3d_full,jet_iterlike_wall,jet_carbon_wall]#,jet_iterlike_wall,jet_carbon_wall]#,jet_iterlike_wall]#[d3d_full]#[jet_carbon_wall]
+conf['paths']['shot_files_test'] = []#[jet_iterlike_wall]#[d3d_full]#[jet_iterlike_wall]
 conf['paths']['shot_files_all'] = conf['paths']['shot_files']+conf['paths']['shot_files_test']
 conf['paths']['all_machines'] = list(set([file.machine for file in conf['paths']['shot_files_all']]))
 

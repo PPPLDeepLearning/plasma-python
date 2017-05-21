@@ -11,6 +11,8 @@ from keras.layers.merge import Concatenate
 from keras.callbacks import Callback
 from keras.optimizers import *
 from keras.regularizers import l1,l2,l1_l2
+
+
 import keras.backend as K
 
 import dill
@@ -18,6 +20,7 @@ import re
 import os,sys
 import numpy as np
 from copy import deepcopy
+
 
 class LossHistory(Callback):
     def on_train_begin(self, logs=None):
@@ -201,7 +204,6 @@ class ModelBuilder(object):
         else:
             x_out = Dense(1,activation=output_activation) (x_in)
         model = Model(inputs=x_input,outputs=x_out)
-	#model.summary()
         model.compile(loss=loss_fn, optimizer=optimizer)
 	#bug with tensorflow/Keras
 	if conf['model']['backend'] == 'tf' or conf['model']['backend'] == 'tensorflow':
