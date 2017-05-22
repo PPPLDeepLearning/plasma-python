@@ -26,6 +26,8 @@ import socket
 sys.setrecursionlimit(10000)
 import getpass
 
+import pdb
+
 #import keras sequentially because it otherwise reads from ~/.keras/keras.json with too many threads.
 #from mpi_launch_tensorflow import get_mpi_task_index 
 from mpi4py import MPI
@@ -306,12 +308,16 @@ class MPIModel():
       mode = conf['callbacks']['mode']
       monitor = conf['callbacks']['monitor']
       patience = conf['callbacks']['patience']
-      callback_save_path = conf['paths']['callback_save_path']
+      csvlog_save_path = conf['paths']['csvlog_save_path']
+      #CSV callback is on by default
+      if not os.path.exists(csvlog_save_path):
+          os.makedirs(csvlog_save_path)
+
       callbacks_list = conf['callbacks']['list']
 
       callbacks = [cbks.BaseLogger()]
       callbacks += [self.history]
-      callbacks += [cbks.CSVLogger("{}callbacks-{}.log".format(callback_save_path,datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")))]
+      callbacks += [cbks.CSVLogger("{}callbacks-{}.log".format(csvlog_save_path,datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")))]
 
       if "earlystop" in callbacks_list: 
           callbacks += [cbks.EarlyStopping(patience=patience, monitor=monitor, mode=mode)]
@@ -319,7 +325,6 @@ class MPIModel():
           pass
       
       return cbks.CallbackList(callbacks)
-
 
   def train_epoch(self):
     '''
@@ -504,7 +509,6 @@ def mpi_make_predictions(conf,shot_list,loader):
     if task_index != 0:
         loader.verbose = False
 
-
     for (i,shot_sublist) in enumerate(shot_sublists):
 
         if i % num_workers == task_index:
@@ -572,6 +576,15 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
     batch_generator = partial(loader.training_batch_generator,shot_list=shot_list_train)
 
     mpi_model = MPIModel(train_model,optimizer,comm,batch_generator,batch_size,lr=lr,warmup_steps = warmup_steps)
+
+    tensorboard = None
+    if backend != "theano" and task_index == 0:
+        tensorboard_save_path = conf['paths']['tensorboard_save_path']
+        write_grads = conf['callbacks']['write_grads']
+        tensorboard = TensorBoard(log_dir=tensorboard_save_path,histogram_freq=1,write_graph=True,write_grads=write_grads)
+        tensorboard.set_model(mpi_model.model)
+        mpi_model.model.summary()
+
     mpi_model.compile(loss=conf['data']['target'].loss)
 
     callbacks = mpi_model.build_callbacks(conf,callbacks_list)
@@ -582,6 +595,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
     callbacks.set_params({
         'epochs': num_epochs,
         'metrics': callback_metrics,
+        'batch_size': batch_size,
     })
     callbacks.on_train_begin()
 
@@ -600,10 +614,6 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
         epoch_logs = {}
         roc_area,loss = mpi_make_predictions_and_evaluate(conf,shot_list_validate,loader)
 
-        #validation_losses.append(loss)
-        #validation_roc.append(roc_area)
-        #training_losses.append(ave_loss)
-
         epoch_logs['val_roc'] = roc_area 
         epoch_logs['val_loss'] = loss
         epoch_logs['train_loss'] = ave_loss
@@ -616,4 +626,92 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
 
             callbacks.on_epoch_end(int(round(e)), epoch_logs)
 
+            #tensorboard
+            val_generator = partial(loader.validation_batch_generator,shot_list=shot_list_validate)()
+            val_steps = 20
+            tensorboard.on_epoch_end(val_generator,val_steps,int(round(e)),epoch_logs)
+
     callbacks.on_train_end()
+    if task_index == 0:
+        tensorboard.on_train_end()
+
+
+class TensorBoard(object):
+    def __init__(self, log_dir='./logs',
+                 histogram_freq=0,
+                 validation_steps=0,
+                 write_graph=True,
+                 write_grads=False):
+        if K.backend() != 'tensorflow':
+            raise RuntimeError('TensorBoard callback only works '
+                               'with the TensorFlow backend.')
+        self.log_dir = log_dir
+        self.histogram_freq = histogram_freq
+        self.merged = None
+        self.writer = None
+        self.write_graph = write_graph
+        self.write_grads = write_grads
+        self.validation_steps = validation_steps
+        self.sess = None
+        self.model = None
+
+    def set_model(self, model):
+        self.model = model
+        self.sess = K.get_session()
+
+        if self.histogram_freq and self.merged is None:
+            for layer in self.model.layers:
+
+                for weight in layer.weights:
+                    tf.summary.histogram(weight.name, weight)
+                    if self.write_grads:
+                        grads = model.optimizer.get_gradients(model.total_loss,
+                                                            weight)
+                        tf.summary.histogram('{}_grad'.format(weight.name), grads)
+
+                if hasattr(layer, 'output'):
+                    tf.summary.histogram('{}_out'.format(layer.name),
+                                       layer.output)
+        self.merged = tf.summary.merge_all()
+
+        if self.write_graph:
+            self.writer = tf.summary.FileWriter(self.log_dir,
+                                              self.sess.graph)
+        else:
+            self.writer = tf.summary.FileWriter(self.log_dir)
+
+
+    def on_epoch_end(self, val_generator, val_steps, epoch, logs=None):
+        logs = logs or {}
+
+        for name, value in logs.items():
+            tf.summary.scalar(name,value)
+
+        tensors = (self.model.inputs +
+                   self.model.targets +
+                   self.model.sample_weights)
+
+        if self.model.uses_learning_phase:
+            tensors += [K.learning_phase()]
+
+        self.sess = K.get_session()
+
+        for val_data in val_generator:
+            batch_val = []
+            sh = val_data[0].shape[0]
+            batch_val.append(val_data[0])
+            batch_val.append(val_data[1])
+            batch_val.append(np.ones(sh))
+            if self.model.uses_learning_phase:
+                batch_val.append(1)
+
+            feed_dict = dict(zip(tensors, batch_val))
+            result = self.sess.run([self.merged], feed_dict=feed_dict)
+            summary_str = result[0]
+            self.writer.add_summary(summary_str, int(round(epoch)))
+            val_steps -= 1
+            if val_steps <= 0: break
+
+
+    def on_train_end(self, _):
+        self.writer.close()

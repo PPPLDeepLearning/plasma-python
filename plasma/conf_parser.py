@@ -39,7 +39,8 @@ def parameters(input_file):
         params['paths']['normalizer_path'] = output_path + '/normalization/normalization.npz'
         params['paths']['results_prepath'] = output_path + '/results/'
         params['paths']['model_save_path'] = output_path + '/model_checkpoints/'
-        params['paths']['callback_save_path'] = output_path + '/callback_logs/'
+        params['paths']['csvlog_save_path'] = output_path + '/csv_logs/'
+        params['paths']['tensorboard_save_path'] = output_path + params['paths']['tensorboard_save_path']
 
         params['data']['num_signals'] = sum([sum([1 for predicate in subl if predicate]) for subl in signals_masks])
         if params['target'] == 'hinge':
