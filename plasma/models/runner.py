@@ -17,9 +17,10 @@ from functools import partial
 import pathos.multiprocessing as mp
 
 from plasma.conf import conf
-from plasma.models.loader import Loader
+from plasma.models.loader import Loader, ProcessGenerator
 from plasma.utils.performance import PerformanceAnalyzer
 from plasma.utils.evaluation import *
+from plasma.utils.state_reset import reset_states
 
 backend = conf['model']['backend']
 
@@ -148,8 +149,9 @@ def train(conf,shot_list_train,loader):
 
     #load the latest epoch we did. Returns -1 if none exist yet
     e = specific_builder.load_model_weights(train_model)
-    batch_generator = partial(loader.training_batch_generator_process,shot_list=shot_list_train)
-    batch_iterator = batch_generator()
+    e_start = e
+    batch_generator = partial(loader.training_batch_generator_partial_reset,shot_list=shot_list_train)
+    batch_iterator = ProcessGenerator(batch_generator())
 
     num_epochs = conf['training']['num_epochs']
     num_at_once = conf['training']['num_shots_at_once']
@@ -158,8 +160,9 @@ def train(conf,shot_list_train,loader):
     print('{} epochs left to go'.format(num_epochs - 1 - e))
     num_so_far_accum = 0
     num_so_far = 0
+    num_total = np.inf
     while e < num_epochs-1:
-        # e += 1
+        e += 1
         print('\nEpoch {}/{}'.format(e+1,num_epochs))
         pbar =  Progbar(len(shot_list_train))
 
@@ -167,40 +170,40 @@ def train(conf,shot_list_train,loader):
         K.set_value(train_model.optimizer.lr, lr*lr_decay**(e))
         
         #print('Learning rate: {}'.format(train_model.optimizer.lr.get_value()))
-        batch_xs,batch_ys,batches_to_reset,num_so_far_curr,num_total = next(batch_iterator_func)
         num_batches_minimum = 100
         num_batches_current = 0
         training_losses_tmp = []
 
-        while (num_so_far-e*num_total) < num_total or num_batches_current < num_batches_minimum:
+        while num_so_far < (e - e_start)*num_total or num_batches_current < num_batches_minimum:
             num_so_far_old = num_so_far
             try:
                 batch_xs,batch_ys,batches_to_reset,num_so_far_curr,num_total = next(batch_iterator)
             except StopIteration:
                 print("Resetting batch iterator.")
                 num_so_far_accum = num_so_far
-                batch_iterator = batch_generator()
+                batch_iterator = ProcessGenerator(batch_generator())
                 batch_xs,batch_ys,batches_to_reset,num_so_far_curr,num_total = next(batch_iterator)
-                num_so_far = num_so_far_accum+num_so_far_curr
+            num_so_far = num_so_far_accum+num_so_far_curr
 
             num_batches_current +=1 
 
             if np.any(batches_to_reset):
                 #print("Resetting batch {}".format(np.where(batches_to_reset)))
-                reset_states(self.model,batches_to_reset)
+                reset_states(train_model,batches_to_reset)
 
             loss = train_model.train_on_batch(batch_xs,batch_ys)
             training_losses_tmp.append(loss)
-            pbar.add(num_so_far - num_so_far_old, values=[("train loss", np.mean(training_losses_tmp))])
+            pbar.add(num_so_far - num_so_far_old, values=[("train loss", loss)])
             loader.verbose=False#True during the first iteration
 
 
-        e = 1.0*self.num_so_far/num_total
+        e = e_start+1.0*num_so_far/num_total
         sys.stdout.flush()
         training_losses.append(np.mean(training_losses_tmp))
-        specific_builder.save_model_weights(train_model,e)
+        specific_builder.save_model_weights(train_model,int(round(e)))
 
         if conf['training']['validation_frac'] > 0.0:
+	    print("prediction on GPU...")
             _,_,_,roc_area,loss = make_predictions_and_evaluate_gpu(conf,shot_list_validate,loader)
             validation_losses.append(loss)
             validation_roc.append(roc_area)
@@ -215,6 +218,7 @@ def train(conf,shot_list_train,loader):
     # plot_losses(conf,[training_losses],specific_builder,name='training')
     if conf['training']['validation_frac'] > 0.0:
         plot_losses(conf,[training_losses,validation_losses,validation_roc],specific_builder,name='training_validation_roc')
+    batch_iterator.__exit__()
     print('...done')
 
 class HyperRunner(object):

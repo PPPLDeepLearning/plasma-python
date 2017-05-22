@@ -38,6 +38,7 @@ MY_GPU = task_index % NUM_GPUS
 from pprint import pprint
 from plasma.conf import conf
 from plasma.utils.state_reset import reset_states
+from plasma.models.loader import ProcessGenerator
 
 backend = conf['model']['backend']
 
@@ -159,7 +160,7 @@ class MPIModel():
     self.DUMMY_LR = 0.1
     self.comm = comm
     self.batch_size = batch_size
-    self.batch_iterator_func = batch_iterator()
+    self.batch_iterator_func = ProcessGenerator(batch_iterator())
     self.batch_iterator = batch_iterator
     self.warmup_steps=warmup_steps
     self.num_workers = comm.Get_size()
@@ -169,6 +170,9 @@ class MPIModel():
         self.num_replicas = self.num_workers
     else:
         self.num_replicas = num_replicas
+
+  def close(self):
+    self.batch_iterator_func.__exit__()
 
   def set_lr(self,lr):
     self.lr = lr
@@ -372,7 +376,8 @@ class MPIModel():
       except StopIteration:
 	  print("Resetting batch iterator.")
           self.num_so_far_accum = self.num_so_far_indiv
-          batch_iterator_func = self.batch_iterator()
+	  self.batch_iterator_func = ProcessGenerator(self.batch_iterator())
+    	  batch_iterator_func = self.batch_iterator_func
           batch_xs,batch_ys,batches_to_reset,num_so_far_curr,num_total = next(batch_iterator_func)
       self.num_so_far_indiv = self.num_so_far_accum+num_so_far_curr
 
@@ -579,6 +584,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
 
     #load the latest epoch we did. Returns -1 if none exist yet
     e = specific_builder.load_model_weights(train_model)
+    e_old = e
 
     num_epochs = conf['training']['num_epochs']
     lr_decay = conf['model']['lr_decay']
@@ -589,8 +595,8 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
     print('{} epochs left to go'.format(num_epochs - 1 - e))
 
     # batch_generator = partial(loader.training_batch_generator,shot_list=shot_list_train)
-    #batch_generator = partial(loader.training_batch_generator_partial_reset,shot_list=shot_list_train)
-    batch_generator = partial(loader.training_batch_generator_process,shot_list=shot_list_train)
+    batch_generator = partial(loader.training_batch_generator_partial_reset,shot_list=shot_list_train)
+    #batch_generator = partial(loader.training_batch_generator_process,shot_list=shot_list_train)
 
     mpi_model = MPIModel(train_model,optimizer,comm,batch_generator,batch_size,lr=lr,warmup_steps = warmup_steps)
     mpi_model.compile(loss=conf['data']['target'].loss)
@@ -612,7 +618,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
         print_unique('\nEpoch {}/{}'.format(e,num_epochs))
 
         (step,ave_loss,curr_loss,num_so_far,effective_epochs) = mpi_model.train_epoch()
-        e = effective_epochs
+        e = e_old + effective_epochs
 
         loader.verbose=False #True during the first iteration
         if task_index == 0:
@@ -638,3 +644,4 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
             callbacks.on_epoch_end(int(round(e)), epoch_logs)
 
     callbacks.on_train_end()
+    mpi_model.close()

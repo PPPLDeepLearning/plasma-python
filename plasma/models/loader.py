@@ -596,3 +596,32 @@ class Loader(object):
         shot_list_validate = data['shot_list_validate'][()]
         shot_list_test = data['shot_list_test'][()]
         return shot_list_train,shot_list_validate,shot_list_test
+
+
+
+
+
+
+
+class ProcessGenerator(object):
+    def __init__(self,generator):
+	self.generator = generator
+	self.proc = mp.Process(target=self.fill_batch_queue)
+	self.queue = mp.Queue()
+	self.proc.start()
+	
+    def fill_batch_queue(self):
+	print("Starting process to fetch data")
+	while True:
+	    self.queue.put(next(self.generator),True,-1) 
+
+    def __next__(self):
+	return self.queue.get(True)
+    
+    def next(self):
+	return self.__next__()
+
+    def __exit__(self):
+	self.proc.terminate()
+	self.queue.close()
+
