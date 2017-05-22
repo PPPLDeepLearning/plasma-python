@@ -26,8 +26,6 @@ import socket
 sys.setrecursionlimit(10000)
 import getpass
 
-import pdb
-
 #import keras sequentially because it otherwise reads from ~/.keras/keras.json with too many threads.
 #from mpi_launch_tensorflow import get_mpi_task_index 
 from mpi4py import MPI
