@@ -190,8 +190,8 @@ class ModelBuilder(object):
 #
 #        else:
 #            x_in = x_input
-        x_in = TimeDistributed(Dense(100,activation='tanh')) (x_in)
-        x_in = TimeDistributed(Dense(30,activation='tanh')) (x_in)
+        #x_in = TimeDistributed(Dense(100,activation='tanh')) (x_in)
+        #x_in = TimeDistributed(Dense(30,activation='tanh')) (x_in)
         #x_in = TimeDistributed(Dense(2*(num_0D+num_1D)),activation='relu') (x_in)
         # x = TimeDistributed(Dense(2*(num_0D+num_1D)))
  #               model.add(TimeDistributed(Dense(num_density_channels,bias=True),batch_input_shape=batch_input_shape))
