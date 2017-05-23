@@ -8,9 +8,8 @@ def get_states(model):
 		if hasattr(layer,"states"):
 			layer_states = []
 			for state in layer.states:
+				#print(K.get_value(state)[0][0:3])
 				layer_states.append(K.get_value(state))
-				# print('hi')
-				# print(K.get_value(state))
 			all_states.append(layer_states)
 	# print(all_states)
 	return all_states

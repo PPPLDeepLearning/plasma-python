@@ -191,6 +191,7 @@ class ModelBuilder(object):
 #        else:
 #            x_in = x_input
         x_in = TimeDistributed(Dense(100,activation='tanh')) (x_in)
+        x_in = TimeDistributed(Dense(30,activation='tanh')) (x_in)
         #x_in = TimeDistributed(Dense(2*(num_0D+num_1D)),activation='relu') (x_in)
         # x = TimeDistributed(Dense(2*(num_0D+num_1D)))
  #               model.add(TimeDistributed(Dense(num_density_channels,bias=True),batch_input_shape=batch_input_shape))
@@ -200,7 +201,7 @@ class ModelBuilder(object):
              bias_regularizer=l2(regularization),dropout=dropout_prob,recurrent_dropout=dropout_prob) (x_in)
             x_in = Dropout(dropout_prob) (x_in)
         if return_sequences:
-            x_out = TimeDistributed(Dense(100,activation='tanh')) (x_in)
+            #x_out = TimeDistributed(Dense(100,activation='tanh')) (x_in)
             x_out = TimeDistributed(Dense(1,activation=output_activation)) (x_in)
         else:
             x_out = Dense(1,activation=output_activation) (x_in)

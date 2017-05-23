@@ -656,6 +656,7 @@ class PerformanceAnalyzer():
             # ax.grid()           
             if save_fig:
                 plt.savefig('sig_fig_{}.png'.format(shot.number),bbox_inches='tight')
+	    plt.close()
         else:
             print("Shot hasn't been processed")
 

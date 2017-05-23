@@ -128,11 +128,13 @@ def train(conf,shot_list_train,loader):
     print('training: {} shots, {} disruptive'.format(len(shot_list_train),shot_list_train.num_disruptive()))
 
     if backend == 'tf' or backend == 'tensorflow':
-        import tensorflow as tf
-        os.environ['KERAS_BACKEND'] = 'tensorflow'
-        from keras.backend.tensorflow_backend import set_session
-        config = tf.ConfigProto(device_count={"GPU":1})
-        set_session(tf.Session(config=config))
+        first_time = "tensorflow" not in sys.modules
+	if first_time:
+        	import tensorflow as tf
+        	os.environ['KERAS_BACKEND'] = 'tensorflow'
+        	from keras.backend.tensorflow_backend import set_session
+        	config = tf.ConfigProto(device_count={"GPU":1})
+        	set_session(tf.Session(config=config))
     else:
         os.environ['KERAS_BACKEND'] = 'theano'
         os.environ['THEANO_FLAGS'] = 'device=gpu,floatX=float32'
@@ -188,7 +190,6 @@ def train(conf,shot_list_train,loader):
             num_batches_current +=1 
 
             if np.any(batches_to_reset):
-                #print("Resetting batch {}".format(np.where(batches_to_reset)))
                 reset_states(train_model,batches_to_reset)
 
             loss = train_model.train_on_batch(batch_xs,batch_ys)
@@ -213,6 +214,9 @@ def train(conf,shot_list_train,loader):
         if conf['training']['validation_frac'] > 0.0:
             print('Validation Loss: {:.3e}'.format(validation_losses[-1]))
             print('Validation ROC: {:.4f}'.format(validation_roc[-1]))
+	
+	print("end epoch. {} / {}".format(num_so_far,(e-e_start)*num_total))
+	print("e: {}".format(e))
 
 
     # plot_losses(conf,[training_losses],specific_builder,name='training')
@@ -337,11 +341,13 @@ def make_predictions(conf,shot_list,loader):
     use_cores = max(1,mp.cpu_count()-2)
 
     if backend == 'tf' or backend == 'tensorflow':
-        import tensorflow as tf
-        os.environ['KERAS_BACKEND'] = 'tensorflow'
-        from keras.backend.tensorflow_backend import set_session
-        config = tf.ConfigProto(device_count={"CPU":use_cores})
-        set_session(tf.Session(config=config))
+        first_time = "tensorflow" not in sys.modules
+	if first_time:
+        	import tensorflow as tf
+        	os.environ['KERAS_BACKEND'] = 'tensorflow'
+        	from keras.backend.tensorflow_backend import set_session
+        	config = tf.ConfigProto(device_count={"CPU":use_cores})
+        	set_session(tf.Session(config=config))
     else:
         os.environ['THEANO_FLAGS'] = 'device=cpu'
         import theano
@@ -396,11 +402,13 @@ def make_single_prediction(shot,specific_builder,loader,model_save_path):
 def make_predictions_gpu(conf,shot_list,loader):
 
     if backend == 'tf' or backend == 'tensorflow':
-        import tensorflow as tf
-        os.environ['KERAS_BACKEND'] = 'tensorflow'
-        from keras.backend.tensorflow_backend import set_session
-        config = tf.ConfigProto(device_count={"GPU":1})
-        set_session(tf.Session(config=config))
+        first_time = "tensorflow" not in sys.modules
+	if first_time:
+        	import tensorflow as tf
+        	os.environ['KERAS_BACKEND'] = 'tensorflow'
+        	from keras.backend.tensorflow_backend import set_session
+        	config = tf.ConfigProto(device_count={"GPU":1})
+        	set_session(tf.Session(config=config))
     else:
         os.environ['THEANO_FLAGS'] = 'device=gpu,floatX=float32'
         import theano
@@ -453,11 +461,13 @@ def make_predictions_and_evaluate_gpu(conf,shot_list,loader):
 def make_evaluations_gpu(conf,shot_list,loader):
 
     if backend == 'tf' or backend == 'tensorflow':
-        import tensorflow as tf
-        os.environ['KERAS_BACKEND'] = 'tensorflow'
-        from keras.backend.tensorflow_backend import set_session
-        config = tf.ConfigProto(device_count={"GPU":1})
-        set_session(tf.Session(config=config))
+        first_time = "tensorflow" not in sys.modules
+	if first_time:
+        	import tensorflow as tf
+        	os.environ['KERAS_BACKEND'] = 'tensorflow'
+        	from keras.backend.tensorflow_backend import set_session
+        	config = tf.ConfigProto(device_count={"GPU":1})
+        	set_session(tf.Session(config=config))
     else:
         os.environ['THEANO_FLAGS'] = 'device=gpu,floatX=float32'
         import theano

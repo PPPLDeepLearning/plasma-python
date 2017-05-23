@@ -147,12 +147,12 @@ class MaxHingeTarget(Target):
 class HingeTarget(Target):
     activation = 'linear'
 
-    loss = 'squared_hinge' #hinge
+    loss = 'hinge' #hinge
     
     @staticmethod
     def loss_np(y_true, y_pred):
-	#return hinge_np(y_true,y_pred)
-	return squared_hinge_np(y_true,y_pred)
+	return hinge_np(y_true,y_pred)
+	#return squared_hinge_np(y_true,y_pred)
 	
     @staticmethod
     def remapper(ttd,T_warning,as_array_of_shots=True):
