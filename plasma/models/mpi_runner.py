@@ -372,12 +372,6 @@ class MPIModel():
     num_batches_minimum = 100
     num_batches_current = 0
     
-    #if task_index == 2:
-    #    sys.stdout.write("\ninternal states: {} ".format(get_states(self.model)[0][0][0][:4]))
-    #    sys.stdout.write("\nweights: {} ".format(self.model.get_weights()[0][0][:4,0]))
-#	sys.stdout.flush()
-    #print(get_states(self.model)[0][0:3])
-
     while (self.num_so_far-self.epoch*num_total) < num_total or num_batches_current < num_batches_minimum:
 
       try:
@@ -413,9 +407,6 @@ class MPIModel():
         sys.stdout.flush()  
 
       t0 = time.time()
-      #positives_ = np.sum(np.max(batch_ys[:,:,0],axis=-1) > 0.0)
-      #sys.stdout.write("\n[{}] postives: {}".format(task_index,positives_))
-      #sys.stdout.flush()
       deltas,loss = self.get_deltas(batch_xs,batch_ys,verbose)
       t1 = time.time()
       self.set_new_weights(deltas,num_replicas)
@@ -423,8 +414,6 @@ class MPIModel():
       write_str_0 = self.calculate_speed(t0,t1,t2,num_replicas)
 
       curr_loss = self.mpi_average_scalars(1.0*loss,num_replicas)
-      #if self.task_index == 0:
-	#print(self.model.get_weights()[0][0][:4])
       loss_averager.add_val(curr_loss)
       ave_loss = loss_averager.get_val()
       eta = self.estimate_remaining_time(t0 - t_start,self.num_so_far-self.epoch*num_total,num_total)
@@ -432,10 +421,6 @@ class MPIModel():
       print_unique(write_str + write_str_0)
       step += 1
 
-    #if task_index == 2:
-    #    sys.stdout.write("\ninternal states: {} ".format(get_states(self.model)[0][0][0][:4]))
-    #    sys.stdout.write("\nweights: {} ".format(self.model.get_weights()[0][0][:4,0]))
-    #	sys.stdout.flush()
     effective_epochs = 1.0*self.num_so_far/num_total
     epoch_previous = self.epoch
     self.epoch = effective_epochs
@@ -603,9 +588,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
     optimizer = MPIAdam(lr=lr)
     print('{} epochs left to go'.format(num_epochs - 1 - e))
 
-    # batch_generator = partial(loader.training_batch_generator,shot_list=shot_list_train)
     batch_generator = partial(loader.training_batch_generator_partial_reset,shot_list=shot_list_train)
-    #{}batch_generator = partial(loader.training_batch_generator_process,shot_list=shot_list_train)
 
     print("warmup {}".format(warmup_steps))
     mpi_model = MPIModel(train_model,optimizer,comm,batch_generator,batch_size,lr=lr,warmup_steps = warmup_steps)
@@ -659,17 +642,17 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
 
             callbacks.on_epoch_end(int(round(e)), epoch_logs)
 
-            #tensorboard
-            val_generator = partial(loader.training_batch_generator,shot_list=shot_list_validate)()
-            val_steps = 20
-            tensorboard.on_epoch_end(val_generator,val_steps,int(round(e)),epoch_logs)
+            if backend != 'theano':
+                #tensorboard
+                val_generator = partial(loader.training_batch_generator,shot_list=shot_list_validate)()
+                val_steps = 20
+                tensorboard.on_epoch_end(val_generator,val_steps,int(round(e)),epoch_logs)
 
     callbacks.on_train_end()
     mpi_model.close()
 
-    if task_index == 0:
-	pass
-        #tensorboard.on_train_end()
+    if backend != 'theano' and task_index == 0:
+        tensorboard.on_train_end()
 
 
 class TensorBoard(object):
@@ -751,4 +734,3 @@ class TensorBoard(object):
 
     def on_train_end(self, _):
         self.writer.close()
-
