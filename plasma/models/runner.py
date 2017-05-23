@@ -6,9 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from itertools import imap
 
-#leading to import errors:
-#from hyperopt import hp, STATUS_OK
-#from hyperas.distributions import conditional
+from hyperopt import hp, STATUS_OK
 
 import time
 import sys
