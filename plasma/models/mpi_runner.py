@@ -37,7 +37,7 @@ MY_GPU = task_index % NUM_GPUS
 
 from pprint import pprint
 from plasma.conf import conf
-from plasma.utils.state_reset import reset_states
+from plasma.utils.state_reset import reset_states,get_states
 from plasma.models.loader import ProcessGenerator
 
 backend = conf['model']['backend']
@@ -157,7 +157,7 @@ class MPIModel():
     self.optimizer = optimizer
     self.max_lr = 0.1
     self.lr = lr if (lr < self.max_lr) else self.max_lr
-    self.DUMMY_LR = 0.1
+    self.DUMMY_LR = 0.001
     self.comm = comm
     self.batch_size = batch_size
     self.batch_iterator_func = ProcessGenerator(batch_iterator())
@@ -371,6 +371,12 @@ class MPIModel():
 
     num_batches_minimum = 100
     num_batches_current = 0
+    
+    #if task_index == 2:
+    #    sys.stdout.write("\ninternal states: {} ".format(get_states(self.model)[0][0][0][:4]))
+    #    sys.stdout.write("\nweights: {} ".format(self.model.get_weights()[0][0][:4,0]))
+#	sys.stdout.flush()
+    #print(get_states(self.model)[0][0:3])
 
     while (self.num_so_far-self.epoch*num_total) < num_total or num_batches_current < num_batches_minimum:
 
@@ -389,7 +395,6 @@ class MPIModel():
       # if batches_to_reset:
         # self.model.reset_states(batches_to_reset)
       if np.any(batches_to_reset):
-        #print("Resetting batch {}".format(np.where(batches_to_reset)))
         reset_states(self.model,batches_to_reset)
 
       warmup_phase = (step < self.warmup_steps and self.epoch == 0)
@@ -408,6 +413,9 @@ class MPIModel():
         sys.stdout.flush()  
 
       t0 = time.time()
+      #positives_ = np.sum(np.max(batch_ys[:,:,0],axis=-1) > 0.0)
+      #sys.stdout.write("\n[{}] postives: {}".format(task_index,positives_))
+      #sys.stdout.flush()
       deltas,loss = self.get_deltas(batch_xs,batch_ys,verbose)
       t1 = time.time()
       self.set_new_weights(deltas,num_replicas)
@@ -424,6 +432,10 @@ class MPIModel():
       print_unique(write_str + write_str_0)
       step += 1
 
+    #if task_index == 2:
+    #    sys.stdout.write("\ninternal states: {} ".format(get_states(self.model)[0][0][0][:4]))
+    #    sys.stdout.write("\nweights: {} ".format(self.model.get_weights()[0][0][:4,0]))
+    #	sys.stdout.flush()
     effective_epochs = 1.0*self.num_so_far/num_total
     epoch_previous = self.epoch
     self.epoch = effective_epochs
@@ -512,7 +524,6 @@ def mpi_make_predictions(conf,shot_list,loader):
     model = specific_builder.build_model(True)
     specific_builder.load_model_weights(model)
     model.reset_states()
-
     if task_index == 0:
         pbar =  Progbar(len(shot_list))
     shot_sublists = shot_list.sublists(conf['model']['pred_batch_size'],do_shuffle=False,equal_size=True)
@@ -531,8 +542,7 @@ def mpi_make_predictions(conf,shot_list,loader):
 
 	
             #load data and fit on data
-            y_p = model.predict(X,
-                batch_size=conf['model']['pred_batch_size'])
+            y_p = model.predict(X,batch_size=conf['model']['pred_batch_size'])
             model.reset_states()
             y_p = loader.batch_output_to_array(y_p)
             y = loader.batch_output_to_array(y)
@@ -565,9 +575,6 @@ def mpi_make_predictions(conf,shot_list,loader):
     y_gold_global = y_gold_global[:len(shot_list)]
     disruptive_global = disruptive_global[:len(shot_list)]
 
-
-
-
     return y_prime_global,y_gold_global,disruptive_global
 
 
@@ -598,8 +605,9 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
 
     # batch_generator = partial(loader.training_batch_generator,shot_list=shot_list_train)
     batch_generator = partial(loader.training_batch_generator_partial_reset,shot_list=shot_list_train)
-    #batch_generator = partial(loader.training_batch_generator_process,shot_list=shot_list_train)
+    #{}batch_generator = partial(loader.training_batch_generator_process,shot_list=shot_list_train)
 
+    print("warmup {}".format(warmup_steps))
     mpi_model = MPIModel(train_model,optimizer,comm,batch_generator,batch_size,lr=lr,warmup_steps = warmup_steps)
 
     tensorboard = None
@@ -637,8 +645,8 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
             specific_builder.save_model_weights(train_model,int(round(e)))
 
         epoch_logs = {}
+	
         _,_,_,roc_area,loss = mpi_make_predictions_and_evaluate(conf,shot_list_validate,loader)
-
         epoch_logs['val_roc'] = roc_area 
         epoch_logs['val_loss'] = loss
         epoch_logs['train_loss'] = ave_loss
@@ -652,15 +660,16 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
             callbacks.on_epoch_end(int(round(e)), epoch_logs)
 
             #tensorboard
-            val_generator = partial(loader.validation_batch_generator,shot_list=shot_list_validate)()
-            val_steps = 20
-            tensorboard.on_epoch_end(val_generator,val_steps,int(round(e)),epoch_logs)
+            #val_generator = partial(loader.validation_batch_generator,shot_list=shot_list_validate)()
+            #val_steps = 20
+            #tensorboard.on_epoch_end(val_generator,val_steps,int(round(e)),epoch_logs)
 
     callbacks.on_train_end()
     mpi_model.close()
 
     if task_index == 0:
-        tensorboard.on_train_end()
+	pass
+        #tensorboard.on_train_end()
 
 
 class TensorBoard(object):

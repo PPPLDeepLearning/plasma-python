@@ -103,8 +103,8 @@ class Loader(object):
         length = self.conf['model']['length']
         end_indices -= length
         assert(np.all(end_indices >= 0))
-        X =  Xbuff[:,:length,:]
-        Y =  Ybuff[:,:length,:]
+        X =  1.0*Xbuff[:,:length,:]
+        Y =  1.0*Ybuff[:,:length,:]
         self.shift_buffer(Xbuff,length)
         self.shift_buffer(Ybuff,length)
         return X,Y
@@ -156,6 +156,7 @@ class Loader(object):
         while True:
             # the list of all shots
             shot_list.shuffle() 
+	    #print("restarting shotlist")
             for shot in shot_list:
                 while not np.any(end_indices == 0):
                     X,Y = self.return_from_training_buffer(Xbuff,Ybuff,end_indices)
