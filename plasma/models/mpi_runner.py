@@ -660,9 +660,9 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
             callbacks.on_epoch_end(int(round(e)), epoch_logs)
 
             #tensorboard
-            #val_generator = partial(loader.validation_batch_generator,shot_list=shot_list_validate)()
-            #val_steps = 20
-            #tensorboard.on_epoch_end(val_generator,val_steps,int(round(e)),epoch_logs)
+            val_generator = partial(loader.training_batch_generator,shot_list=shot_list_validate)()
+            val_steps = 20
+            tensorboard.on_epoch_end(val_generator,val_steps,int(round(e)),epoch_logs)
 
     callbacks.on_train_end()
     mpi_model.close()
