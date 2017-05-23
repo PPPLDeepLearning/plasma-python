@@ -10,11 +10,51 @@ This work was supported by the DOE CSGF program.
 
 from __future__ import print_function
 import os
+import os.path
+import sys
 import random as rnd
 
 import numpy as np
 
-from plasma.utils.processing import train_test_split
+from plasma.utils.processing import train_test_split,cut_and_resample_signal
+
+
+
+class ShotListFiles(object):
+    def __init__(self,machine,prepath,paths,description=''):
+        self.machine = machine
+        self.prepath = prepath
+        self.paths = paths
+        self.description = description
+
+    def __str__(self):
+        s = 'machine: ' + self.machine.__str__()
+        s += '\n' + self.description
+        return s
+
+    def __repr__(self):
+        return self.__str__()
+
+    def get_single_shot_numbers_and_disruption_times(self,full_path):
+        data = np.loadtxt(full_path,ndmin=1,dtype={'names':('num','disrupt_times'),
+                                                                  'formats':('i4','f4')})
+        shots = np.array(list(zip(*data))[0])
+        disrupt_times = np.array(list(zip(*data))[1])
+        return shots, disrupt_times
+
+
+    def get_shot_numbers_and_disruption_times(self):
+        all_shots = []
+        all_disruption_times = []
+        all_machines_arr = []
+        for path in self.paths:
+            full_path = self.prepath + path
+            shots,disruption_times = self.get_single_shot_numbers_and_disruption_times(full_path)
+            all_shots.append(shots)
+            all_disruption_times.append(disruption_times)
+        return np.concatenate(all_shots),np.concatenate(all_disruption_times)
+
+
 
 class ShotList(object):
     '''
@@ -35,31 +75,41 @@ class ShotList(object):
             assert(all([isinstance(shot,Shot) for shot in shots]))
             self.shots = [shot for shot in shots]
 
-    def load_from_files(self,shot_list_dir,shot_files):
-        shot_numbers,disruption_times = ShotList.get_multiple_shots_and_disruption_times(shot_list_dir,shot_files)
+    def load_from_shot_list_files_object(self,shot_list_files_object,signals):
+        machine = shot_list_files_object.machine
+        shot_numbers,disruption_times = shot_list_files_object.get_shot_numbers_and_disruption_times()
         for number,t in list(zip(shot_numbers,disruption_times)):
-            self.append(Shot(number=number,t_disrupt=t))
+            self.append(Shot(number=number,t_disrupt=t,machine=machine,signals=[s for s in signals if s.is_defined_on_machine(machine)]))
 
-            ######Generic Methods####
 
-    @staticmethod 
-    def get_shots_and_disruption_times(shots_and_disruption_times_path):
-        data = np.loadtxt(shots_and_disruption_times_path,ndmin=1,dtype={'names':('num','disrupt_times'),
-                                                                  'formats':('i4','f4')})
-        shots = np.array(list(zip(*data))[0])
-        disrupt_times = np.array(list(zip(*data))[1])
-        return shots, disrupt_times
 
-    @staticmethod
-    def get_multiple_shots_and_disruption_times(base_path,endings):
-        all_shots = []
-        all_disruption_times = []
-        for ending in endings:
-            path = base_path + ending
-            shots,disruption_times = ShotList.get_shots_and_disruption_times(path)
-            all_shots.append(shots)
-            all_disruption_times.append(disruption_times)
-        return np.concatenate(all_shots),np.concatenate(all_disruption_times)
+    def load_from_shot_list_files_objects(self,shot_list_files_objects,signals):
+        for obj in shot_list_files_objects:
+            self.load_from_shot_list_files_object(obj,signals)
+
+    #         ######Generic Methods####
+
+    # @staticmethod 
+    # def get_shots_and_disruption_times(shots_and_disruption_times_path,machine):
+    #     data = np.loadtxt(shots_and_disruption_times_path,ndmin=1,dtype={'names':('num','disrupt_times'),
+    #                                                               'formats':('i4','f4')})
+    #     shots = np.array(list(zip(*data))[0])
+    #     disrupt_times = np.array(list(zip(*data))[1])
+    #     machines = np.array([machine]*len(shots))
+    #     return shots, disrupt_times, machines
+
+    # @staticmethod
+    # def get_multiple_shots_and_disruption_times(base_path,endings,machines):
+    #     all_shots = []
+    #     all_disruption_times = []
+    #     all_machines_arr = []
+    #     for (ending,machine) in zip(endings,machines):
+    #         path = base_path + ending
+    #         shots,disruption_times,machines_arr = ShotList.get_shots_and_disruption_times(path,machine)
+    #         all_shots.append(shots)
+    #         all_disruption_times.append(disruption_times)
+    #         all_machines_arr.append(machines_arr)
+    #     return np.concatenate(all_shots),np.concatenate(all_disruption_times),np.concatenate(all_machines_arr)
 
 
     def split_train_test(self,conf):
@@ -69,20 +119,25 @@ class ShotList(object):
         train_frac = conf['training']['train_frac']
         shuffle_training = conf['training']['shuffle_training']
         use_shots = conf['data']['use_shots']
+	all_signals = conf['paths']['all_signals']
         #split randomly
         use_shots_train = int(round(train_frac*use_shots))
         use_shots_test = int(round((1-train_frac)*use_shots))
         if len(shot_files_test) == 0:
             shot_list_train,shot_list_test = train_test_split(self.shots,train_frac,shuffle_training)
-            shot_numbers_train = [shot.number for shot in shot_list_train]
-            shot_numbers_test = [shot.number for shot in shot_list_test]
         #train and test list given
         else:
-            shot_numbers_train,_ = ShotList.get_multiple_shots_and_disruption_times(shot_list_dir,shot_files)
-            shot_numbers_test,_ = ShotList.get_multiple_shots_and_disruption_times(shot_list_dir,shot_files_test)
-
+	    shot_list_train = ShotList()
+	    shot_list_train.load_from_shot_list_files_objects(shot_files,all_signals)
+		
+	    shot_list_test = ShotList()
+	    shot_list_test.load_from_shot_list_files_objects(shot_files_test,all_signals)
         
+	
+        shot_numbers_train = [shot.number for shot in shot_list_train]
+        shot_numbers_test = [shot.number for shot in shot_list_test]
         print(len(shot_numbers_train),len(shot_numbers_test))
+	#make sure we only use pre-filtered valid shots
         shots_train = self.filter_by_number(shot_numbers_train)
         shots_test = self.filter_by_number(shot_numbers_test)
         return shots_train.random_sublist(use_shots_train),shots_test.random_sublist(use_shots_test)
@@ -142,6 +197,9 @@ class ShotList(object):
     def shuffle(self):
         np.random.shuffle(self.shots)
 
+    def sort(self):
+        self.shots.sort() #will sort based on machine and number
+
     def as_list(self):
         return self.shots
 
@@ -158,7 +216,7 @@ class ShotList(object):
             self.append(shot)
             return True
         else:
-            print('Warning: shot {} not valid, omitting'.format(shot.number))
+            #print('Warning: shot {} not valid, omitting'.format(shot.number))
             return False
 
         
@@ -171,7 +229,7 @@ class Shot(object):
     For 0D data, each shot is modeled as a 2D Numpy array - time vs a plasma property.
     '''
 
-    def __init__(self,number=None,signals=None,ttd=None,valid=None,is_disruptive=None,t_disrupt=None):
+    def __init__(self,number=None,machine=None,signals=None,signals_dict=None,ttd=None,valid=None,is_disruptive=None,t_disrupt=None):
         '''
         Shot objects contain following attributes:
     
@@ -182,17 +240,36 @@ class Shot(object):
          - is_disruptive: boolean flag indicating whether a shot is disruptive
         '''
         self.number = number #Shot number
+        self.machine = machine #machine on which it is defined
         self.signals = signals 
+        self.signals_dict = signals_dict #
         self.ttd = ttd 
         self.valid =valid 
         self.is_disruptive = is_disruptive
         self.t_disrupt = t_disrupt
         if t_disrupt is not None:
             self.is_disruptive = Shot.is_disruptive_given_disruption_time(t_disrupt)
+        else:
+            print('Warning, disruption time (disruptivity) not set! Either set t_disrupt or is_disruptive')
+
+    def get_id_str(self):
+        return '{} : {}'.format(self.machine,self.number)
+
+    def __lt__(self,other):
+        return self.get_id_str().__lt__(other.get_id_str())
+
+    def __eq__(self,other):
+        return self.get_id_str().__eq__(other.get_id_str())
+
+    def __hash__(self):
+        return self.get_id_str().__hash__()
+
 
     def __str__(self):
         string = 'number: {}\n'.format(self.number)
+        string = 'machine: {}\n'.format(self.machine)
         string += 'signals: {}\n'.format(self.signals )
+        string += 'signals_dict: {}\n'.format(self.signals_dict )
         string += 'ttd: {}\n'.format(self.ttd )
         string += 'valid: {}\n'.format(self.valid )
         string += 'is_disruptive: {}\n'.format(self.is_disruptive)
@@ -212,12 +289,100 @@ class Shot(object):
     def is_disruptive_shot(self):
         return self.is_disruptive
 
+    def get_data_arrays(self,use_signals):
+        t_array = self.ttd
+        signal_array = np.zeros((len(t_array),sum([sig.num_channels for sig in use_signals])))
+        curr_idx = 0
+        for sig in use_signals:
+            signal_array[:,curr_idx:curr_idx+sig.num_channels] = self.signals_dict[sig]
+            curr_idx += sig.num_channels
+        return t_array,signal_array
+
+    def get_individual_signal_arrays(self):
+        #guarantee ordering
+        return [self.signals_dict[sig] for sig in self.signals]
+
+    def preprocess(self,conf):
+        sys.stdout.write('\rrecomputing {}'.format(self.number))
+	sys.stdout.flush()
+      #get minmax times
+        time_arrays,signal_arrays,t_min,t_max,valid = self.get_signals_and_times_from_file(conf) 
+        self.valid = valid
+        #cut and resample
+	if self.valid:
+	        self.cut_and_resample_signals(time_arrays,signal_arrays,t_min,t_max,conf)
+
+    def get_signals_and_times_from_file(self,conf):
+        valid = True
+        t_min = -1
+        t_max = np.Inf
+        t_thresh = -1
+        signal_arrays = []
+        time_arrays = []
+
+        #disruptive = self.t_disrupt >= 0
+
+        signal_prepath = conf['paths']['signal_prepath']
+        for (i,signal) in enumerate(self.signals):
+            t,sig,valid_signal = signal.load_data(signal_prepath,self)
+            if not valid_signal:
+		return None,None,None,None,False
+            else:
+            	assert(len(sig.shape) == 2)
+            	assert(len(t.shape) == 1)
+		assert(len(t) > 1)
+                t_min = max(t_min,np.min(t))
+                t_max = min(t_max,np.max(t))
+			
+                signal_arrays.append(sig)
+                time_arrays.append(t)
+        assert(t_max > t_min or not valid)
+	#make sure the shot is long enough.
+	dt = conf['data']['dt']
+	if (t_max - t_min)/dt <= (conf['model']['length']+conf['data']['T_min_warn']):
+	    print('Shot {} contains insufficient data'.format(self.number))
+	    valid = False
+		
+	
+        if self.is_disruptive:
+            t_max = self.t_disrupt
+            assert(self.t_disrupt <= t_max or not valid)
+
+        return time_arrays,signal_arrays,t_min,t_max,valid
+
+
+    def cut_and_resample_signals(self,time_arrays,signal_arrays,t_min,t_max,conf):
+        dt = conf['data']['dt']
+        signals_dict = dict()
+
+        #resample signals
+        assert((len(signal_arrays) == len(time_arrays) == len(self.signals)) and len(signal_arrays) > 0)
+        tr = 0
+        for (i,signal) in enumerate(self.signals):
+            tr,sigr = cut_and_resample_signal(time_arrays[i],signal_arrays[i],t_min,t_max,dt)
+            signals_dict[signal] = sigr
+
+        ttd = self.convert_to_ttd(tr,conf)
+        self.signals_dict =signals_dict 
+        self.ttd = ttd
+
+    def convert_to_ttd(self,tr,conf):
+        T_max = conf['data']['T_max']
+	dt = conf['data']['dt']
+        if self.is_disruptive:
+            ttd = max(tr) - tr
+            ttd = np.clip(ttd,0,T_max)
+        else:
+            ttd = T_max*np.ones_like(tr)
+        ttd = np.log10(ttd + 1.0*dt/10)
+        return ttd
+
     def save(self,prepath):
         if not os.path.exists(prepath):
             os.makedirs(prepath)
         save_path = self.get_save_path(prepath)
-        np.savez(save_path,number=self.number,valid=self.valid,is_disruptive=self.is_disruptive,
-            signals=self.signals,ttd=self.ttd)
+        np.savez(save_path,valid=self.valid,is_disruptive=self.is_disruptive,
+            signals_dict=self.signals_dict,ttd=self.ttd)
         print('...saved shot {}'.format(self.number))
 
     def get_save_path(self,prepath):
@@ -228,15 +393,14 @@ class Shot(object):
         save_path = self.get_save_path(prepath)
         dat = np.load(save_path)
 
-        self.number = dat['number'][()]
         self.valid = dat['valid'][()]
         self.is_disruptive = dat['is_disruptive'][()]
 
         if light:
-            self.signals = None
+            self.signals_dict = None
             self.ttd = None 
         else:
-            self.signals = dat['signals']
+            self.signals_dict = dat['signals_dict'][()]
             self.ttd = dat['ttd']
   
     def previously_saved(self,prepath):
@@ -244,7 +408,7 @@ class Shot(object):
         return os.path.isfile(save_path)
 
     def make_light(self):
-        self.signals = None
+        self.signals_dict = None
         self.ttd = None
 
     @staticmethod

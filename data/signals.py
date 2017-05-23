@@ -1,76 +1,12 @@
-from MDSplus import *
+# try:
+	# from MDSplus import *
+# except ImportError:
+	# print("MDS+ not installed. Won't be able to download data")
 import numpy as np
 import time
 import sys
 
-# class SignalCollection:
-# 	"""GA Data Obj"""
-# 	def __init__(self,signal_descriptions,signal_paths):
-# 		self.signals = []
-# 		for i in range(len(signal_paths))
-# 			self.signals.append(Signal(signal_descriptions[i],signal_paths[i]))
-
-class Signal:
-	def __init__(self,description,paths,machines=['jet'],tex_label=None,causal_shifts=None):
-		assert(len(paths) == len(machines))
-		self.description = description
-		self.paths = paths
-		self.machines = machines #on which machines is the signal defined
-		if causal_shifts == None:
-			causal_shifts = [0 for m in machines]
-		self.causal_shifts = causal_shifts #causal shift in ms
-
-	def is_defined_on_machine(self,machine):
-		return machine in self.machines
-
-	def is_defined_on_machines(self,machines):
-		return all([m in self.machines for m in machines])
-
-	def get_path(self,machine):
-		idx = self.get_idx(machine)
-		return self.paths[idx]
-
-	def get_causal_shift(self,machine):
-		idx = self.get_idx(machine)
-		return self.causal_shifts[idx]
-
-	def get_idx(self,machine):
-		assert(machine in self.machines)
-		idx = self.machines.index(machine)	
-		return idx
-
-
-class Machine:
-	def __init__(self,name,server,fetch_data_fn):
-		self.name = name
-		self.server = server
-		self.fetch_data_fn = fetch_data_fn
-
-	def get_connection(self):
-		return Connection(server)
-
-	def fetch_data(self,signal,shot_num,c):
-		path = signal.get_path(self)
-		success = False
-		mapping = None
-		try:
-			time,data,mapping,success = self.fetch_data_fn(path,shot_num,c)
-		except Exception,e:
-			time,data = create_missing_value_filler()
-			print(e)
-			sys.stdout.flush()
-		time = np.array(time) + signal.get_causal_shift(self)
-		return time,np.array(data),mapping,success
-
-	def __eq__(self,other):
-		return self.name.__eq__(other.name)
-
-	
-	def __ne__(self,other):
-		return self.name.__ne__(other.name)
-	
-	def __hash__(self,other):
-		return self.name.__hash__()
+from plasma.models.data import Signal,ProfileSignal,Machine
 
 
 def create_missing_value_filler():
@@ -95,15 +31,15 @@ def fetch_d3d_data(signal_path,shot,c=None):
 	if tree == None:
 		signal = c.get('findsig("'+signal+'",_fstree)').value
 		tree = c.get('_fstree').value 
-	if c is None:
-		c = MDSplus.Connection('atlas.gat.com')
+	# if c is None:
+		# c = MDSplus.Connection('atlas.gat.com')
 
 	# ## Retrieve Data 
 	t0 =  time.time()
 	found = False
-	xdata = [0]
+	xdata = np.array([0])
 	ydata = None
-	data = [0]
+	data = np.array([0])
 
 	# Retrieve data from MDSplus (thin)
 	#first try, retrieve directly from tree andsignal 
@@ -122,10 +58,10 @@ def fetch_d3d_data(signal_path,shot,c=None):
 			xdata = c.get('dim_of(_s,1)').data()
 			xunits = get_units('dim_of(_s,1)')
 			ydata 	= c.get('dim_of(_s)').data()
-	    		yunits = get_units('dim_of(_s)')
+			yunits = get_units('dim_of(_s)')
 		else:
 			xdata = c.get('dim_of(_s)').data()
-	    		xunits = get_units('dim_of(_s)')
+			xunits = get_units('dim_of(_s)')
 		found = True
 		# MDSplus seems to return 2-D arrays transposed.  Change them back.
 		if np.ndim(data) == 2: data = np.transpose(data)
@@ -140,17 +76,17 @@ def fetch_d3d_data(signal_path,shot,c=None):
 	# Retrieve data from PTDATA if node not found
 	if not found:
 		#print("not in full path {}".format(signal))
-		data = c.get('_s = ptdata2("'+signal+'",'+str(shot)+')')
+		data = c.get('_s = ptdata2("'+signal+'",'+str(shot)+')').data()
 		if len(data) != 1:
-			xdata = c.get('dim_of(_s)')
+			xdata = c.get('dim_of(_s)').data()
 			rank = 1
 			found = True
 	# Retrieve data from Pseudo-pointname if not in ptdata
 	if not found:
 		#print("not in PTDATA {}".format(signal))
-		data = c.get('_s = pseudo("'+signal+'",'+str(shot)+')')
+		data = c.get('_s = pseudo("'+signal+'",'+str(shot)+')').data()
 		if len(data) != 1:
-			xdata = c.get('dim_of(_s)')
+			xdata = c.get('dim_of(_s)').data()
 			rank = 1
 			found = True
 	#this means the signal wasn't found
@@ -159,6 +95,7 @@ def fetch_d3d_data(signal_path,shot,c=None):
 		pass
 
     # print '   GADATA Retrieval Time : ',time.time() - t0
+	xdata = xdata*1e-3#time is measued in ms
 	return xdata,data,ydata,found
 
 
@@ -176,47 +113,63 @@ def fetch_nstx_data(signal_path,shot_num,c):
 	found = True
 	return time,data,None,found
 
-d3d = Machine("d3d","atlas.gat.com",fetch_d3d_data)
-jet = Machine("jet","mdsplus.jet.efda.org",fetch_jet_data)
-nstk = Machine("nstx","skylark.pppl.gov:8501::",fetch_nstx_data)
+
+
+
+
+d3d = Machine("d3d","atlas.gat.com",fetch_d3d_data,max_cores=32,current_threshold=1e-1)
+jet = Machine("jet","mdsplus.jet.efda.org",fetch_jet_data,max_cores=8,current_threshold=1e5)
+nstx = Machine("nstx","skylark.pppl.gov:8501::",fetch_nstx_data,max_cores=8)
 
 
 all_machines = [d3d,jet]
 
-etemp_profile = Signal("Electron temperature profile",["ZIPFIT01/PROFILES.ETEMPFIT"],[d3d],causal_shifts=[10])
-edens_profile = Signal("Electron density profile",["ZIPFIT01/PROFILES.EDENSFIT"],[d3d],causal_shifts=[10])
+profile_num_channels = 32
+etemp_profile = ProfileSignal("Electron temperature profile",["ZIPFIT01/PROFILES.ETEMPFIT"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels)
+edens_profile = ProfileSignal("Electron density profile",["ZIPFIT01/PROFILES.EDENSFIT"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels)
 
-q95 = Signal("q95 safety factor",["EFIT01/RESULTS.AEQDSK.Q95"],[d3d],causal_shifts=[10])
+q95 = Signal("q95 safety factor",['ppf/efit/q95',"EFIT01/RESULTS.AEQDSK.Q95"],[jet,d3d],causal_shifts=[15,10])
 
-li = Signal("locked mode amplitude",["jpf/gs/bl-li<s","d3d/efsli"],[jet,d3d])
-ip = Signal("plasma current",["jpf/da/c2-ipla","d3d/ipsip"],[jet,d3d])
-betan = Signal("Normalized Beta",['d3d/efsbetan'],[d3d])
-energy = Signal("stored energy",['d3d/efswmhd'],[d3d])
+ip = Signal("plasma current",["jpf/da/c2-ipla","d3d/ipsip"],[jet,d3d],is_ip=True)
+li = Signal("internal inductance",["jpf/gs/bl-li<s","d3d/efsli"],[jet,d3d])
 lm = Signal("Locked mode amplitude",['jpf/da/c2-loca','d3d/dusbradial'],[jet,d3d])
-dens = Signal("Plasma density",['jpf/df/g1r-lid:002','d3d/dssdenest'],[jet,d3d])
+dens = Signal("Plasma density",['jpf/df/g1r-lid:003','d3d/dssdenest'],[jet,d3d])
+energy = Signal("stored energy",['jpf/gs/bl-wmhd<s','d3d/efswmhd'],[jet,d3d])
+pin = Signal("Input Power (beam for d3d)",['jpf/gs/bl-ptot<s','d3d/bmspinj'],[jet,d3d]) #Total Beam Power
 
+pradtot = Signal("Radiated Power",['jpf/db/b5r-ptot>out'],[jet])
 pradcore = Signal("Radiated Power Core",['d3d/'+r'\bol_l15_p'],[d3d])
 pradedge = Signal("Radiated Power Edge",['d3d/'+r'\bol_l03_p'],[d3d])
-pradtot = Signal("Radiated Power",['jpf/db/b5r-ptot>out'],[jet])
-pin = Signal("Input Power (beam for d3d)",['jpf/gs/bl-ptot<s','d3d/bmspinj'],[jet,d3d]) #Total Beam Power
-pechin = Signal("ECH input power, not always on",['d3d/pcechpwrf'],[d3d])
+# pechin = Signal("ECH input power, not always on",['d3d/pcechpwrf'],[d3d])
+pechin = Signal("ECH input power, not always on",['RF/ECH.TOTAL.ECHPWRC'],[d3d])
+
+betan = Signal("Normalized Beta",['d3d/efsbetan'],[d3d])
+energydt = Signal("stored energy time derivative",['jpf/gs/bl-fdwdt<s'],[jet])
 
 torquein = Signal("Input Beam Torque",['d3d/bmstinj'],[d3d]) #Total Beam Power
 tmamp1 = Signal("Tearing Mode amplitude (rotating 2/1)", ['d3d/nssampn1l'],[d3d])
 tmamp2 = Signal("Tearing Mode amplitude (rotating 3/2)", ['d3d/nssampn2l'],[d3d])
 tmfreq1 = Signal("Tearing Mode frequency (rotating 2/1)", ['d3d/nssfrqn1l'],[d3d])
 tmfreq2 = Signal("Tearing Mode frequency (rotating 3/2)", ['d3d/nssfrqn2l'],[d3d])
+ipdirect = Signal("plasma current direction",["d3d/iptdirect"],[d3d])
 
-
-all_signals = [etemp_profile,edens_profile,q95,li,ip,
+#for downloading
+all_signals = [q95,li,ip,
 betan,energy,lm,dens,pradcore,pradedge,pradtot,pin,
-torquein,tmamp1,tmamp2,tmfreq1,tmfreq2
-#pechin,
+torquein,tmamp1,tmamp2,tmfreq1,tmfreq2,pechin,energydt,ipdirect,etemp_profile,edens_profile,
 ]
 
+#for actual data analysis
+#all_signals_restricted = [q95,li,ip,energy,lm,dens,pradcore,pradtot,pin,etemp_profile,edens_profile]
 
-fully_defined_signals = [sig for sig in all_signals if sig.is_defined_on_machines(all_machines)]
-d3d_signals = [sig for sig in all_signals if sig.is_defined_on_machine(d3d)]
+all_signals_restricted = all_signals
+
+print('all signals:')
+print(all_signals)
+
+fully_defined_signals = [sig for sig in all_signals_restricted if sig.is_defined_on_machines(all_machines)]
+d3d_signals = [sig for sig in all_signals_restricted if sig.is_defined_on_machine(d3d)]
+jet_signals = [sig for sig in all_signals_restricted if sig.is_defined_on_machine(jet)]
 
 
 

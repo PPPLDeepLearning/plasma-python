@@ -6,8 +6,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from itertools import imap
 
-from hyperopt import hp, STATUS_OK
-from hyperas.distributions import conditional
+#leading to import errors:
+#from hyperopt import hp, STATUS_OK
+#from hyperas.distributions import conditional
 
 import time
 import sys
@@ -16,11 +17,103 @@ from functools import partial
 import pathos.multiprocessing as mp
 
 from plasma.conf import conf
-from plasma.models.loader import Loader
+from plasma.models.loader import Loader, ProcessGenerator
 from plasma.utils.performance import PerformanceAnalyzer
 from plasma.utils.evaluation import *
+from plasma.utils.state_reset import reset_states
 
 backend = conf['model']['backend']
+
+# def train(conf,shot_list_train,loader):
+
+#     np.random.seed(1)
+
+#     validation_losses = []
+#     validation_roc = []
+#     training_losses = []
+#     if conf['training']['validation_frac'] > 0.0:
+#         shot_list_train,shot_list_validate = shot_list_train.split_direct(1.0-conf['training']['validation_frac'],do_shuffle=True)
+#         print('validate: {} shots, {} disruptive'.format(len(shot_list_validate),shot_list_validate.num_disruptive()))
+#     print('training: {} shots, {} disruptive'.format(len(shot_list_train),shot_list_train.num_disruptive()))
+
+#     if backend == 'tf' or backend == 'tensorflow':
+#         import tensorflow as tf
+#         os.environ['KERAS_BACKEND'] = 'tensorflow'
+#         from keras.backend.tensorflow_backend import set_session
+#         config = tf.ConfigProto(device_count={"GPU":1})
+#         set_session(tf.Session(config=config))
+#     else:
+#         os.environ['KERAS_BACKEND'] = 'theano'
+#         os.environ['THEANO_FLAGS'] = 'device=gpu,floatX=float32'
+#         import theano
+
+#     from keras.utils.generic_utils import Progbar 
+#     from keras import backend as K
+#     from plasma.models import builder
+
+#     print('Build model...',end='')
+#     specific_builder = builder.ModelBuilder(conf)
+#     train_model = specific_builder.build_model(False) 
+#     print('...done')
+
+#     #load the latest epoch we did. Returns -1 if none exist yet
+#     e = specific_builder.load_model_weights(train_model)
+
+#     num_epochs = conf['training']['num_epochs']
+#     num_at_once = conf['training']['num_shots_at_once']
+#     lr_decay = conf['model']['lr_decay']
+#     lr = conf['model']['lr']
+#     print('{} epochs left to go'.format(num_epochs - 1 - e))
+#     while e < num_epochs-1:
+#         e += 1
+#         print('\nEpoch {}/{}'.format(e+1,num_epochs))
+#         pbar =  Progbar(len(shot_list_train))
+
+#         #shuffle during every iteration
+#         shot_list_train.shuffle() 
+#         shot_sublists = shot_list_train.sublists(num_at_once)
+#         training_losses_tmp = []
+
+#         #decay learning rate each epoch:
+#         K.set_value(train_model.optimizer.lr, lr*lr_decay**(e))
+        
+#         #print('Learning rate: {}'.format(train_model.optimizer.lr.get_value()))
+#         for (i,shot_sublist) in enumerate(shot_sublists):
+#             X_list,y_list = loader.load_as_X_y_list(shot_sublist)
+#             for j,(X,y) in enumerate(zip(X_list,y_list)):
+#                 history = builder.LossHistory()
+#                 #load data and fit on data
+#                 train_model.fit(X,y,
+#                     batch_size=Loader.get_batch_size(conf['training']['batch_size'],prediction_mode=False),
+#                     epochs=1,shuffle=False,verbose=0,
+#                     validation_split=0.0,callbacks=[history])
+#                 train_model.reset_states()
+#                 train_loss = np.mean(history.losses)
+#                 training_losses_tmp.append(train_loss)
+
+#                 pbar.add(1.0*len(shot_sublist)/len(X_list), values=[("train loss", train_loss)])
+#                 loader.verbose=False#True during the first iteration
+#         sys.stdout.flush()
+#         training_losses.append(np.mean(training_losses_tmp))
+#         specific_builder.save_model_weights(train_model,e)
+
+#         if conf['training']['validation_frac'] > 0.0:
+#             _,_,_,roc_area,loss = make_predictions_and_evaluate_gpu(conf,shot_list_validate,loader)
+#             validation_losses.append(loss)
+#             validation_roc.append(roc_area)
+
+#         print('=========Summary========')
+#         print('Training Loss: {:.3e}'.format(training_losses[-1]))
+#         if conf['training']['validation_frac'] > 0.0:
+#             print('Validation Loss: {:.3e}'.format(validation_losses[-1]))
+#             print('Validation ROC: {:.4f}'.format(validation_roc[-1]))
+
+
+#     # plot_losses(conf,[training_losses],specific_builder,name='training')
+#     if conf['training']['validation_frac'] > 0.0:
+#         plot_losses(conf,[training_losses,validation_losses,validation_roc],specific_builder,name='training_validation_roc')
+#     print('...done')
+
 
 def train(conf,shot_list_train,loader):
 
@@ -35,11 +128,13 @@ def train(conf,shot_list_train,loader):
     print('training: {} shots, {} disruptive'.format(len(shot_list_train),shot_list_train.num_disruptive()))
 
     if backend == 'tf' or backend == 'tensorflow':
-        import tensorflow as tf
-        os.environ['KERAS_BACKEND'] = 'tensorflow'
-        from keras.backend.tensorflow_backend import set_session
-        config = tf.ConfigProto(device_count={"GPU":1})
-        set_session(tf.Session(config=config))
+        first_time = "tensorflow" not in sys.modules
+	if first_time:
+        	import tensorflow as tf
+        	os.environ['KERAS_BACKEND'] = 'tensorflow'
+        	from keras.backend.tensorflow_backend import set_session
+        	config = tf.ConfigProto(device_count={"GPU":1})
+        	set_session(tf.Session(config=config))
     else:
         os.environ['KERAS_BACKEND'] = 'theano'
         os.environ['THEANO_FLAGS'] = 'device=gpu,floatX=float32'
@@ -56,47 +151,61 @@ def train(conf,shot_list_train,loader):
 
     #load the latest epoch we did. Returns -1 if none exist yet
     e = specific_builder.load_model_weights(train_model)
+    e_start = e
+    batch_generator = partial(loader.training_batch_generator_partial_reset,shot_list=shot_list_train)
+    batch_iterator = ProcessGenerator(batch_generator())
 
     num_epochs = conf['training']['num_epochs']
     num_at_once = conf['training']['num_shots_at_once']
     lr_decay = conf['model']['lr_decay']
     lr = conf['model']['lr']
     print('{} epochs left to go'.format(num_epochs - 1 - e))
+    num_so_far_accum = 0
+    num_so_far = 0
+    num_total = np.inf
     while e < num_epochs-1:
         e += 1
         print('\nEpoch {}/{}'.format(e+1,num_epochs))
         pbar =  Progbar(len(shot_list_train))
 
-        #shuffle during every iteration
-        shot_list_train.shuffle() 
-        shot_sublists = shot_list_train.sublists(num_at_once)
-        training_losses_tmp = []
-
         #decay learning rate each epoch:
         K.set_value(train_model.optimizer.lr, lr*lr_decay**(e))
         
         #print('Learning rate: {}'.format(train_model.optimizer.lr.get_value()))
-        for (i,shot_sublist) in enumerate(shot_sublists):
-            X_list,y_list = loader.load_as_X_y_list(shot_sublist)
-            for j,(X,y) in enumerate(zip(X_list,y_list)):
-                history = builder.LossHistory()
-                #load data and fit on data
-                train_model.fit(X,y,
-                    batch_size=Loader.get_batch_size(conf['training']['batch_size'],prediction_mode=False),
-                    epochs=1,shuffle=False,verbose=0,
-                    validation_split=0.0,callbacks=[history])
-                train_model.reset_states()
-                train_loss = np.mean(history.losses)
-                training_losses_tmp.append(train_loss)
+        num_batches_minimum = 100
+        num_batches_current = 0
+        training_losses_tmp = []
 
-                pbar.add(1.0*len(shot_sublist)/len(X_list), values=[("train loss", train_loss)])
-                loader.verbose=False#True during the first iteration
+        while num_so_far < (e - e_start)*num_total or num_batches_current < num_batches_minimum:
+            num_so_far_old = num_so_far
+            try:
+                batch_xs,batch_ys,batches_to_reset,num_so_far_curr,num_total = next(batch_iterator)
+            except StopIteration:
+                print("Resetting batch iterator.")
+                num_so_far_accum = num_so_far
+                batch_iterator = ProcessGenerator(batch_generator())
+                batch_xs,batch_ys,batches_to_reset,num_so_far_curr,num_total = next(batch_iterator)
+            num_so_far = num_so_far_accum+num_so_far_curr
+
+            num_batches_current +=1 
+
+            if np.any(batches_to_reset):
+                reset_states(train_model,batches_to_reset)
+
+            loss = train_model.train_on_batch(batch_xs,batch_ys)
+            training_losses_tmp.append(loss)
+            pbar.add(num_so_far - num_so_far_old, values=[("train loss", loss)])
+            loader.verbose=False#True during the first iteration
+
+
+        e = e_start+1.0*num_so_far/num_total
         sys.stdout.flush()
         training_losses.append(np.mean(training_losses_tmp))
-        specific_builder.save_model_weights(train_model,e)
+        specific_builder.save_model_weights(train_model,int(round(e)))
 
         if conf['training']['validation_frac'] > 0.0:
-            roc_area,loss = make_predictions_and_evaluate_gpu(conf,shot_list_validate,loader)
+	    print("prediction on GPU...")
+            _,_,_,roc_area,loss = make_predictions_and_evaluate_gpu(conf,shot_list_validate,loader)
             validation_losses.append(loss)
             validation_roc.append(roc_area)
 
@@ -105,11 +214,15 @@ def train(conf,shot_list_train,loader):
         if conf['training']['validation_frac'] > 0.0:
             print('Validation Loss: {:.3e}'.format(validation_losses[-1]))
             print('Validation ROC: {:.4f}'.format(validation_roc[-1]))
+	
+	print("end epoch. {} / {}".format(num_so_far,(e-e_start)*num_total))
+	print("e: {}".format(e))
 
 
     # plot_losses(conf,[training_losses],specific_builder,name='training')
     if conf['training']['validation_frac'] > 0.0:
         plot_losses(conf,[training_losses,validation_losses,validation_roc],specific_builder,name='training_validation_roc')
+    batch_iterator.__exit__()
     print('...done')
 
 class HyperRunner(object):
@@ -171,7 +284,7 @@ class HyperRunner(object):
             training_losses.append(np.mean(training_losses_tmp))
             specific_builder.save_model_weights(train_model,e)
 
-            roc_area,loss = make_predictions_and_evaluate_gpu(self.conf,shot_list_validate,self.loader)
+            _,_,_,roc_area,loss = make_predictions_and_evaluate_gpu(self.conf,shot_list_validate,self.loader)
             print("Epoch: {}, loss: {}, validation_losses_size: {}".format(e,loss,len(validation_losses)))
             validation_losses.append(loss)
             validation_roc.append(roc_area)
@@ -228,11 +341,13 @@ def make_predictions(conf,shot_list,loader):
     use_cores = max(1,mp.cpu_count()-2)
 
     if backend == 'tf' or backend == 'tensorflow':
-        import tensorflow as tf
-        os.environ['KERAS_BACKEND'] = 'tensorflow'
-        from keras.backend.tensorflow_backend import set_session
-        config = tf.ConfigProto(device_count={"CPU":use_cores})
-        set_session(tf.Session(config=config))
+        first_time = "tensorflow" not in sys.modules
+	if first_time:
+        	import tensorflow as tf
+        	os.environ['KERAS_BACKEND'] = 'tensorflow'
+        	from keras.backend.tensorflow_backend import set_session
+        	config = tf.ConfigProto(device_count={"CPU":use_cores})
+        	set_session(tf.Session(config=config))
     else:
         os.environ['THEANO_FLAGS'] = 'device=cpu'
         import theano
@@ -287,11 +402,13 @@ def make_single_prediction(shot,specific_builder,loader,model_save_path):
 def make_predictions_gpu(conf,shot_list,loader):
 
     if backend == 'tf' or backend == 'tensorflow':
-        import tensorflow as tf
-        os.environ['KERAS_BACKEND'] = 'tensorflow'
-        from keras.backend.tensorflow_backend import set_session
-        config = tf.ConfigProto(device_count={"GPU":1})
-        set_session(tf.Session(config=config))
+        first_time = "tensorflow" not in sys.modules
+	if first_time:
+        	import tensorflow as tf
+        	os.environ['KERAS_BACKEND'] = 'tensorflow'
+        	from keras.backend.tensorflow_backend import set_session
+        	config = tf.ConfigProto(device_count={"GPU":1})
+        	set_session(tf.Session(config=config))
     else:
         os.environ['THEANO_FLAGS'] = 'device=gpu,floatX=float32'
         import theano
@@ -338,17 +455,19 @@ def make_predictions_and_evaluate_gpu(conf,shot_list,loader):
     y_prime,y_gold,disruptive = make_predictions_gpu(conf,shot_list,loader)
     analyzer = PerformanceAnalyzer(conf=conf)
     roc_area = analyzer.get_roc_area(y_prime,y_gold,disruptive)
-    loss = get_loss_from_list(y_prime,y_gold,conf['data']['target'].loss)
-    return roc_area,loss
+    loss = get_loss_from_list(y_prime,y_gold,conf['data']['target'])
+    return y_prime,y_gold,disruptive,roc_area,loss
 
 def make_evaluations_gpu(conf,shot_list,loader):
 
     if backend == 'tf' or backend == 'tensorflow':
-        import tensorflow as tf
-        os.environ['KERAS_BACKEND'] = 'tensorflow'
-        from keras.backend.tensorflow_backend import set_session
-        config = tf.ConfigProto(device_count={"GPU":1})
-        set_session(tf.Session(config=config))
+        first_time = "tensorflow" not in sys.modules
+	if first_time:
+        	import tensorflow as tf
+        	os.environ['KERAS_BACKEND'] = 'tensorflow'
+        	from keras.backend.tensorflow_backend import set_session
+        	config = tf.ConfigProto(device_count={"GPU":1})
+        	set_session(tf.Session(config=config))
     else:
         os.environ['THEANO_FLAGS'] = 'device=gpu,floatX=float32'
         import theano

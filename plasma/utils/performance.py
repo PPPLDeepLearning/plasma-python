@@ -1,3 +1,6 @@
+from __future__ import print_function
+import matplotlib
+matplotlib.use('Agg')#for machines that don't have a display
 import matplotlib.pyplot as plt
 import os
 from pprint import pprint
@@ -27,6 +30,8 @@ class PerformanceAnalyzer():
         self.disruptive_test = None
         self.shot_list_test = None
 
+	self.p_thresh_range = None
+
         self.normalizer = None
 
 
@@ -46,11 +51,9 @@ class PerformanceAnalyzer():
         return self.get_metrics_vs_p_thresh_custom(all_preds,all_truths,all_disruptive)
 
 
-    def get_p_thresh_range(self):
-        return self.conf['data']['target'].threshold_range(self.conf['data']['T_warning'])
-
 
     def get_metrics_vs_p_thresh_custom(self,all_preds,all_truths,all_disruptive):
+        return self.get_metrics_vs_p_thresh_fast(all_preds,all_truths,all_disruptive)
         P_thresh_range = self.get_p_thresh_range()
         correct_range = np.zeros_like(P_thresh_range)
         accuracy_range = np.zeros_like(P_thresh_range)
@@ -67,6 +70,101 @@ class PerformanceAnalyzer():
             early_alarm_range[i] = early_alarm_rate
         
         return correct_range,accuracy_range,fp_range,missed_range,early_alarm_range
+
+
+    def get_p_thresh_range(self):
+    	#return self.conf['data']['target'].threshold_range(self.conf['data']['T_warning'])
+	if self.p_thresh_range == None:
+		all_preds_tr = self.pred_train
+		all_truths_tr = self.truth_train
+		all_disruptive_tr = self.disruptive_train
+		all_preds_te = self.pred_test
+		all_truths_te = self.truth_test
+		all_disruptive_te = self.disruptive_test
+	
+	        early_th_tr,correct_th_tr,late_th_tr,nd_th_tr = self.get_threshold_arrays(all_preds_tr,all_truths_tr,all_disruptive_tr)
+	        early_th_te,correct_th_te,late_th_te,nd_th_te = self.get_threshold_arrays(all_preds_te,all_truths_te,all_disruptive_te)
+	        all_thresholds = np.sort(np.concatenate((early_th_tr,correct_th_tr,late_th_tr,nd_th_tr,early_th_te,correct_th_te,late_th_te,nd_th_te)))
+		self.p_thresh_range = all_thresholds
+	return self.p_thresh_range
+		
+
+    def get_metrics_vs_p_thresh_fast(self,all_preds,all_truths,all_disruptive):
+	all_disruptive = np.array(all_disruptive)	
+	if self.pred_train is not None:
+		p_thresh_range = self.get_p_thresh_range()
+	else:
+	        early_th,correct_th,late_th,nd_th = self.get_threshold_arrays(all_preds,all_truths,all_disruptive)
+	        p_thresh_range = np.sort(np.concatenate((early_th,correct_th,late_th,nd_th)))
+        correct_range = np.zeros_like(p_thresh_range)
+        accuracy_range = np.zeros_like(p_thresh_range)
+        fp_range = np.zeros_like(p_thresh_range)
+        missed_range = np.zeros_like(p_thresh_range)
+        early_alarm_range = np.zeros_like(p_thresh_range)
+
+	early_th,correct_th,late_th,nd_th = self.get_threshold_arrays(all_preds,all_truths,all_disruptive)
+
+        for i,thresh in enumerate(p_thresh_range):
+            #correct,accuracy,fp_rate,missed,early_alarm_rate = self.summarize_shot_prediction_stats(thresh,all_preds,all_truths,all_disruptive)
+            correct,accuracy,fp_rate,missed,early_alarm_rate = self.get_shot_prediction_stats_from_threshold_arrays(early_th,correct_th,late_th,nd_th,thresh)
+            correct_range[i] = correct
+            accuracy_range[i] = accuracy 
+            fp_range[i] = fp_rate 
+            missed_range[i] = missed
+            early_alarm_range[i] = early_alarm_rate
+        
+        return correct_range,accuracy_range,fp_range,missed_range,early_alarm_range
+
+    def get_shot_prediction_stats_from_threshold_arrays(self,early_th,correct_th,late_th,nd_th,thresh):
+	indices = np.where(np.logical_and(correct_th > thresh,early_th <= thresh))[0]
+        FPs = np.sum(nd_th > thresh)
+        TNs = len(nd_th) - FPs 
+
+        earlies = np.sum(early_th > thresh) 
+        TPs = np.sum(np.logical_and(early_th <= thresh,correct_th > thresh)) 
+        lates = np.sum(np.logical_and(np.logical_and(early_th <= thresh,correct_th <= thresh),late_th > thresh))
+        FNs = np.sum(np.logical_and(np.logical_and(early_th <= thresh,correct_th <= thresh),late_th <= thresh))
+
+        return self.get_accuracy_and_fp_rate_from_stats(TPs,FPs,FNs,TNs,earlies,lates)
+
+
+
+    def get_threshold_arrays(self,preds,truths,disruptives):
+        num_d = np.sum(disruptives)
+        num_nd = np.sum(~disruptives)
+        nd_thresholds = [] 
+        d_early_thresholds = [] 
+        d_correct_thresholds = [] 
+        d_late_thresholds = [] 
+        for i in range(len(preds)):
+            pred = 1.0*preds[i]
+            truth = truths[i]
+	    pred[:self.get_ignore_indices()] = -np.inf
+            is_disruptive = disruptives[i] 
+            if is_disruptive:
+                max_acceptable = self.create_acceptable_region(truth,'max')
+                min_acceptable = self.create_acceptable_region(truth,'min')
+                correct_indices = np.logical_and(max_acceptable, ~min_acceptable)
+                early_indices = ~max_acceptable
+                late_indices = min_acceptable
+		if np.sum(late_indices) == 0:
+                	d_late_thresholds.append(-np.inf)
+		else:
+	                d_late_thresholds.append(np.max(pred[late_indices]))
+		if np.sum(early_indices) == 0:
+                	d_early_thresholds.append(-np.inf)
+		else:
+                	d_early_thresholds.append(np.max(pred[early_indices]))
+			
+                d_correct_thresholds.append(np.max(pred[correct_indices]))
+            else:
+                nd_thresholds.append(np.max(pred))
+        return np.array(d_early_thresholds), np.array(d_correct_thresholds),np.array(d_late_thresholds), np.array(nd_thresholds)
+     
+
+
+
+
 
     def summarize_shot_prediction_stats_by_mode(self,P_thresh,mode,verbose=False):
 
@@ -142,10 +240,13 @@ class PerformanceAnalyzer():
                 FP = 1
         return TP,FP,FN,TN,early,late
 
+    def get_ignore_indices(self):
+	return conf['model']['ignore_timesteps']
+
 
     def get_positives(self,predictions):
         indices = np.arange(len(predictions))
-        return np.where(np.logical_and(predictions,indices >= 100))[0]
+        return np.where(np.logical_and(predictions,indices >= self.get_ignore_indices()))[0]
 
 
     def create_acceptable_region(self,truth,mode):
@@ -197,6 +298,7 @@ class PerformanceAnalyzer():
         results_files = os.listdir(self.results_dir)
         print(results_files)
         dat = np.load(self.results_dir + results_files[self.i])
+	print("Loading results file {}".format(self.results_dir + results_files[self.i]))
 
         if self.verbose:
             print('configuration: {} '.format(dat['conf']))
@@ -213,6 +315,20 @@ class PerformanceAnalyzer():
         for mode in ['test','train']:
             print('{}: loaded {} shot ({}) disruptive'.format(mode,self.get_num_shots(mode),self.get_num_disruptive_shots(mode)))
         self.print_conf()
+	#self.assert_same_lists(self.shot_list_test,self.truth_test,self.disruptive_test)
+	#self.assert_same_lists(self.shot_list_train,self.truth_train,self.disruptive_train)
+
+    def assert_same_lists(self,shot_list,truth_arr,disr_arr):
+	assert(len(shot_list) == len(truth_arr))
+	for i in range(len(shot_list)):
+		shot_list.shots[i].restore("/tigress/jk7/processed_shots/")
+		s = shot_list.shots[i].ttd
+		if not truth_arr[i].shape[0] == s.shape[0]-30:
+			print(i)
+			print(shot_list.shots[i].number)
+			print((s.shape,truth_arr[i].shape,disr_arr[i]))
+		assert(truth_arr[i].shape[0] == s.shape[0]-30)
+	print("Same Shape!")
    
     def print_conf(self):
         pprint(self.conf) 
@@ -433,6 +549,7 @@ class PerformanceAnalyzer():
             p = pred[i]
             is_disr = is_disruptive[i]
             shot = shot_list.shots[i]
+
             TP,FP,FN,TN,early,late =self.get_shot_prediction_stats(P_thresh_opt,p,t,is_disr)
             prediction_type = self.get_prediction_type(TP,FP,FN,TN,early,late)
             if not all(_ in set(['FP','TP','FN','TN','late','early','any']) for _ in types_to_plot):
@@ -469,56 +586,77 @@ class PerformanceAnalyzer():
             is_disruptive =  shot.is_disruptive
             if normalize:
                 self.normalizer.apply(shot)
-            #shot.signals is a 2D numpy array with the rows containing the unlabeled timeseries data
-            signals = np.empty((len(shot.signals),0)) #None
 
-            labels = []
-            signals_index = 0
-            signals_masks = conf['paths']['signals_masks']
-            plot_masks = conf['plots']['plot_masks']
-            group_labels = conf['plots']['group_labels']
-            for i, group in enumerate(conf['paths']['signals_dirs']):
-                for j,signal_name in enumerate(group):
-                    if signals_masks[i][j]: #signal was used in training/testing
-                        if plot_masks[i][j]: #subset of signals to be plotted
-                            labels += group_labels[i] #original object was 2D by PPFvs.JPF x signal group
-                            signals = np.column_stack((signals,shot.signals.T[signals_index]))
-                        signals_index += 1
-
-            if is_disruptive:
-                print('disruptive')
-            else:
-                print('non disruptive')
-
-            f,axarr = subplots(len(signals.T)+1,1,sharex=True,figsize=(13,13))#, squeeze=False)
-            title(prediction_type)
-            for (i,sig) in enumerate(signals.T):
+            use_signals = self.conf['paths']['use_signals']
+            f,axarr = plt.subplots(len(use_signals)+1,1,sharex=True,figsize=(13,13))#, squeeze=False)
+            plt.title(prediction_type)
+            assert(np.all(shot.ttd.flatten() == truth.flatten()))
+            for i,sig in enumerate(use_signals):
+                num_channels = sig.num_channels
                 ax = axarr[i]
-                ax.plot(sig[::-1],label = labels[i])
-                ax.legend(loc='best',fontsize=8)
-                setp(ax.get_xticklabels(),visible=False)
-                setp(ax.get_yticklabels(),fontsize=7)
+                sig_arr = shot.signals_dict[sig]
+                if num_channels == 1:
+                    ax.plot(sig_arr[:,0],label = sig.description)
+                else:
+                    ax.imshow(sig_arr[:,:].T, aspect='auto', label = sig.description + " (profile)")
+		    ax.set_ylim([0,num_channels])
+                ax.legend(loc='upper center',fontsize=8)
+                plt.setp(ax.get_xticklabels(),visible=False)
+                plt.setp(ax.get_yticklabels(),fontsize=7)
                 f.subplots_adjust(hspace=0)
-                print('min: {}, max: {}'.format(min(sig), max(sig)))
+		#print(sig)
+                #print('min: {}, max: {}'.format(np.min(sig_arr), np.max(sig_arr)))
+            #shot.signals is a 2D numpy array with the rows containing the unlabeled timeseries data
+            # signals = np.empty((len(shot.signals),0)) #None
+
+            # labels = []
+            # signals_index = 0
+            # signals_masks = conf['paths']['signals_masks']
+            # plot_masks = conf['plots']['plot_masks']
+            # group_labels = conf['plots']['group_labels']
+            # for i, group in enumerate(conf['paths']['signals_dirs']):
+            #     for j,signal_name in enumerate(group):
+            #         if signals_masks[i][j]: #signal was used in training/testing
+            #             if plot_masks[i][j]: #subset of signals to be plotted
+            #                 labels += group_labels[i] #original object was 2D by PPFvs.JPF x signal group
+            #                 signals = np.column_stack((signals,shot.signals.T[signals_index]))
+            #             signals_index += 1
+
+            # if is_disruptive:
+            #     print('disruptive')
+            # else:
+            #     print('non disruptive')
+
+            # f,axarr = subplots(len(signals.T)+1,1,sharex=True,figsize=(13,13))#, squeeze=False)
+            # title(prediction_type)
+            # for (i,sig) in enumerate(signals.T):
+            #     ax = axarr[i]
+            #     ax.plot(sig[::-1],label = labels[i])
+            #     ax.legend(loc='best',fontsize=8)
+            #     setp(ax.get_xticklabels(),visible=False)
+            #     setp(ax.get_yticklabels(),fontsize=7)
+            #     f.subplots_adjust(hspace=0)
+            #     print('min: {}, max: {}'.format(min(sig), max(sig)))
             ax = axarr[-1] 
             if self.pred_ttd:
-                ax.semilogy((-truth+0.0001)[::-1],label='ground truth')
-                ax.plot(-prediction[::-1]+0.0001,'g',label='neural net prediction')
+                ax.semilogy((-truth+0.0001),label='ground truth')
+                ax.plot(-prediction+0.0001,'g',label='neural net prediction')
                 ax.axhline(-P_thresh_opt,color='k',label='trigger threshold')
             else:
-                ax.plot((truth+0.001)[::-1],label='ground truth')
-                ax.plot(prediction[::-1],'g',label='neural net prediction')
+                ax.plot((truth+0.001),label='ground truth')
+                ax.plot(prediction,'g',label='neural net prediction')
                 ax.axhline(P_thresh_opt,color='k',label='trigger threshold')
             #ax.set_ylim([1e-5,1.1e0])
             ax.set_ylim([-2,2])
-            ax.axvline(self.T_min_warn,color='r',label='max warning time')
-            ax.axvline(self.T_max_warn,color='r',label='min warning time')
+            ax.axvline(len(truth)-self.T_min_warn,color='r',label='max warning time')
+            ax.axvline(len(truth)-self.T_max_warn,color='r',label='min warning time')
             ax.set_xlabel('TTD [ms]')
-            ax.legend(loc = 'best',fontsize=10)
+            ax.legend(loc = 'upper center',fontsize=10)
             plt.setp(ax.get_yticklabels(),fontsize=7)
             # ax.grid()           
             if save_fig:
                 plt.savefig('sig_fig_{}.png'.format(shot.number),bbox_inches='tight')
+	    plt.close()
         else:
             print("Shot hasn't been processed")
 
@@ -542,7 +680,7 @@ class PerformanceAnalyzer():
         if save_figure:
             plt.savefig(title_str + '.png',bbox_inches='tight')
         plt.close('all')
-        plt.plot(fp_range,1-missed_range,'o-b')
+        plt.plot(fp_range,1-missed_range,'-b')
         ax = plt.gca()
         plt.xlabel('FP rate')
         plt.ylabel('TP rate')
@@ -644,4 +782,5 @@ class PerformanceAnalyzer():
 #         correct,accuracy,fp_rate,missed,early_alarm_rate = summarize_shot_prediction_stats(P_thresh,ttd_prime_by_shot, \
 #                                 ttd_by_shot,disr,length,T_min_warn,T_max_warn,verbose=verbose)
 #         return fp_rate
+
 
