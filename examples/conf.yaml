@@ -34,7 +34,8 @@ paths:
                  'jpf/df/g1r-lid:007',
                  'jpf/df/g1r-lid:008']]
     positivity_mask: [['jpf/da/c2-ipla'], 
-                     ['jpf/gs/bl-fdwdt<s']]
+                      ['jpf/gs/bl-fdwdt<s']]
+    tensorboard_save_path: '/Graph/'
 
 data:
     cut_shot_ends: True
@@ -96,6 +97,7 @@ model:
     ignore_timesteps: 100 #how many initial timesteps to ignore during evaluation (to let the internal state settle)
     backend: 'tensorflow' #'theano' #'tensorflow' #theano
 
+
 training:
     as_array_of_shots: True
     shuffle_training: True
@@ -106,7 +108,8 @@ training:
     max_patch_length: 100000
     #How many shots are we loading at once?
     num_shots_at_once: 200
-    num_epochs: 7
+
+    num_epochs: 10
     use_mock_data: False
     data_parallel: False
 callbacks:
@@ -115,6 +118,7 @@ callbacks:
     mode: 'max'
     monitor: 'val_loss'
     patience: 2
+    write_grads: False
 
 plots:
     #LaTeX strings for performance analysis, sorted in lists by signal_group
