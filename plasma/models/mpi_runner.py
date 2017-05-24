@@ -648,6 +648,8 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
                 val_steps = 20
                 tensorboard.on_epoch_end(val_generator,val_steps,int(round(e)),epoch_logs)
 
+        if callback.model.stop_training: break
+
     callbacks.on_train_end()
     mpi_model.close()
 
