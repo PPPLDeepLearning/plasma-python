@@ -8,34 +8,8 @@ target: 'maxhinge' #'binary' #'ttd' #'hinge'
 num_gpus: 4
 
 paths:
-    #shot_files: ['CWall_clear.txt','CFC_unint.txt']
-    #shot_files_test: ['BeWall_clear.txt','ILW_unint.txt']
-    #signals_dirs: [['jpf/da/c2-ipla'], # Plasma Current [A]
-                #['jpf/da/c2-loca'], # Mode Lock Amplitude [A]
-                #['jpf/db/b5r-ptot>out'], #Radiated Power [W]
-                #['jpf/gs/bl-li<s'], #Plasma Internal Inductance
-                #['jpf/gs/bl-fdwdt<s'], #Stored Diamagnetic Energy (time derivative) [W] Might cause a lot of false positives!
-                #['jpf/gs/bl-ptot<s'], #total input power [W]
-                #['jpf/gs/bl-wmhd<s'], #total stored diamagnetic energy
-                ##density signals [m^-2]
-                ##4 vertical channels and 4 horizontal channels
-                #['jpf/df/g1r-lid:002',
-                # 'jpf/df/g1r-lid:003',
-                # 'jpf/df/g1r-lid:004',
-                # 'jpf/df/g1r-lid:005',
-                # 'jpf/df/g1r-lid:006',
-                # 'jpf/df/g1r-lid:007',
-                # 'jpf/df/g1r-lid:008']]
     signal_prepath: '/signal_data/' #/signal_data/jet/
     shot_list_dir: '/shot_lists/'
-    #signals_masks: [['jpf/df/g1r-lid:003',
-                 #'jpf/df/g1r-lid:004',
-                 #'jpf/df/g1r-lid:005',
-                 #'jpf/df/g1r-lid:006',
-                 #'jpf/df/g1r-lid:007',
-                 #'jpf/df/g1r-lid:008']]
-    #positivity_mask: [['jpf/da/c2-ipla'], 
-                      #['jpf/gs/bl-fdwdt<s']]
     tensorboard_save_path: '/Graph/'
 
 data:
@@ -97,8 +71,6 @@ model:
     warmup_steps: 0
     ignore_timesteps: 100 #how many initial timesteps to ignore during evaluation (to let the internal state settle)
     backend: 'tensorflow' #'theano' #'tensorflow' #theano
-
-
 training:
     as_array_of_shots: True
     shuffle_training: True
@@ -119,30 +91,3 @@ callbacks:
     monitor: 'val_loss'
     patience: 2
     write_grads: False
-
-plots:
-    #LaTeX strings for performance analysis, sorted in lists by signal_group
-    #group_labels: [[' $I_{plasma}$ [A]'],
-    #          [' Mode L. A. [A]'],
-    #          [' $P_{radiated}$ [W]'],
-    #          [' $P_{radiated}$ [W]'],
-    #          [' $\rho_{plasma}$ [m^-2]'],
-    #          [' $L_{plasma,internal}$'],
-    #          ['$\frac{d}{dt} E_{D}$ [W]'],
-    #          [' $P_{input}$ [W]'],
-    #          ['$E_{D}$'],
-    #            #ppf signal labels
-    #          ['ECE unit?']]
-
-    #plot_masks: [['jpf/da/c2-loca'], # Mode Lock Amplitude [A]
-    #            ['jpf/db/b5r-ptot>out'], #Radiated Power [W]
-    #            ['jpf/gs/bl-li<s'], #Plasma Internal Inductance
-    #            ['jpf/gs/bl-fdwdt<s'], #Stored Diamagnetic Energy (time derivative) [W] Might cause a lot of false positives!
-    #            ['jpf/gs/bl-ptot<s'], #total input power [W]
-    #            ['jpf/df/g1r-lid:002',
-    #             'jpf/df/g1r-lid:003',
-    #             'jpf/df/g1r-lid:004',
-    #             'jpf/df/g1r-lid:005',
-    #             'jpf/df/g1r-lid:006',
-    #             'jpf/df/g1r-lid:007',
-    #             'jpf/df/g1r-lid:008']]
