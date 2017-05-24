@@ -184,7 +184,17 @@ jet_signals = [sig for sig in all_signals_restricted if sig.is_defined_on_machin
 #'AOT/EQU.dens_e'] #electron density profile vs rho (uniform mapping over time)
 
 
-
+# [[' $I_{plasma}$ [A]'],
+#[' Mode L. A. [A]'],
+#[' $P_{radiated}$ [W]'],
+#[' $P_{radiated}$ [W]'],
+#[' $\rho_{plasma}$ [m^-2]'],
+#[' $L_{plasma,internal}$'],
+#['$\frac{d}{dt} E_{D}$ [W]'],
+#[' $P_{input}$ [W]'],
+#['$E_{D}$'],
+##ppf signal labels
+#['ECE unit?']]
 
 
 

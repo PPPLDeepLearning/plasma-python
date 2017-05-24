@@ -91,38 +91,40 @@ class TTDLinearTarget(Target):
 #Also implements class weighting
 class MaxHingeTarget(Target):
     activation = 'linear'
+    fac = 1.0
 
     @staticmethod
     def loss(y_true, y_pred):
-	fac = 2.0
-	#overall_fac = np.prod(np.array(K.shape(y_pred)[1:]).astype(np.float32))
-	overall_fac = K.prod(K.cast(K.shape(y_pred)[1:],K.floatx()))
+        fac = MaxHingeTarget.fac
+        #overall_fac = np.prod(np.array(K.shape(y_pred)[1:]).astype(np.float32))
+        overall_fac = K.prod(K.cast(K.shape(y_pred)[1:],K.floatx()))
         max_val = K.max(y_pred,axis=-2) #temporal axis!
         max_val1 = K.repeat(max_val,K.shape(y_pred)[-2])
         mask = K.cast(K.equal(max_val1,y_pred),K.floatx())
         y_pred1 = mask * y_pred + (1-mask) * y_true
-	weight_mask = K.mean(y_true,axis=-1)
+        weight_mask = K.mean(y_true,axis=-1)
         weight_mask = K.cast(K.greater(weight_mask,0.0),K.floatx()) #positive label!
-	weight_mask = fac*weight_mask + (1 - weight_mask)
-	#return weight_mask*squared_hinge(y_true,y_pred1)
-	return overall_fac*weight_mask*hinge(y_true,y_pred1)
+        weight_mask = fac*weight_mask + (1 - weight_mask)
+        #return weight_mask*squared_hinge(y_true,y_pred1)
+        return overall_fac*weight_mask*hinge(y_true,y_pred1)
 
     @staticmethod
     def loss_np(y_true, y_pred):
-	fac = 2.0
-	#print(y_pred.shape)
-	overall_fac = np.prod(np.array(y_pred.shape).astype(np.float32))
-   	max_val = np.max(y_pred,axis=-2) #temporal axis!
-   	max_val = np.reshape(max_val,max_val.shape[:-1] + (1,) + (max_val.shape[-1],))
-   	max_val = np.tile(max_val,(1,y_pred.shape[-2],1))
-   	mask = np.equal(max_val,y_pred)
-   	mask = mask.astype(np.float32)
-   	y_pred = mask * y_pred + (1-mask) * y_true
+        fac = MaxHingeTarget.fac
+        print("fac: {}".format(fac))
+        #print(y_pred.shape)
+        overall_fac = np.prod(np.array(y_pred.shape).astype(np.float32))
+        max_val = np.max(y_pred,axis=-2) #temporal axis!
+        max_val = np.reshape(max_val,max_val.shape[:-1] + (1,) + (max_val.shape[-1],))
+        max_val = np.tile(max_val,(1,y_pred.shape[-2],1))
+        mask = np.equal(max_val,y_pred)
+        mask = mask.astype(np.float32)
+        y_pred = mask * y_pred + (1-mask) * y_true
         weight_mask = np.greater(y_true,0.0).astype(np.float32) #positive label!
-	weight_mask = fac*weight_mask + (1 - weight_mask)
-   	#return np.mean(weight_mask*np.square(np.maximum(1. - y_true * y_pred, 0.)))#, axis=-1) only during training, here we want to completely sum up over all instances
-   	return np.mean(overall_fac*weight_mask*np.maximum(1. - y_true * y_pred, 0.))#, axis=-1) only during training, here we want to completely sum up over all instances
-   
+        weight_mask = fac*weight_mask + (1 - weight_mask)
+        #return np.mean(weight_mask*np.square(np.maximum(1. - y_true * y_pred, 0.)))#, axis=-1) only during training, here we want to completely sum up over all instances
+        return np.mean(overall_fac*weight_mask*np.maximum(1. - y_true * y_pred, 0.))#, axis=-1) only during training, here we want to completely sum up over all instances
+
 
     # def _loss_tensor_old(y_true, y_pred):
     #     max_val = K.max(y_pred) #temporal axis!

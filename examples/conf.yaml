@@ -23,6 +23,7 @@ data:
     #train/validate split
     #how many shots to use
     use_shots: 200000 #1000 #200000
+    positive_example_penalty: 2.0 #by what factor to upweight positive examples?
     #normalization timescale
     dt: 0.001
     #maximum TTD considered
