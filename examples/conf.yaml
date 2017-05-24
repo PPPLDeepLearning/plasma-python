@@ -36,6 +36,7 @@ paths:
     positivity_mask: [['jpf/da/c2-ipla'], 
                       ['jpf/gs/bl-fdwdt<s']]
     tensorboard_save_path: '/Graph/'
+    csvlog_save_path: '/csv_logs/'
 
 data:
     cut_shot_ends: True
