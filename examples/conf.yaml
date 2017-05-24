@@ -5,36 +5,37 @@
 # for example tigress/alexeys
 fs_path: '/tigress' #'/cscratch/share/frnn' #'/tigress'
 target: 'maxhinge' #'binary' #'ttd' #'hinge'
+num_gpus: 4
 
 paths:
-    shot_files: ['CWall_clear.txt','CFC_unint.txt']
-    shot_files_test: ['BeWall_clear.txt','ILW_unint.txt']
-    signals_dirs: [['jpf/da/c2-ipla'], # Plasma Current [A]
-                ['jpf/da/c2-loca'], # Mode Lock Amplitude [A]
-                ['jpf/db/b5r-ptot>out'], #Radiated Power [W]
-                ['jpf/gs/bl-li<s'], #Plasma Internal Inductance
-                ['jpf/gs/bl-fdwdt<s'], #Stored Diamagnetic Energy (time derivative) [W] Might cause a lot of false positives!
-                ['jpf/gs/bl-ptot<s'], #total input power [W]
-                ['jpf/gs/bl-wmhd<s'], #total stored diamagnetic energy
-                #density signals [m^-2]
-                #4 vertical channels and 4 horizontal channels
-                ['jpf/df/g1r-lid:002',
-                 'jpf/df/g1r-lid:003',
-                 'jpf/df/g1r-lid:004',
-                 'jpf/df/g1r-lid:005',
-                 'jpf/df/g1r-lid:006',
-                 'jpf/df/g1r-lid:007',
-                 'jpf/df/g1r-lid:008']]
+    #shot_files: ['CWall_clear.txt','CFC_unint.txt']
+    #shot_files_test: ['BeWall_clear.txt','ILW_unint.txt']
+    #signals_dirs: [['jpf/da/c2-ipla'], # Plasma Current [A]
+                #['jpf/da/c2-loca'], # Mode Lock Amplitude [A]
+                #['jpf/db/b5r-ptot>out'], #Radiated Power [W]
+                #['jpf/gs/bl-li<s'], #Plasma Internal Inductance
+                #['jpf/gs/bl-fdwdt<s'], #Stored Diamagnetic Energy (time derivative) [W] Might cause a lot of false positives!
+                #['jpf/gs/bl-ptot<s'], #total input power [W]
+                #['jpf/gs/bl-wmhd<s'], #total stored diamagnetic energy
+                ##density signals [m^-2]
+                ##4 vertical channels and 4 horizontal channels
+                #['jpf/df/g1r-lid:002',
+                # 'jpf/df/g1r-lid:003',
+                # 'jpf/df/g1r-lid:004',
+                # 'jpf/df/g1r-lid:005',
+                # 'jpf/df/g1r-lid:006',
+                # 'jpf/df/g1r-lid:007',
+                # 'jpf/df/g1r-lid:008']]
     signal_prepath: '/signal_data/' #/signal_data/jet/
     shot_list_dir: '/shot_lists/'
-    signals_masks: [['jpf/df/g1r-lid:003',
-                 'jpf/df/g1r-lid:004',
-                 'jpf/df/g1r-lid:005',
-                 'jpf/df/g1r-lid:006',
-                 'jpf/df/g1r-lid:007',
-                 'jpf/df/g1r-lid:008']]
-    positivity_mask: [['jpf/da/c2-ipla'], 
-                      ['jpf/gs/bl-fdwdt<s']]
+    #signals_masks: [['jpf/df/g1r-lid:003',
+                 #'jpf/df/g1r-lid:004',
+                 #'jpf/df/g1r-lid:005',
+                 #'jpf/df/g1r-lid:006',
+                 #'jpf/df/g1r-lid:007',
+                 #'jpf/df/g1r-lid:008']]
+    #positivity_mask: [['jpf/da/c2-ipla'], 
+                      #['jpf/gs/bl-fdwdt<s']]
     tensorboard_save_path: '/Graph/'
 
 data:
@@ -53,7 +54,7 @@ data:
     #maximum TTD considered
     T_max: 1000.0
     #The shortest works best so far: less overfitting. log TTd prediction also works well. 0.5 better than 0.2
-    T_warning: 1.0 #0.25 #1.0 #1.0 #warning time in seconds
+    T_warning: 1.024 #0.512 #0.25 #1.0 #1.0 #warning time in seconds
     current_thresh: 750000
     current_end_thresh: 10000
     #the characteristic decay length of the decaying moving average window
@@ -87,8 +88,8 @@ model:
     clipnorm: 10.0
     regularization: 0.0
     #1e-4 is too high, 5e-7 is too low. 5e-5 seems best at 256 batch size, full dataset and ~10 epochs, and lr decay of 0.90. 1e-4 also works well if we decay a lot (i.e ~0.7 or more)
-    lr: 0.0001 #0.00005 #0.00005
-    lr_decay: 0.9 #0.9
+    lr: 0.0001 #0.00005 #0.00005 #0.00005
+    lr_decay: 1.0 #0.98 #0.9
     stateful: True
     return_sequences: True
     dropout_prob: 0.3
@@ -108,8 +109,7 @@ training:
     max_patch_length: 100000
     #How many shots are we loading at once?
     num_shots_at_once: 200
-
-    num_epochs: 10
+    num_epochs: 26
     use_mock_data: False
     data_parallel: False
 callbacks:
@@ -122,27 +122,27 @@ callbacks:
 
 plots:
     #LaTeX strings for performance analysis, sorted in lists by signal_group
-    group_labels: [[' $I_{plasma}$ [A]'],
-              [' Mode L. A. [A]'],
-              [' $P_{radiated}$ [W]'],
-              [' $P_{radiated}$ [W]'],
-              [' $\rho_{plasma}$ [m^-2]'],
-              [' $L_{plasma,internal}$'],
-              ['$\frac{d}{dt} E_{D}$ [W]'],
-              [' $P_{input}$ [W]'],
-              ['$E_{D}$'],
-                #ppf signal labels
-              ['ECE unit?']]
+    #group_labels: [[' $I_{plasma}$ [A]'],
+    #          [' Mode L. A. [A]'],
+    #          [' $P_{radiated}$ [W]'],
+    #          [' $P_{radiated}$ [W]'],
+    #          [' $\rho_{plasma}$ [m^-2]'],
+    #          [' $L_{plasma,internal}$'],
+    #          ['$\frac{d}{dt} E_{D}$ [W]'],
+    #          [' $P_{input}$ [W]'],
+    #          ['$E_{D}$'],
+    #            #ppf signal labels
+    #          ['ECE unit?']]
 
-    plot_masks: [['jpf/da/c2-loca'], # Mode Lock Amplitude [A]
-                ['jpf/db/b5r-ptot>out'], #Radiated Power [W]
-                ['jpf/gs/bl-li<s'], #Plasma Internal Inductance
-                ['jpf/gs/bl-fdwdt<s'], #Stored Diamagnetic Energy (time derivative) [W] Might cause a lot of false positives!
-                ['jpf/gs/bl-ptot<s'], #total input power [W]
-                ['jpf/df/g1r-lid:002',
-                 'jpf/df/g1r-lid:003',
-                 'jpf/df/g1r-lid:004',
-                 'jpf/df/g1r-lid:005',
-                 'jpf/df/g1r-lid:006',
-                 'jpf/df/g1r-lid:007',
-                 'jpf/df/g1r-lid:008']]
+    #plot_masks: [['jpf/da/c2-loca'], # Mode Lock Amplitude [A]
+    #            ['jpf/db/b5r-ptot>out'], #Radiated Power [W]
+    #            ['jpf/gs/bl-li<s'], #Plasma Internal Inductance
+    #            ['jpf/gs/bl-fdwdt<s'], #Stored Diamagnetic Energy (time derivative) [W] Might cause a lot of false positives!
+    #            ['jpf/gs/bl-ptot<s'], #total input power [W]
+    #            ['jpf/df/g1r-lid:002',
+    #             'jpf/df/g1r-lid:003',
+    #             'jpf/df/g1r-lid:004',
+    #             'jpf/df/g1r-lid:005',
+    #             'jpf/df/g1r-lid:006',
+    #             'jpf/df/g1r-lid:007',
+    #             'jpf/df/g1r-lid:008']]

@@ -32,13 +32,14 @@ from mpi4py import MPI
 comm = MPI.COMM_WORLD
 task_index = comm.Get_rank()
 num_workers = comm.Get_size()
-NUM_GPUS = 4
-MY_GPU = task_index % NUM_GPUS
 
 from pprint import pprint
 from plasma.conf import conf
 from plasma.utils.state_reset import reset_states,get_states
 from plasma.models.loader import ProcessGenerator
+
+NUM_GPUS = conf['num_gpus']
+MY_GPU = task_index % NUM_GPUS
 
 backend = conf['model']['backend']
 
