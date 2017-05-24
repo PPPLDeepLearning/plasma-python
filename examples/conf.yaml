@@ -115,7 +115,7 @@ training:
 callbacks:
     list: ['earlystop']
     metrics: ['val_loss','val_roc','train_loss']
-    mode: 'max'
+    mode: 'auto'
     monitor: 'val_loss'
     patience: 2
     write_grads: False
