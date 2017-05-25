@@ -286,7 +286,7 @@ class MPIModel():
     self.optimizer.set_lr(effective_lr)
     global_deltas = self.optimizer.get_deltas(global_deltas)
 
-    if comm.rank == 0:
+    if self.comm.rank == 0:
       new_weights = self.get_new_weights(global_deltas)
     else:
       new_weights = None
@@ -407,7 +407,7 @@ class MPIModel():
       if step == 0 and self.epoch == 0:
         t0_comp = time.time()
         _,_ = self.get_deltas(batch_xs,batch_ys,verbose)
-        comm.Barrier()
+        self.comm.Barrier()
         sys.stdout.flush()
         print_unique('Compilation finished in {:.2f}s'.format(time.time()-t0_comp))
         t_start = time.time()
@@ -621,20 +621,20 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
 
     mpi_model.compile(loss=conf['data']['target'].loss)
 
-    callbacks = mpi_model.build_callbacks(conf,callbacks_list)
-
-    callbacks.set_model(mpi_model.model)
-    callback_metrics = conf['callbacks']['metrics']
-
-    callbacks.set_params({
+    if task_index == 0:
+	callbacks = mpi_model.build_callbacks(conf,callbacks_list)
+	callbacks.set_model(mpi_model.model)
+	callback_metrics = conf['callbacks']['metrics']
+    	callbacks.set_params({
         'epochs': num_epochs,
         'metrics': callback_metrics,
         'batch_size': batch_size,
-    })
-    callbacks.on_train_begin()
+    	})
+    	callbacks.on_train_begin()
 
     while e < num_epochs-1:
-        callbacks.on_epoch_begin(int(round(e)))
+        if task_index == 0:
+	    callbacks.on_epoch_begin(int(round(e)))
         mpi_model.set_lr(lr*lr_decay**e)
         print_unique('\nEpoch {}/{}'.format(e,num_epochs))
 
@@ -659,19 +659,32 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
             print('Validation ROC: {:.4f}'.format(roc_area))
 
             callbacks.on_epoch_end(int(round(e)), epoch_logs)
+	    stop_training = get_stop_training(callbacks)
 
             #tensorboard
             val_generator = partial(loader.training_batch_generator,shot_list=shot_list_validate)()
             val_steps = 20
             tensorboard.on_epoch_end(val_generator,val_steps,int(round(e)),epoch_logs)
-
-    callbacks.on_train_end()
-    mpi_model.close()
+	else:
+	    stop_training = False
+	stop_training = comm.bcast(stop_training,root=0)
+	if stop_training:
+	    print("Stopping training due to early stopping")
+	    break
 
     if task_index == 0:
+        callbacks.on_train_end()
 	pass
         #tensorboard.on_train_end()
 
+    mpi_model.close()
+
+def get_stop_training(callbacks):
+    for cb in callbacks:
+	if isinstance(cb,cbks.EarlyStopping):
+	    print("Checking for early stopping")
+	    return cb.model.stop_training
+    return False
 
 class TensorBoard(object):
     def __init__(self, log_dir='./logs',

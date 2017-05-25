@@ -23,10 +23,10 @@ class Hyperparam(object):
     	print(el[self.path[-1]])
     	el[self.path[-1]] = val
 
-    	with open(save_path+"changed_params.out", 'w') as outfile:
+    	with open(save_path+"changed_params.out", 'a+') as outfile:
     		for el in self.path:
 	    		outfile.write("{} : ".format(el))
-	    	outfile.write("{}".format(val))
+	    	outfile.write("{}\n".format(val))
 
 
 

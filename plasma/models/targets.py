@@ -111,7 +111,6 @@ class MaxHingeTarget(Target):
     @staticmethod
     def loss_np(y_true, y_pred):
         fac = MaxHingeTarget.fac
-        print("fac: {}".format(fac))
         #print(y_pred.shape)
         overall_fac = np.prod(np.array(y_pred.shape).astype(np.float32))
         max_val = np.max(y_pred,axis=-2) #temporal axis!
