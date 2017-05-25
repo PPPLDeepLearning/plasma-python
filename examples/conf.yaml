@@ -89,6 +89,6 @@ callbacks:
     list: ['earlystop']
     metrics: ['val_loss','val_roc','train_loss']
     mode: 'max'
-    monitor: 'val_loss'
+    monitor: 'val_roc'
     patience: 2
     write_grads: False
