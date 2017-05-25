@@ -74,6 +74,7 @@ from plasma.models import builder
 from plasma.utils.evaluation import get_loss_from_list
 from plasma.utils.processing import concatenate_sublists
 from plasma.utils.performance import PerformanceAnalyzer
+from plasma.primitives.ops import mpi_sum_f16
 
 if task_index == 0:
     pprint(conf)
@@ -227,7 +228,10 @@ class MPIModel():
     if self.task_index >= num_replicas:
       arr *= 0.0
     arr_global = np.empty_like(arr)
-    self.comm.Allreduce(arr,arr_global,op=MPI.SUM)
+    if K.floatx() == 'float16':
+        self.comm.Allreduce(arr,arr_global,op=mpi_sum_f16)
+    else:
+        self.comm.Allreduce(arr,arr_global,op=MPI.SUM)
     arr_global /= num_replicas
     return arr_global
 
