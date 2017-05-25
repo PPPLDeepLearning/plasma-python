@@ -668,9 +668,11 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
 		stop_training = mpi_model.model.stop_training
 
             #tensorboard
-            val_generator = partial(loader.training_batch_generator,shot_list=shot_list_validate)()
-            val_steps = 20
-            tensorboard.on_epoch_end(val_generator,val_steps,int(round(e)),epoch_logs)
+            if backend != 'theano':
+                val_generator = partial(loader.training_batch_generator,shot_list=shot_list_validate)()
+                val_steps = 20
+                tensorboard.on_epoch_end(val_generator,val_steps,int(round(e)),epoch_logs)
+
 	stop_training = comm.bcast(stop_training,root=0)
 	if stop_training:
 	    print("Stopping training due to early stopping")
