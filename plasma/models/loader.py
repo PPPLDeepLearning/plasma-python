@@ -591,7 +591,7 @@ class Loader(object):
         return 1 + (length-1)//skip
 
     def load_shotlists(self,conf):
-        path = conf['paths']['base_path'] + '/normalization/shot_lists.npz'
+        path = conf['paths']['saved_shotlist_path']
         data = np.load(path)
         shot_list_train = data['shot_list_train'][()]
         shot_list_validate = data['shot_list_validate'][()]

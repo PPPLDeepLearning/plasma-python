@@ -16,11 +16,10 @@ class Hyperparam(object):
 
     def assign_to_conf(self,conf,save_path):
     	val = self.choice()
-    	print(val)
+    	print(" : ".join(self.path)+ ": {}".format(val))
     	el = conf
     	for sub_path in self.path[:-1]:
     		el = el[sub_path]
-    	print(el[self.path[-1]])
     	el[self.path[-1]] = val
 
     	with open(save_path+"changed_params.out", 'a+') as outfile:

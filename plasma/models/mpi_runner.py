@@ -642,7 +642,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
         e = e_old + effective_epochs
 
         loader.verbose=False #True during the first iteration
-        if task_index == 0:
+        if task_index == 0: 
             specific_builder.save_model_weights(train_model,int(round(e)))
 
         epoch_logs = {}
@@ -662,8 +662,6 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
             callbacks.on_epoch_end(int(round(e)), epoch_logs)
 	    if hasattr(mpi_model.model,'stop_training'):
 		stop_training = mpi_model.model.stop_training
-	    else:
-		print("No stop training attribute found")
 
             #tensorboard
             val_generator = partial(loader.training_batch_generator,shot_list=shot_list_validate)()

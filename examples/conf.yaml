@@ -85,6 +85,7 @@ training:
     num_epochs: 26
     use_mock_data: False
     data_parallel: False
+    hyperparam_tuning: False
 callbacks:
     list: ['earlystop']
     metrics: ['val_loss','val_roc','train_loss']
