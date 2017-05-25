@@ -14,7 +14,7 @@ class Hyperparam(object):
     		el = el[sub_path]
     	return el
 
-    def assign_to_conf(self,conf):
+    def assign_to_conf(self,conf,save_path):
     	val = self.choice()
     	print(val)
     	el = conf
@@ -22,6 +22,12 @@ class Hyperparam(object):
     		el = el[sub_path]
     	print(el[self.path[-1]])
     	el[self.path[-1]] = val
+
+    	with open(save_path+"changed_params.out", 'w') as outfile:
+    		for el in self.path:
+	    		outfile.write("{} : ".format(el))
+	    	outfile.write("{}".format(val))
+
 
 
 class CategoricalHyperparam(Hyperparam):

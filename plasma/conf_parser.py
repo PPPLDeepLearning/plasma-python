@@ -21,7 +21,7 @@ def parameters(input_file):
         params['paths']['normalizer_path'] = output_path + '/normalization/normalization.npz'
         params['paths']['results_prepath'] = output_path + '/results/'
         params['paths']['model_save_path'] = output_path + '/model_checkpoints/'
-        params['paths']['csvlog_save_path'] = output_path + '/csv_logs/'
+        params['paths']['csvlog_save_path'] = './csv_logs/' #output_path + '/csv_logs/'
         params['paths']['tensorboard_save_path'] = output_path + params['paths']['tensorboard_save_path']
 
         if params['target'] == 'hinge':

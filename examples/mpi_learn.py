@@ -115,4 +115,5 @@ if task_index == 0:
         shot_list_train=shot_list_train,shot_list_test=shot_list_test,
         conf = conf)
 
+    sys.stdout.flush()
     print('finished.')
