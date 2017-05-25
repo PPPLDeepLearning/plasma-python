@@ -370,7 +370,7 @@ class MPIModel():
     t1 = 0 
     t2 = 0
 
-    num_batches_minimum = 40
+    num_batches_minimum = 100
     num_batches_current = 0
     
     #if task_index == 2:

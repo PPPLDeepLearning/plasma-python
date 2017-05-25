@@ -9,10 +9,10 @@ import subprocess as sp
 
 tunables = []
 
-lr = LogContinuousHyperparam(['model','lr'],1e-6,1e-3) 
-lr_decay = CategoricalHyperparam(['model','lr_decay'],[0.9,0.97,1.0]) 
-t_warn = CategoricalHyperparam(['data','T_warning'],[0.128,0.256,0.512,1.024,40.0])
-fac = CategoricalHyperparam(['data','positive_example_penalty'],[1.0,2.0,10.0,40.0])
+lr = LogContinuousHyperparam(['model','lr'],5e-6,4e-3) 
+lr_decay = CategoricalHyperparam(['model','lr_decay'],[0.97,1.0]) 
+t_warn = CategoricalHyperparam(['data','T_warning'],[0.256,0.512,1.024,40.0])
+fac = CategoricalHyperparam(['data','positive_example_penalty'],[1.0,2.0,10.0])
 #target = CategoricalHyperparam(['target'],['lasso','hi'])
 
 
@@ -23,7 +23,7 @@ template_path = "/home/{}/plasma-python/examples/".format(getpass.getuser())
 conf_name = "conf.yaml"
 executable_name = "mpi_learn.py"
 num_machines = 2
-num_trials = 20
+num_trials = 40
 
 def generate_conf_file(tunables,template_path = "../",save_path = "./",conf_name="conf.yaml"):
 	assert(template_path != save_path)
