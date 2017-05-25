@@ -680,10 +680,11 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
     mpi_model.close()
 
 def get_stop_training(callbacks):
-    for cb in callbacks:
+    for cb in callbacks.callbacks:
 	if isinstance(cb,cbks.EarlyStopping):
 	    print("Checking for early stopping")
 	    return cb.model.stop_training
+    print("No early stopping callback found.")
     return False
 
 class TensorBoard(object):
