@@ -22,6 +22,8 @@ class HyperparamExperiment():
 	if not path.endswith('/'):
 	    path += '/'
 	self.path = path
+	self.finished = False
+	self.success = False
 	self.logs_path = path + "csv_logs/"
 	self.raw_logs_path = path[:-1] + ".out"
 	self.changed_path = path + "changed_params.out"
@@ -80,7 +82,8 @@ class HyperparamExperiment():
     def get_maximum(self):
 	if len(self.epochs) > 0:
 	    idx = np.argmax(self.values)	
-	    print("maximum of {} at epoch {}".format(self.values[idx],self.epochs[idx]))
+	    s = "Finished" if self.finished else "Running"
+	    print("[{}] maximum of {} at epoch {}".format(s,self.values[idx],self.epochs[idx]))
 	    return self.epochs[idx],self.values[idx]
 	else:
 	    return -1,-1
