@@ -1,7 +1,4 @@
-# try:
-	# from MDSplus import *
-# except ImportError:
-	# print("MDS+ not installed. Won't be able to download data")
+from __future__ import print_function
 import numpy as np
 import time
 import sys
@@ -68,7 +65,7 @@ def fetch_d3d_data(signal_path,shot,c=None):
 		if np.ndim(ydata) == 2: ydata = np.transpose(ydata)
 		if np.ndim(xdata) == 2: xdata = np.transpose(xdata)
 
-	except Exception,e:
+	except Exception as e:
 		#print(e)
 		#sys.stdout.flush()
 		pass
@@ -91,7 +88,7 @@ def fetch_d3d_data(signal_path,shot,c=None):
 			found = True
 	#this means the signal wasn't found
 	if not found:  
-		print "   No such signal: %s" % (signal,)
+		print ("No such signal: {}".format(signal))
 		pass
 
     # print '   GADATA Retrieval Time : ',time.time() - t0

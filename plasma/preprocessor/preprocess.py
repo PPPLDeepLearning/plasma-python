@@ -69,7 +69,7 @@ class Preprocessor(object):
     def preprocess_from_files(self,shot_files,use_shots):
         #all shots, including invalid ones
         all_signals = self.conf['paths']['all_signals'] 
-	shot_list = ShotList()
+        shot_list = ShotList()
         shot_list.load_from_shot_list_files_objects(shot_files,all_signals)
         shot_list_picked = shot_list.random_sublist(use_shots)
 
@@ -85,8 +85,8 @@ class Preprocessor(object):
             sys.stdout.write('\r{}/{}'.format(i,len(shot_list_picked)))
             used_shots.append_if_valid(shot)
 
-	pool.close()
-	pool.join()
+        pool.close()
+        pool.join()
         print('Finished Preprocessing {} files in {} seconds'.format(len(shot_list_picked),time.time()-start_time))
         print('Omitted {} shots of {} total.'.format(len(shot_list_picked) - len(used_shots),len(shot_list_picked)))
         print('{}/{} disruptive shots'.format(used_shots.num_disruptive(),len(used_shots)))
@@ -101,14 +101,13 @@ class Preprocessor(object):
             shot.save(processed_prepath)
 
         else:
-	    try:
-	    	shot.restore(processed_prepath,light=True)
-            	sys.stdout.write('\r{} exists.'.format(shot.number))
-	    except:
-            	shot.preprocess(self.conf)
-            	shot.save(processed_prepath)
-            	sys.stdout.write('\r{} exists but corrupted, resaved.'.format(shot.number))
-		
+            try:
+                shot.restore(processed_prepath,light=True)
+                sys.stdout.write('\r{} exists.'.format(shot.number))
+            except:
+                shot.preprocess(self.conf)
+                shot.save(processed_prepath)
+                sys.stdout.write('\r{} exists but corrupted, resaved.'.format(shot.number))
         shot.make_light()
         return shot 
 

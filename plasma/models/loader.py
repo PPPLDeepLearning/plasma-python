@@ -156,11 +156,9 @@ class Loader(object):
         while True:
             # the list of all shots
             shot_list.shuffle() 
-	    #print("restarting shotlist")
             for shot in shot_list:
                 while not np.any(end_indices == 0):
                     X,Y = self.return_from_training_buffer(Xbuff,Ybuff,end_indices)
-		    #print(end_indices)
                     yield X,Y,batches_to_reset,num_so_far,num_total
                     returned = True
                     batches_to_reset[:] = False
@@ -172,22 +170,21 @@ class Loader(object):
             # epoch += 1
 
     def fill_batch_queue(self,shot_list,queue):
-	print("Starting thread to fill queue")
+        print("Starting thread to fill queue")
         gen = self.training_batch_generator_partial_reset(shot_list)
-	while True:
-	    ret = next(gen)
-	    queue.put(ret,block=True,timeout=-1)
+        while True:
+            ret = next(gen)
+            queue.put(ret,block=True,timeout=-1)
 
 
     def training_batch_generator_process(self,shot_list):
-	queue = mp.Queue()
-	proc = mp.Process(target = self.fill_batch_queue,args=(shot_list,queue))
-	proc.start()
-	while True:
-	    yield queue.get(True)
-	proc.join()
-	queue.close()
-	
+        queue = mp.Queue()
+        proc = mp.Process(target = self.fill_batch_queue,args=(shot_list,queue))
+        proc.start()
+        while True:
+            yield queue.get(True)
+        proc.join()
+        queue.close()
 
     def load_as_X_y_list(self,shot_list,verbose=False,prediction_mode=False):
         """
@@ -249,10 +246,10 @@ class Loader(object):
             if self.conf['training']['use_mock_data']:
                 signal,ttd = self.get_mock_data()
             ttd,signal = shot.get_data_arrays(use_signals)
-	    if len(ttd) < self.conf['model']['length']:
-		print(ttd)
-		print(shot)
-		print(shot.number)
+            if len(ttd) < self.conf['model']['length']:
+                print(ttd)
+                print(shot)
+                print(shot.number)
 
             total_length += len(ttd)
             signals.append(signal)
@@ -329,8 +326,8 @@ class Loader(object):
     def make_deterministic_patches_from_single_array(self,sig,res,min_len):
         sig_patches = []
         res_patches = []
-	if len(sig) <= min_len:
-		print('signal length: {}'.format(len(sig)))
+        if len(sig) <= min_len:
+            print('signal length: {}'.format(len(sig)))
         assert(min_len <= len(sig))
         for start in range(0,len(sig)-min_len,min_len):
             sig_patches.append(sig[start:start+min_len])
@@ -598,31 +595,24 @@ class Loader(object):
         shot_list_test = data['shot_list_test'][()]
         return shot_list_train,shot_list_validate,shot_list_test
 
-
-
-
-
-
-
 class ProcessGenerator(object):
     def __init__(self,generator):
-	self.generator = generator
-	self.proc = mp.Process(target=self.fill_batch_queue)
-	self.queue = mp.Queue()
-	self.proc.start()
-	
+        self.generator = generator
+        self.proc = mp.Process(target=self.fill_batch_queue)
+        self.queue = mp.Queue()
+        self.proc.start()
+        
     def fill_batch_queue(self):
-	print("Starting process to fetch data")
-	while True:
-	    self.queue.put(next(self.generator),True,-1) 
+        print("Starting process to fetch data")
+        while True:
+            self.queue.put(next(self.generator),True,-1) 
 
     def __next__(self):
-	return self.queue.get(True)
+        return self.queue.get(True)
     
     def next(self):
-	return self.__next__()
+        return self.__next__()
 
     def __exit__(self):
-	self.proc.terminate()
-	self.queue.close()
-
+        self.proc.terminate()
+        self.queue.close()
