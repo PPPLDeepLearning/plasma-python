@@ -81,9 +81,6 @@ if task_index == 0:
 
 
 
-###TODO add optimizers other than SGD
-
-
 class MPIOptimizer(object):
   def __init__(self,lr):
     self.lr = lr
@@ -116,6 +113,9 @@ class MPIAdam(MPIOptimizer):
 
   def get_deltas(self,raw_deltas):
 
+    if K.floatx() == "float16":
+        raw_deltas = map(lambda w: w.astype(np.float32),raw_deltas)
+
     if self.iterations == 0:
       self.m_list = [np.zeros_like(g) for g in raw_deltas]
       self.v_list = [np.zeros_like(g) for g in raw_deltas]
@@ -132,6 +132,10 @@ class MPIAdam(MPIOptimizer):
       self.v_list[i] = v_t
 
     self.iterations += 1
+
+    if K.floatx() == "float16":
+        deltas = map(lambda w: w.astype(np.float16),deltas)
+
     return deltas
 
 
