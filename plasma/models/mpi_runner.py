@@ -514,7 +514,7 @@ def load_shotlists(conf):
 
 #shot_list_train,shot_list_validate,shot_list_test = load_shotlists(conf)
 
-def mpi_make_predictions(conf,shot_list,loader):
+def mpi_make_predictions(conf,shot_list,loader,custom_path=None):
     shot_list.sort()#make sure all replicas have the same list
     specific_builder = builder.ModelBuilder(conf) 
 
@@ -523,7 +523,7 @@ def mpi_make_predictions(conf,shot_list,loader):
     disruptive = []
 
     model = specific_builder.build_model(True)
-    specific_builder.load_model_weights(model)
+    specific_builder.load_model_weights(model,custom_path)
     model.reset_states()
     if task_index == 0:
         pbar =  Progbar(len(shot_list))
@@ -579,8 +579,8 @@ def mpi_make_predictions(conf,shot_list,loader):
     return y_prime_global,y_gold_global,disruptive_global
 
 
-def mpi_make_predictions_and_evaluate(conf,shot_list,loader):
-    y_prime,y_gold,disruptive = mpi_make_predictions(conf,shot_list,loader)
+def mpi_make_predictions_and_evaluate(conf,shot_list,loader,custom_path=None):
+    y_prime,y_gold,disruptive = mpi_make_predictions(conf,shot_list,loader,custom_path)
     analyzer = PerformanceAnalyzer(conf=conf)
     roc_area = analyzer.get_roc_area(y_prime,y_gold,disruptive)
     loss = get_loss_from_list(y_prime,y_gold,conf['data']['target'])
