@@ -380,22 +380,16 @@ class MPIModel():
 
     num_batches_minimum = 100
     num_batches_current = 0
-    
-    #if task_index == 2:
-    #    sys.stdout.write("\ninternal states: {} ".format(get_states(self.model)[0][0][0][:4]))
-    #    sys.stdout.write("\nweights: {} ".format(self.model.get_weights()[0][0][:4,0]))
-#	sys.stdout.flush()
-    #print(get_states(self.model)[0][0:3])
 
     while (self.num_so_far-self.epoch*num_total) < num_total or num_batches_current < num_batches_minimum:
 
       try:
           batch_xs,batch_ys,batches_to_reset,num_so_far_curr,num_total = next(batch_iterator_func)
       except StopIteration:
-	  print("Resetting batch iterator.")
+          print("Resetting batch iterator.")
           self.num_so_far_accum = self.num_so_far_indiv
-	  self.batch_iterator_func = ProcessGenerator(self.batch_iterator())
-    	  batch_iterator_func = self.batch_iterator_func
+          self.batch_iterator_func = ProcessGenerator(self.batch_iterator())
+          batch_iterator_func = self.batch_iterator_func
           batch_xs,batch_ys,batches_to_reset,num_so_far_curr,num_total = next(batch_iterator_func)
       self.num_so_far_indiv = self.num_so_far_accum+num_so_far_curr
 
@@ -422,9 +416,6 @@ class MPIModel():
         sys.stdout.flush()  
 
       t0 = time.time()
-      #positives_ = np.sum(np.max(batch_ys[:,:,0],axis=-1) > 0.0)
-      #sys.stdout.write("\n[{}] postives: {}".format(task_index,positives_))
-      #sys.stdout.flush()
       deltas,loss = self.get_deltas(batch_xs,batch_ys,verbose)
       t1 = time.time()
       self.set_new_weights(deltas,num_replicas)
@@ -433,7 +424,7 @@ class MPIModel():
 
       curr_loss = self.mpi_average_scalars(1.0*loss,num_replicas)
       #if self.task_index == 0:
-	#print(self.model.get_weights()[0][0][:4])
+        #print(self.model.get_weights()[0][0][:4])
       loss_averager.add_val(curr_loss)
       ave_loss = loss_averager.get_val()
       eta = self.estimate_remaining_time(t0 - t_start,self.num_so_far-self.epoch*num_total,num_total)
@@ -441,10 +432,6 @@ class MPIModel():
       print_unique(write_str + write_str_0)
       step += 1
 
-    #if task_index == 2:
-    #    sys.stdout.write("\ninternal states: {} ".format(get_states(self.model)[0][0][0][:4]))
-    #    sys.stdout.write("\nweights: {} ".format(self.model.get_weights()[0][0][:4,0]))
-    #	sys.stdout.flush()
     effective_epochs = 1.0*self.num_so_far/num_total
     epoch_previous = self.epoch
     self.epoch = effective_epochs
@@ -549,7 +536,7 @@ def mpi_make_predictions(conf,shot_list,loader):
             X,y,shot_lengths,disr = loader.load_as_X_y_pred(shot_sublist)
 
 
-	
+        
             #load data and fit on data
             y_p = model.predict(X,batch_size=conf['model']['pred_batch_size'])
             model.reset_states()
@@ -630,19 +617,19 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
     mpi_model.compile(loss=conf['data']['target'].loss)
 
     if task_index == 0:
-	callbacks = mpi_model.build_callbacks(conf,callbacks_list)
-	callbacks.set_model(mpi_model.model)
-	callback_metrics = conf['callbacks']['metrics']
-    	callbacks.set_params({
+        callbacks = mpi_model.build_callbacks(conf,callbacks_list)
+        callbacks.set_model(mpi_model.model)
+        callback_metrics = conf['callbacks']['metrics']
+        callbacks.set_params({
         'epochs': num_epochs,
         'metrics': callback_metrics,
         'batch_size': batch_size,
-    	})
-    	callbacks.on_train_begin()
+        })
+        callbacks.on_train_begin()
 
     while e < num_epochs-1:
         if task_index == 0:
-	    callbacks.on_epoch_begin(int(round(e)))
+            callbacks.on_epoch_begin(int(round(e)))
         mpi_model.set_lr(lr*lr_decay**e)
         print_unique('\nEpoch {}/{}'.format(e,num_epochs))
 
@@ -654,13 +641,13 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
             specific_builder.save_model_weights(train_model,int(round(e)))
 
         epoch_logs = {}
-	
+        
         _,_,_,roc_area,loss = mpi_make_predictions_and_evaluate(conf,shot_list_validate,loader)
         epoch_logs['val_roc'] = roc_area 
         epoch_logs['val_loss'] = loss
         epoch_logs['train_loss'] = ave_loss
 
-	stop_training = False
+        stop_training = False
         if task_index == 0:
             print('=========Summary======== for epoch{}'.format(step))
             print('Training Loss: {:.3e}'.format(ave_loss))
@@ -668,8 +655,8 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
             print('Validation ROC: {:.4f}'.format(roc_area))
 
             callbacks.on_epoch_end(int(round(e)), epoch_logs)
-	    if hasattr(mpi_model.model,'stop_training'):
-		stop_training = mpi_model.model.stop_training
+            if hasattr(mpi_model.model,'stop_training'):
+                stop_training = mpi_model.model.stop_training
 
             #tensorboard
             if backend != 'theano':
@@ -677,14 +664,14 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
                 val_steps = 20
                 tensorboard.on_epoch_end(val_generator,val_steps,int(round(e)),epoch_logs)
 
-	stop_training = comm.bcast(stop_training,root=0)
-	if stop_training:
-	    print("Stopping training due to early stopping")
-	    break
+        stop_training = comm.bcast(stop_training,root=0)
+        if stop_training:
+            print("Stopping training due to early stopping")
+            break
 
     if task_index == 0:
         callbacks.on_train_end()
-	pass
+        pass
         #tensorboard.on_train_end()
 
     mpi_model.close()
@@ -692,9 +679,9 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
 
 def get_stop_training(callbacks):
     for cb in callbacks.callbacks:
-	if isinstance(cb,cbks.EarlyStopping):
-	    print("Checking for early stopping")
-	    return cb.model.stop_training
+        if isinstance(cb,cbks.EarlyStopping):
+            print("Checking for early stopping")
+            return cb.model.stop_training
     print("No early stopping callback found.")
     return False
 
