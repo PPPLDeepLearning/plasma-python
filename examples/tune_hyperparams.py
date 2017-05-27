@@ -9,20 +9,21 @@ import subprocess as sp
 
 tunables = []
 
-lr = LogContinuousHyperparam(['model','lr'],1e-7,1e-2) 
-# lr = CategoricalHyperparam(['model','lr'],[0.001,0.01,0.1]) 
-t_warn = CategoricalHyperparam(['data','T_warning'],[0.128,0.256,0.512,1.024])
+lr = LogContinuousHyperparam(['model','lr'],5e-6,4e-3) 
+lr_decay = CategoricalHyperparam(['model','lr_decay'],[0.97,1.0]) 
+t_warn = CategoricalHyperparam(['data','T_warning'],[0.256,0.512,1.024,40.0])
+fac = CategoricalHyperparam(['data','positive_example_penalty'],[1.0,2.0,10.0])
 #target = CategoricalHyperparam(['target'],['lasso','hi'])
 
 
-tunables = [lr,t_warn] #target
+tunables = [lr,lr_decay,t_warn,fac] #target
 
 run_directory = "/tigress/jk7/hyperparams/"
 template_path = "/home/{}/plasma-python/examples/".format(getpass.getuser())
 conf_name = "conf.yaml"
 executable_name = "mpi_learn.py"
 num_machines = 2
-num_trials = 2
+num_trials = 40
 
 def generate_conf_file(tunables,template_path = "../",save_path = "./",conf_name="conf.yaml"):
 	assert(template_path != save_path)
@@ -30,6 +31,8 @@ def generate_conf_file(tunables,template_path = "../",save_path = "./",conf_name
 		conf = yaml.load(yaml_file)
 	for tunable in tunables:
 		tunable.assign_to_conf(conf,save_path)
+	conf['training']['num_epochs'] = 1000 #rely on early stopping to terminate training
+	conf['training']['hyperparam_tuning'] = True #rely on early stopping to terminate training
 	with open(save_path+conf_name, 'w') as outfile:
 		yaml.dump(conf, outfile, default_flow_style=False)
 
@@ -69,6 +72,14 @@ def create_slurm_script(subdir,num_machines,idx):
 
 	return filepath 
 
+def copy_files_to_environment(subdir):
+    from plasma.conf import conf
+    normalization_dir = os.path.dirname(conf['paths']['normalizer_path'])
+    if os.path.isdir(normalization_dir):
+	print("Copying normalization to")
+	shutil.copytree(normalization_dir,subdir+os.path.basename(normalization_dir))
+
+
 
 working_directory = generate_working_dirname(run_directory)
 os.makedirs(working_directory)
@@ -78,9 +89,10 @@ os.chdir(working_directory)
 print("Going into {}".format(working_directory))
 
 for i in range(num_trials):
-	print("i")
+	print(i)
 	subdir = working_directory + "/{}/".format(i) 
 	os.makedirs(subdir)
+	copy_files_to_environment(subdir)
 	print("Making modified conf")
 	generate_conf_file(tunables,working_directory,subdir,conf_name)
 	print("Starting job")

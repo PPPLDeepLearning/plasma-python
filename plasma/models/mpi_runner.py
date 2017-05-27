@@ -642,7 +642,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
         e = e_old + effective_epochs
 
         loader.verbose=False #True during the first iteration
-        if task_index == 0:
+        if task_index == 0: 
             specific_builder.save_model_weights(train_model,int(round(e)))
 
         epoch_logs = {}
@@ -652,6 +652,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
         epoch_logs['val_loss'] = loss
         epoch_logs['train_loss'] = ave_loss
 
+	stop_training = False
         if task_index == 0:
             print('=========Summary======== for epoch{}'.format(step))
             print('Training Loss: {:.3e}'.format(ave_loss))
@@ -659,14 +660,13 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
             print('Validation ROC: {:.4f}'.format(roc_area))
 
             callbacks.on_epoch_end(int(round(e)), epoch_logs)
-	    stop_training = get_stop_training(callbacks)
+	    if hasattr(mpi_model.model,'stop_training'):
+		stop_training = mpi_model.model.stop_training
 
             #tensorboard
             val_generator = partial(loader.training_batch_generator,shot_list=shot_list_validate)()
             val_steps = 20
             tensorboard.on_epoch_end(val_generator,val_steps,int(round(e)),epoch_logs)
-	else:
-	    stop_training = False
 	stop_training = comm.bcast(stop_training,root=0)
 	if stop_training:
 	    print("Stopping training due to early stopping")
@@ -679,11 +679,13 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
 
     mpi_model.close()
 
+
 def get_stop_training(callbacks):
-    for cb in callbacks:
+    for cb in callbacks.callbacks:
 	if isinstance(cb,cbks.EarlyStopping):
 	    print("Checking for early stopping")
 	    return cb.model.stop_training
+    print("No early stopping callback found.")
     return False
 
 class TensorBoard(object):
