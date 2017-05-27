@@ -114,7 +114,7 @@ class MPIAdam(MPIOptimizer):
   def get_deltas(self,raw_deltas):
 
     if K.floatx() == "float16":
-        raw_deltas = map(lambda w: w.astype(np.float32),raw_deltas)
+        raw_deltas[:] = map(lambda w: w.astype(np.float32),raw_deltas)
 
     if self.iterations == 0:
       self.m_list = [np.zeros_like(g) for g in raw_deltas]
@@ -134,7 +134,7 @@ class MPIAdam(MPIOptimizer):
     self.iterations += 1
 
     if K.floatx() == "float16":
-        deltas = map(lambda w: w.astype(np.float16),deltas)
+        deltas[:] = map(lambda w: w.astype(np.float16),deltas)
 
     return deltas
 
