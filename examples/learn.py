@@ -68,6 +68,10 @@ shot_list = pp.preprocess_all()
 sorted(shot_list)
 shot_list_train,shot_list_test = shot_list.split_train_test(conf)
 num_shots = len(shot_list_train) + len(shot_list_test)
+if validation_frac <= 0.0:
+    print('Setting validation to a minimum of 0.05')
+    validation_frac = 0.05
+shot_list_train,shot_list_validate = shot_list_train.split_direct(1.0-validation_frac,do_shuffle=True)
 print("...done")
 
 
@@ -90,7 +94,7 @@ print('Training on {} shots, testing on {} shots'.format(len(shot_list_train),le
 ######################TRAINING#######################
 #####################################################
 #train(conf,shot_list_train,loader)
-p = old_mp.Process(target = train,args=(conf,shot_list_train,loader))
+p = old_mp.Process(target = train,args=(conf,shot_list_train,shot_list_validate,loader))
 p.start()
 p.join()
 

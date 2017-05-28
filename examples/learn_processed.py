@@ -95,7 +95,7 @@ print('Training on {} shots, testing on {} shots'.format(len(shot_list_train),le
 
 
 
-p = old_mp.Process(target = train,args=(conf,shot_list_train,loader))
+p = old_mp.Process(target = train,args=(conf,shot_list_train,shot_list_validate,loader))
 p.start()
 p.join()
 

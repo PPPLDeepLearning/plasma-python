@@ -115,16 +115,14 @@ backend = conf['model']['backend']
 #     print('...done')
 
 
-def train(conf,shot_list_train,loader):
+def train(conf,shot_list_train,shot_list_validate,loader):
 
     np.random.seed(1)
 
     validation_losses = []
     validation_roc = []
     training_losses = []
-    if conf['training']['validation_frac'] > 0.0:
-        shot_list_train,shot_list_validate = shot_list_train.split_direct(1.0-conf['training']['validation_frac'],do_shuffle=True)
-        print('validate: {} shots, {} disruptive'.format(len(shot_list_validate),shot_list_validate.num_disruptive()))
+    print('validate: {} shots, {} disruptive'.format(len(shot_list_validate),shot_list_validate.num_disruptive()))
     print('training: {} shots, {} disruptive'.format(len(shot_list_train),shot_list_train.num_disruptive()))
 
     if backend == 'tf' or backend == 'tensorflow':
