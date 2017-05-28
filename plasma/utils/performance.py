@@ -650,8 +650,8 @@ class PerformanceAnalyzer():
             ax.set_ylim([-2,2])
             ax.axvline(len(truth)-self.T_min_warn,color='r',label='max warning time')
             ax.axvline(len(truth)-self.T_max_warn,color='r',label='min warning time')
-            ax.set_xlabel('TTD [ms]')
-            ax.legend(loc = 'upper center',fontsize=10)
+            ax.set_xlabel('T [ms]')
+            ax.legend(loc = 'lower left',fontsize=10)
             plt.setp(ax.get_yticklabels(),fontsize=7)
             # ax.grid()           
             if save_fig:
