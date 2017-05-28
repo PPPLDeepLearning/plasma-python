@@ -2,15 +2,15 @@
 
 #will do stuff in fs_path / [username] / signal_data | shot_lists | processed shots, etc.
 
-# for example tigress/alexeys
-fs_path: '/tigress' #'/cscratch/share/frnn' #'/tigress'
-target: 'maxhinge' #'binary' #'ttd' #'hinge'
+fs_path: '/tigress'
+target: 'maxhinge' #'binary' #'ttd'
 num_gpus: 4
 
 paths:
     signal_prepath: '/signal_data/' #/signal_data/jet/
     shot_list_dir: '/shot_lists/'
     tensorboard_save_path: '/Graph/'
+    data: 'jet_data'
 
 data:
     cut_shot_ends: True
@@ -63,7 +63,7 @@ model:
     clipnorm: 10.0
     regularization: 0.0
     #1e-4 is too high, 5e-7 is too low. 5e-5 seems best at 256 batch size, full dataset and ~10 epochs, and lr decay of 0.90. 1e-4 also works well if we decay a lot (i.e ~0.7 or more)
-    lr: 0.0001 #0.00005 #0.00005 #0.00005
+    lr: 0.000001 #0.00005 #0.00005 #0.00005
     lr_decay: 1.0 #0.98 #0.9
     stateful: True
     return_sequences: True
@@ -82,7 +82,7 @@ training:
     max_patch_length: 100000
     #How many shots are we loading at once?
     num_shots_at_once: 200
-    num_epochs: 26
+    num_epochs: 100
     use_mock_data: False
     data_parallel: False
     hyperparam_tuning: False

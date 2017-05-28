@@ -55,8 +55,6 @@ def parameters(input_file):
 
         #signals
         params['paths']['all_signals'] = all_signals
-        #make sure all 1D signals appear last!
-        params['paths']['use_signals'] = d3d_signals
 
         #shot lists
         jet_carbon_wall = ShotListFiles(jet,params['paths']['shot_list_dir'],['CWall_clear.txt','CFC_unint.txt'],'jet carbon wall data')
@@ -70,9 +68,19 @@ def parameters(input_file):
         d3d_jb_full = ShotListFiles(d3d,params['paths']['shot_list_dir'],['shotlist_JaysonBarr_clear.txt','shotlist_JaysonBarr_disrupt.txt'],'d3d shots since 160000-170000')
 
         nstx_full = ShotListFiles(nstx,params['paths']['shot_list_dir'],['disrupt_nstx.txt'],'nstx shots (all are disruptive')
+ 
+        if params['paths']['data'] == 'jet_data':
+            params['paths']['shot_files'] = [jet_carbon_wall]
+            params['paths']['shot_files_test'] = [jet_iterlike_wall]
+            params['paths']['use_signals'] = jet_signals
+        elif params['paths']['data'] == 'd3d_data':
+            params['paths']['shot_files'] = [d3d_full]
+            params['paths']['shot_files_test'] = []
+            #make sure all 1D signals appear last!
+            params['paths']['use_signals'] = d3d_signals
+        else: pass 
 
-        params['paths']['shot_files'] = [d3d_full]
-        params['paths']['shot_files_test'] = []
+
         params['paths']['shot_files_all'] = params['paths']['shot_files']+params['paths']['shot_files_test']
         params['paths']['all_machines'] = list(set([file.machine for file in params['paths']['shot_files_all']]))
 
