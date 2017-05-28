@@ -12,7 +12,7 @@ class Target(object):
 
     @abc.abstractmethod
     def loss_np(y_true,y_pred):
-	return mse_np(y_true,y_pred)
+        return mse_np(y_true,y_pred)
 
     @abc.abstractmethod
     def remapper(ttd,T_warning):
@@ -29,7 +29,7 @@ class BinaryTarget(Target):
 
     @staticmethod
     def loss_np(y_true,y_pred):
-	return binary_crossentropy_np(y_true,y_pred)
+        return binary_crossentropy_np(y_true,y_pred)
 
     @staticmethod
     def remapper(ttd,T_warning,as_array_of_shots=True):
@@ -51,7 +51,7 @@ class TTDTarget(Target):
 
     @staticmethod
     def loss_np(y_true,y_pred):
-	return mse_np(y_true,y_pred)
+        return mse_np(y_true,y_pred)
 
     @staticmethod
     def remapper(ttd,T_warning):
@@ -71,7 +71,7 @@ class TTDLinearTarget(Target):
 
     @staticmethod
     def loss_np(y_true,y_pred):
-	return mse_np(y_true,y_pred)
+        return mse_np(y_true,y_pred)
     
 
     @staticmethod
@@ -152,9 +152,9 @@ class HingeTarget(Target):
     
     @staticmethod
     def loss_np(y_true, y_pred):
-	return hinge_np(y_true,y_pred)
-	#return squared_hinge_np(y_true,y_pred)
-	
+        return hinge_np(y_true,y_pred)
+        #return squared_hinge_np(y_true,y_pred)
+        
     @staticmethod
     def remapper(ttd,T_warning,as_array_of_shots=True):
         binary_ttd = 0*ttd

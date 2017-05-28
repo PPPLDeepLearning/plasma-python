@@ -38,7 +38,7 @@ class gadata:
 					fstree 	= tree
 				else:					
 					tag = self.connection.get('findsig("'+self.signal+'",_fstree)').value
-  					fstree = self.connection.get('_fstree').value 
+					fstree = self.connection.get('_fstree').value 
 
 				self.connection.openTree(fstree,shot)
 				self.zdata  = self.connection.get('_s = '+tag).data()
@@ -48,17 +48,17 @@ class gadata:
 					self.xdata = self.connection.get('dim_of(_s,1)').data()
 					self.xunits = self.connection.get('units_of(dim_of(_s,1))').data()
 					if self.xunits == '' or self.xunits == ' ': 
-   						self.xunits = self.connection.get('units(dim_of(_s,1))').data()
+						self.xunits = self.connection.get('units(dim_of(_s,1))').data()
 
 					self.ydata 	= self.connection.get('dim_of(_s)').data()
-                			self.yunits = self.connection.get('units_of(dim_of(_s))').data()
+					self.yunits = self.connection.get('units_of(dim_of(_s))').data()
 					if self.yunits == '' or self.yunits == ' ':
  						self.yunits     = self.connection.get('units(dim_of(_s))').data()
 				else:
 					self.xdata = self.connection.get('dim_of(_s)').data()
 					self.xunits = self.connection.get('units_of(dim_of(_s))').data()
 					if self.xunits == '' or self.xunits == ' ': 
-   						self.xunits = self.connection.get('units(dim_of(_s))').data()
+						self.xunits = self.connection.get('units(dim_of(_s))').data()
 				#print 'zdata: ' + str(self.zdata)
 				self.found = True
 
@@ -67,19 +67,17 @@ class gadata:
 				if numpy.ndim(self.ydata) == 2: self.ydata = numpy.transpose(self.ydata)
 				if numpy.ndim(self.xdata) == 2: self.xdata = numpy.transpose(self.xdata)
 
-            		except Exception,e:
-            	#node not found
-#				print '   Signal not in MDSplus: %s' % (signal,) 
+			except Exception as e:
 				pass
 
 			# Retrieve data from PTDATA if node not found
-	        if not self.found:
+		if not self.found:
 			#print 'Trying ptdata: %s' % (signal,)
-                	self.zdata = self.connection.get('_s = ptdata2("'+signal+'",'+str(shot)+')')
-                	if len(self.zdata) != 1:
-                    		self.xdata = self.connection.get('dim_of(_s)')
-                    		self.rank = 1
-                    		self.found = True
+			self.zdata = self.connection.get('_s = ptdata2("'+signal+'",'+str(shot)+')')
+			if len(self.zdata) != 1:
+				self.xdata = self.connection.get('dim_of(_s)')
+				self.rank = 1
+				self.found = True
 
 			# Retrieve data from Pseudo-pointname if not in ptdata
 		if not self.found:
@@ -92,8 +90,5 @@ class gadata:
 
 		if not self.found:  #this means the signal wasn't found
 			pass
-	#			print '   Signal not in pseudo-pointname: %s' % (signal,) 
-			#print "   No such signal: %s" % (signal,)
 
-	        #print '   GADATA Retrieval Time : ',time.time() - t0
 		return
