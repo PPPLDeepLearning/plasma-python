@@ -228,16 +228,22 @@ class ModelBuilder(object):
         if not os.path.exists(prepath):
             os.makedirs(prepath)
 
-    def load_model_weights(self,model):
-        epochs = self.get_all_saved_files()
-        if len(epochs) == 0:
-            print('no previous checkpoint found')
-            return -1
+    def load_model_weights(self,model,custom_path=None):
+        if custom_path == None:
+            epochs = self.get_all_saved_files()
+            if len(epochs) == 0:
+                print('no previous checkpoint found')
+                return -1
+            else:
+                max_epoch = max(epochs)
+                print('loading from epoch {}'.format(max_epoch))
+                model.load_weights(self.get_save_path(max_epoch))
+                return max_epoch
         else:
-            max_epoch = max(epochs)
-            print('loading from epoch {}'.format(max_epoch))
-            model.load_weights(self.get_save_path(max_epoch))
-            return max_epoch
+            epoch = self.extract_id_and_epoch_from_filename(sys.path.getbasename(custom_path))
+            model.load_weights(custom_path)
+            print("Loading from custom epoch {}".format(epoch))
+            return epoch
 
     def get_latest_save_path(self):
         epochs = self.get_all_saved_files()

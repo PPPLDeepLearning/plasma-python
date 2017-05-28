@@ -60,6 +60,12 @@ random.seed(task_index)
 if task_index == 0:
     pprint(conf)
 
+only_predict = len(sys.argv) > 1
+custom_path = None
+if only_predict:
+    custom_path = sys.argv[1]
+    print("predicting using path {}".format(custom_path))
+
 #####################################################
 ####################Normalization####################
 #####################################################
@@ -72,7 +78,8 @@ print("...done")
 
 shot_list_train,shot_list_validate,shot_list_test = loader.load_shotlists(conf)
 
-mpi_train(conf,shot_list_train,shot_list_validate,loader)
+if not only_predict:
+    mpi_train(conf,shot_list_train,shot_list_validate,loader)
 
 #load last model for testing
 print('saving results')
@@ -83,8 +90,8 @@ disruptive= []
 # y_prime_train,y_gold_train,disruptive_train = make_predictions(conf,shot_list_train,loader)
 # y_prime_test,y_gold_test,disruptive_test = make_predictions(conf,shot_list_test,loader)
 
-y_prime_train,y_gold_train,disruptive_train,roc_train,loss_train = mpi_make_predictions_and_evaluate(conf,shot_list_train,loader)
-y_prime_test,y_gold_test,disruptive_test,roc_test,loss_test = mpi_make_predictions_and_evaluate(conf,shot_list_test,loader)
+y_prime_train,y_gold_train,disruptive_train,roc_train,loss_train = mpi_make_predictions_and_evaluate(conf,shot_list_train,loader,custom_path)
+y_prime_test,y_gold_test,disruptive_test,roc_test,loss_test = mpi_make_predictions_and_evaluate(conf,shot_list_test,loader,custom_path)
 
 if task_index == 0:
 	print('=========Summary========')

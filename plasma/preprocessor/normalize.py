@@ -226,10 +226,12 @@ class MeanVarNormalizer(Normalizer):
         means = np.median(self.means[m],axis=0)
         stds = np.median(self.stds[m],axis=0)
         for (i,sig) in enumerate(shot.signals):
-            stds_curr = stds[i]
-            if stds_curr == 0.0:
-                stds_curr = 1.0
-            shot.signals_dict[sig] = (shot.signals_dict[sig] - means[i])/stds_curr
+            if sig.normalize:
+                stds_curr = stds[i]
+                if stds_curr == 0.0:
+                    stds_curr = 1.0
+                shot.signals_dict[sig] = (shot.signals_dict[sig] - means[i])/stds_curr
+
         shot.ttd = self.remapper(shot.ttd,self.conf['data']['T_warning'])
         self.cut_end_of_shot(shot)
         # self.apply_positivity_mask(shot)
@@ -265,10 +267,11 @@ class VarNormalizer(MeanVarNormalizer):
         m = shot.machine
         stds = np.median(self.stds[m],axis=0)
         for (i,sig) in enumerate(shot.signals):
-            stds_curr = stds[i]
-            if stds_curr == 0.0:
-                stds_curr = 1.0
-            shot.signals_dict[sig] = (shot.signals_dict[sig])/stds_curr
+            if sig.normalize:
+                stds_curr = stds[i]
+                if stds_curr == 0.0:
+                    stds_curr = 1.0
+                shot.signals_dict[sig] = (shot.signals_dict[sig])/stds_curr
         shot.ttd = self.remapper(shot.ttd,self.conf['data']['T_warning'])
         self.cut_end_of_shot(shot)
 
@@ -290,7 +293,8 @@ class AveragingVarNormalizer(VarNormalizer):
         window = exponential(window_size,0,window_decay,False)
         window /= np.sum(window)
         for (i,sig) in enumerate(shot.signals):
-            shot.signals_dict[sig] = apply_along_axis(lambda m : correlate(m,window,'valid'),axis=0,arr=shot.signals_dict[sig])
+            if sig.normalize:
+                shot.signals_dict[sig] = apply_along_axis(lambda m : correlate(m,window,'valid'),axis=0,arr=shot.signals_dict[sig])
         shot.ttd = shot.ttd[-shot.signals.shape[0]:]
 
     def __str__(self):
@@ -355,7 +359,8 @@ class MinMaxNormalizer(Normalizer):
                 curr_range = 1.0
         shot.signals = (shot.signals - self.minimums[m])/curr_range
         for (i,sig) in enumerate(shot.signals):
-            shot.signals_dict[sig] = (shot.signals_dict[sig] - self.minimums[m])/(self.maximums[m] - self.minimums[m])
+            if sig.normalize:
+                shot.signals_dict[sig] = (shot.signals_dict[sig] - self.minimums[m])/(self.maximums[m] - self.minimums[m])
         shot.ttd = self.remapper(shot.ttd,self.conf['data']['T_warning'])
         self.cut_end_of_shot(shot)
         # self.apply_positivity_mask(shot)
