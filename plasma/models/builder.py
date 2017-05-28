@@ -77,6 +77,7 @@ class ModelBuilder(object):
         lr = model_conf['lr']
         clipnorm = model_conf['clipnorm']
         regularization = model_conf['regularization']
+        dense_regularization = model_conf['dense_regularization']
 
         if optimizer == 'sgd':
             optimizer_class = SGD
@@ -161,7 +162,6 @@ class ModelBuilder(object):
             pre_rnn_1D = Reshape((num_1D,len(indices_1d)/num_1D)) (pre_rnn_1D)
 	    pre_rnn_1D = Permute((2,1)) (pre_rnn_1D)
             
-	    #pre_rnn_1D = Conv1D(num_conv_filters,size_conv_filters,padding='same',activation='relu',dilation_rate=1) (pre_rnn_1D)
             for i in range(model_conf['num_conv_layers']):
                 pre_rnn_1D = Convolution1D(num_conv_filters,size_conv_filters,padding='valid',activation='relu') (pre_rnn_1D)
                 pre_rnn_1D = MaxPooling1D(pool_size) (pre_rnn_1D)
@@ -169,8 +169,11 @@ class ModelBuilder(object):
             pre_rnn = Concatenate() ([pre_rnn_0D,pre_rnn_1D])
 	else:
 	    pre_rnn = pre_rnn_input	
-	#pre_rnn = Dense(dense_size,activation='relu') (pre_rnn)
-	#pre_rnn = Dense(dense_size,activation='relu') (pre_rnn)
+
+	if model_conf['rnn_layers'] == 0:
+	    pre_rnn = Dense(dense_size,activation='tanh',kernel_regularizer=l2(dense_regularization),bias_regularizer=l2(dense_regularization),activity_regularizer=l2(dense_regularization)) (pre_rnn)
+	    pre_rnn = Dense(dense_size/2,activation='tanh',kernel_regularizer=l2(dense_regularization),bias_regularizer=l2(dense_regularization),activity_regularizer=l2(dense_regularization)) (pre_rnn)
+	    pre_rnn = Dense(dense_size/4,activation='tanh',kernel_regularizer=l2(dense_regularization),bias_regularizer=l2(dense_regularization),activity_regularizer=l2(dense_regularization)) (pre_rnn)
 	
 	pre_rnn_model = Model(inputs = pre_rnn_input,outputs=pre_rnn)
 	x_input = Input(batch_shape = batch_input_shape)
@@ -247,7 +250,7 @@ class ModelBuilder(object):
                 model.load_weights(self.get_save_path(max_epoch))
                 return max_epoch
         else:
-            epoch = self.extract_id_and_epoch_from_filename(sys.path.getbasename(custom_path))
+            epoch = self.extract_id_and_epoch_from_filename(os.path.basename(custom_path))[1]
             model.load_weights(custom_path)
             print("Loading from custom epoch {}".format(epoch))
             return epoch
