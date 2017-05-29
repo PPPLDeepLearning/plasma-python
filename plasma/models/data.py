@@ -174,7 +174,7 @@ class Machine(object):
 		mapping = None
 		try:
 			time,data,mapping,success = self.fetch_data_fn(path,shot_num,c)
-		except Exception,e:
+		except Exception as e:
 			time,data = create_missing_value_filler()
 			print(e)
 			sys.stdout.flush()

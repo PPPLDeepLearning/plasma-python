@@ -22,7 +22,7 @@ import numpy as np
 import sys
 import multiprocessing as mp
 from functools import partial
-import Queue
+from multiprocessing import Queue
 import os
 import errno
 
@@ -82,7 +82,7 @@ def save_shot(shot_num_queue,c,signals,save_prepath,machine,sentinel=-1):
 						data_two_column = np.vstack((mapping_two_column,data_two_column))
 					try: #can lead to race condition
 						mkdirdepth(save_path_full)
-					except OSError, e:
+					except OSError as e:
 					    if e.errno == errno.EEXIST:
 					        # File exists, and it's a directory, another process beat us to creating this dir, that's OK.
 					        pass

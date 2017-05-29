@@ -2,15 +2,15 @@
 
 #will do stuff in fs_path / [username] / signal_data | shot_lists | processed shots, etc.
 
-# for example tigress/alexeys
-fs_path: '/tigress' #'/cscratch/share/frnn' #'/tigress'
-target: 'maxhinge' #'binary' #'ttd' #'hinge'
+fs_path: '/tigress'
+target: 'maxhinge' #'binary' #'ttd'
 num_gpus: 4
 
 paths:
     signal_prepath: '/signal_data/' #/signal_data/jet/
     shot_list_dir: '/shot_lists/'
     tensorboard_save_path: '/Graph/'
+    data: 'jet_data'
 
 data:
     cut_shot_ends: True
@@ -82,7 +82,7 @@ training:
     max_patch_length: 100000
     #How many shots are we loading at once?
     num_shots_at_once: 200
-    num_epochs: 26
+    num_epochs: 100
     use_mock_data: False
     data_parallel: False
     hyperparam_tuning: False

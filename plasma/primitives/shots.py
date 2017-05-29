@@ -119,7 +119,7 @@ class ShotList(object):
         train_frac = conf['training']['train_frac']
         shuffle_training = conf['training']['shuffle_training']
         use_shots = conf['data']['use_shots']
-	all_signals = conf['paths']['all_signals']
+        all_signals = conf['paths']['all_signals']
         #split randomly
         use_shots_train = int(round(train_frac*use_shots))
         use_shots_test = int(round((1-train_frac)*use_shots))
@@ -127,17 +127,17 @@ class ShotList(object):
             shot_list_train,shot_list_test = train_test_split(self.shots,train_frac,shuffle_training)
         #train and test list given
         else:
-	    shot_list_train = ShotList()
-	    shot_list_train.load_from_shot_list_files_objects(shot_files,all_signals)
-		
-	    shot_list_test = ShotList()
-	    shot_list_test.load_from_shot_list_files_objects(shot_files_test,all_signals)
+            shot_list_train = ShotList()
+            shot_list_train.load_from_shot_list_files_objects(shot_files,all_signals)
+                
+            shot_list_test = ShotList()
+            shot_list_test.load_from_shot_list_files_objects(shot_files_test,all_signals)
         
-	
+        
         shot_numbers_train = [shot.number for shot in shot_list_train]
         shot_numbers_test = [shot.number for shot in shot_list_test]
         print(len(shot_numbers_train),len(shot_numbers_test))
-	#make sure we only use pre-filtered valid shots
+        #make sure we only use pre-filtered valid shots
         shots_train = self.filter_by_number(shot_numbers_train)
         shots_test = self.filter_by_number(shot_numbers_test)
         return shots_train.random_sublist(use_shots_train),shots_test.random_sublist(use_shots_test)
@@ -304,13 +304,13 @@ class Shot(object):
 
     def preprocess(self,conf):
         sys.stdout.write('\rrecomputing {}'.format(self.number))
-	sys.stdout.flush()
+        sys.stdout.flush()
       #get minmax times
         time_arrays,signal_arrays,t_min,t_max,valid = self.get_signals_and_times_from_file(conf) 
         self.valid = valid
         #cut and resample
-	if self.valid:
-	        self.cut_and_resample_signals(time_arrays,signal_arrays,t_min,t_max,conf)
+        if self.valid:
+                self.cut_and_resample_signals(time_arrays,signal_arrays,t_min,t_max,conf)
 
     def get_signals_and_times_from_file(self,conf):
         valid = True
@@ -326,24 +326,23 @@ class Shot(object):
         for (i,signal) in enumerate(self.signals):
             t,sig,valid_signal = signal.load_data(signal_prepath,self)
             if not valid_signal:
-		return None,None,None,None,False
+                return None,None,None,None,False
             else:
-            	assert(len(sig.shape) == 2)
-            	assert(len(t.shape) == 1)
-		assert(len(t) > 1)
+                assert(len(sig.shape) == 2)
+                assert(len(t.shape) == 1)
+                assert(len(t) > 1)
                 t_min = max(t_min,np.min(t))
                 t_max = min(t_max,np.max(t))
-			
                 signal_arrays.append(sig)
                 time_arrays.append(t)
         assert(t_max > t_min or not valid)
-	#make sure the shot is long enough.
-	dt = conf['data']['dt']
-	if (t_max - t_min)/dt <= (conf['model']['length']+conf['data']['T_min_warn']):
-	    print('Shot {} contains insufficient data'.format(self.number))
-	    valid = False
-		
-	
+        #make sure the shot is long enough.
+        dt = conf['data']['dt']
+        if (t_max - t_min)/dt <= (conf['model']['length']+conf['data']['T_min_warn']):
+            print('Shot {} contains insufficient data'.format(self.number))
+            valid = False
+                
+        
         if self.is_disruptive:
             t_max = self.t_disrupt
             assert(self.t_disrupt <= t_max or not valid)
@@ -368,7 +367,7 @@ class Shot(object):
 
     def convert_to_ttd(self,tr,conf):
         T_max = conf['data']['T_max']
-	dt = conf['data']['dt']
+        dt = conf['data']['dt']
         if self.is_disruptive:
             ttd = max(tr) - tr
             ttd = np.clip(ttd,0,T_max)
