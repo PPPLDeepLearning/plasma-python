@@ -18,7 +18,7 @@ from data.signals import *#d3d,jet,d3d_signals,jet_signals,all_signals
 #signals
 conf['paths']['all_signals'] = all_signals#jet_signals#d3d_signals#all_signals
 #make sure all 1D signals appear last!
-conf['paths']['use_signals'] = d3d_signals #fully_defined_signals#d3d_signals#fully_defined_signals #d3d_signals#fully_defined_signals# [ip,lm,li,dens,q95,energy,pin,pradcore]#,edens_profile,etemp_profile]#jet_signals#
+conf['paths']['use_signals'] = [q95,li,ip,betan,energy,lm,dens,pradcore,pradedge,pin,pechin,torquein,ipdirect,etemp_profile,edens_profile] #d3d_signals #fully_defined_signals#d3d_signals#fully_defined_signals #d3d_signals#fully_defined_signals# [ip,lm,li,dens,q95,energy,pin,pradcore]#,edens_profile,etemp_profile]#jet_signals#
 
 #shot lists
 #shot_list_dir = conf['paths']['shot_list_dir']

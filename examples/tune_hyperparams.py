@@ -10,20 +10,22 @@ import subprocess as sp
 tunables = []
 
 lr = LogContinuousHyperparam(['model','lr'],5e-6,4e-3) 
-lr_decay = CategoricalHyperparam(['model','lr_decay'],[0.97,1.0]) 
-t_warn = CategoricalHyperparam(['data','T_warning'],[0.256,0.512,1.024,40.0])
-fac = CategoricalHyperparam(['data','positive_example_penalty'],[1.0,2.0,10.0])
-#target = CategoricalHyperparam(['target'],['lasso','hi'])
+lr_decay = CategoricalHyperparam(['model','lr_decay'],[0.97,0.985,1.0]) 
+#t_warn = CategoricalHyperparam(['data','T_warning'],[1.024])
+fac = CategoricalHyperparam(['data','positive_example_penalty'],[1.0,2.0,4.0,8.0])
+#target = CategoricalHyperparam(['target'],['maxhinge','hinge'])
+#batch_size = CategoricalHyperparam(['training','batch_size'],[256,128,32,64])
+#dropout_prob = CategoricalHyperparam(['model','dropout_prob'],[0.1,0.3,0.5])
 
 
-tunables = [lr,lr_decay,t_warn,fac] #target
+tunables = [lr,lr_decay,fac] #target
 
 run_directory = "/tigress/jk7/hyperparams/"
 template_path = "/home/{}/plasma-python/examples/".format(getpass.getuser())
 conf_name = "conf.yaml"
 executable_name = "mpi_learn.py"
 num_machines = 2
-num_trials = 40
+num_trials = 50
 
 def generate_conf_file(tunables,template_path = "../",save_path = "./",conf_name="conf.yaml"):
 	assert(template_path != save_path)
