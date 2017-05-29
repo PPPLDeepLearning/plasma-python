@@ -30,7 +30,7 @@ class PerformanceAnalyzer():
         self.disruptive_test = None
         self.shot_list_test = None
 
-	self.p_thresh_range = None
+        self.p_thresh_range = None
 
         self.normalizer = None
 
@@ -73,36 +73,36 @@ class PerformanceAnalyzer():
 
 
     def get_p_thresh_range(self):
-    	#return self.conf['data']['target'].threshold_range(self.conf['data']['T_warning'])
-	if self.p_thresh_range == None:
-		all_preds_tr = self.pred_train
-		all_truths_tr = self.truth_train
-		all_disruptive_tr = self.disruptive_train
-		all_preds_te = self.pred_test
-		all_truths_te = self.truth_test
-		all_disruptive_te = self.disruptive_test
-	
-	        early_th_tr,correct_th_tr,late_th_tr,nd_th_tr = self.get_threshold_arrays(all_preds_tr,all_truths_tr,all_disruptive_tr)
-	        early_th_te,correct_th_te,late_th_te,nd_th_te = self.get_threshold_arrays(all_preds_te,all_truths_te,all_disruptive_te)
-	        all_thresholds = np.sort(np.concatenate((early_th_tr,correct_th_tr,late_th_tr,nd_th_tr,early_th_te,correct_th_te,late_th_te,nd_th_te)))
-		self.p_thresh_range = all_thresholds
-	return self.p_thresh_range
-		
+        #return self.conf['data']['target'].threshold_range(self.conf['data']['T_warning'])
+        if self.p_thresh_range == None:
+                all_preds_tr = self.pred_train
+                all_truths_tr = self.truth_train
+                all_disruptive_tr = self.disruptive_train
+                all_preds_te = self.pred_test
+                all_truths_te = self.truth_test
+                all_disruptive_te = self.disruptive_test
+        
+                early_th_tr,correct_th_tr,late_th_tr,nd_th_tr = self.get_threshold_arrays(all_preds_tr,all_truths_tr,all_disruptive_tr)
+                early_th_te,correct_th_te,late_th_te,nd_th_te = self.get_threshold_arrays(all_preds_te,all_truths_te,all_disruptive_te)
+                all_thresholds = np.sort(np.concatenate((early_th_tr,correct_th_tr,late_th_tr,nd_th_tr,early_th_te,correct_th_te,late_th_te,nd_th_te)))
+                self.p_thresh_range = all_thresholds
+        return self.p_thresh_range
+                
 
     def get_metrics_vs_p_thresh_fast(self,all_preds,all_truths,all_disruptive):
-	all_disruptive = np.array(all_disruptive)	
-	if self.pred_train is not None:
-		p_thresh_range = self.get_p_thresh_range()
-	else:
-	        early_th,correct_th,late_th,nd_th = self.get_threshold_arrays(all_preds,all_truths,all_disruptive)
-	        p_thresh_range = np.sort(np.concatenate((early_th,correct_th,late_th,nd_th)))
+        all_disruptive = np.array(all_disruptive)        
+        if self.pred_train is not None:
+                p_thresh_range = self.get_p_thresh_range()
+        else:
+                early_th,correct_th,late_th,nd_th = self.get_threshold_arrays(all_preds,all_truths,all_disruptive)
+                p_thresh_range = np.sort(np.concatenate((early_th,correct_th,late_th,nd_th)))
         correct_range = np.zeros_like(p_thresh_range)
         accuracy_range = np.zeros_like(p_thresh_range)
         fp_range = np.zeros_like(p_thresh_range)
         missed_range = np.zeros_like(p_thresh_range)
         early_alarm_range = np.zeros_like(p_thresh_range)
 
-	early_th,correct_th,late_th,nd_th = self.get_threshold_arrays(all_preds,all_truths,all_disruptive)
+        early_th,correct_th,late_th,nd_th = self.get_threshold_arrays(all_preds,all_truths,all_disruptive)
 
         for i,thresh in enumerate(p_thresh_range):
             #correct,accuracy,fp_rate,missed,early_alarm_rate = self.summarize_shot_prediction_stats(thresh,all_preds,all_truths,all_disruptive)
@@ -116,7 +116,7 @@ class PerformanceAnalyzer():
         return correct_range,accuracy_range,fp_range,missed_range,early_alarm_range
 
     def get_shot_prediction_stats_from_threshold_arrays(self,early_th,correct_th,late_th,nd_th,thresh):
-	indices = np.where(np.logical_and(correct_th > thresh,early_th <= thresh))[0]
+        indices = np.where(np.logical_and(correct_th > thresh,early_th <= thresh))[0]
         FPs = np.sum(nd_th > thresh)
         TNs = len(nd_th) - FPs 
 
@@ -139,7 +139,7 @@ class PerformanceAnalyzer():
         for i in range(len(preds)):
             pred = 1.0*preds[i]
             truth = truths[i]
-	    pred[:self.get_ignore_indices()] = -np.inf
+            pred[:self.get_ignore_indices()] = -np.inf
             is_disruptive = disruptives[i] 
             if is_disruptive:
                 max_acceptable = self.create_acceptable_region(truth,'max')
@@ -147,15 +147,15 @@ class PerformanceAnalyzer():
                 correct_indices = np.logical_and(max_acceptable, ~min_acceptable)
                 early_indices = ~max_acceptable
                 late_indices = min_acceptable
-		if np.sum(late_indices) == 0:
-                	d_late_thresholds.append(-np.inf)
-		else:
-	                d_late_thresholds.append(np.max(pred[late_indices]))
-		if np.sum(early_indices) == 0:
-                	d_early_thresholds.append(-np.inf)
-		else:
-                	d_early_thresholds.append(np.max(pred[early_indices]))
-			
+                if np.sum(late_indices) == 0:
+                        d_late_thresholds.append(-np.inf)
+                else:
+                        d_late_thresholds.append(np.max(pred[late_indices]))
+                if np.sum(early_indices) == 0:
+                        d_early_thresholds.append(-np.inf)
+                else:
+                        d_early_thresholds.append(np.max(pred[early_indices]))
+                        
                 d_correct_thresholds.append(np.max(pred[correct_indices]))
             else:
                 nd_thresholds.append(np.max(pred))
@@ -241,7 +241,7 @@ class PerformanceAnalyzer():
         return TP,FP,FN,TN,early,late
 
     def get_ignore_indices(self):
-	return conf['model']['ignore_timesteps']
+        return conf['model']['ignore_timesteps']
 
 
     def get_positives(self,predictions):
@@ -298,7 +298,7 @@ class PerformanceAnalyzer():
         results_files = os.listdir(self.results_dir)
         print(results_files)
         dat = np.load(self.results_dir + results_files[self.i])
-	print("Loading results file {}".format(self.results_dir + results_files[self.i]))
+        print("Loading results file {}".format(self.results_dir + results_files[self.i]))
 
         if self.verbose:
             print('configuration: {} '.format(dat['conf']))
@@ -315,20 +315,20 @@ class PerformanceAnalyzer():
         for mode in ['test','train']:
             print('{}: loaded {} shot ({}) disruptive'.format(mode,self.get_num_shots(mode),self.get_num_disruptive_shots(mode)))
         self.print_conf()
-	#self.assert_same_lists(self.shot_list_test,self.truth_test,self.disruptive_test)
-	#self.assert_same_lists(self.shot_list_train,self.truth_train,self.disruptive_train)
+        #self.assert_same_lists(self.shot_list_test,self.truth_test,self.disruptive_test)
+        #self.assert_same_lists(self.shot_list_train,self.truth_train,self.disruptive_train)
 
     def assert_same_lists(self,shot_list,truth_arr,disr_arr):
-	assert(len(shot_list) == len(truth_arr))
-	for i in range(len(shot_list)):
-		shot_list.shots[i].restore("/tigress/jk7/processed_shots/")
-		s = shot_list.shots[i].ttd
-		if not truth_arr[i].shape[0] == s.shape[0]-30:
-			print(i)
-			print(shot_list.shots[i].number)
-			print((s.shape,truth_arr[i].shape,disr_arr[i]))
-		assert(truth_arr[i].shape[0] == s.shape[0]-30)
-	print("Same Shape!")
+        assert(len(shot_list) == len(truth_arr))
+        for i in range(len(shot_list)):
+                shot_list.shots[i].restore("/tigress/jk7/processed_shots/")
+                s = shot_list.shots[i].ttd
+                if not truth_arr[i].shape[0] == s.shape[0]-30:
+                        print(i)
+                        print(shot_list.shots[i].number)
+                        print((s.shape,truth_arr[i].shape,disr_arr[i]))
+                assert(truth_arr[i].shape[0] == s.shape[0]-30)
+        print("Same Shape!")
    
     def print_conf(self):
         pprint(self.conf) 
@@ -599,12 +599,12 @@ class PerformanceAnalyzer():
                     ax.plot(sig_arr[:,0],label = sig.description)
                 else:
                     ax.imshow(sig_arr[:,:].T, aspect='auto', label = sig.description + " (profile)")
-		    ax.set_ylim([0,num_channels])
+                    ax.set_ylim([0,num_channels])
                 ax.legend(loc='upper center',fontsize=8)
                 plt.setp(ax.get_xticklabels(),visible=False)
                 plt.setp(ax.get_yticklabels(),fontsize=7)
                 f.subplots_adjust(hspace=0)
-		#print(sig)
+                #print(sig)
                 #print('min: {}, max: {}'.format(np.min(sig_arr), np.max(sig_arr)))
             #shot.signals is a 2D numpy array with the rows containing the unlabeled timeseries data
             # signals = np.empty((len(shot.signals),0)) #None
@@ -656,7 +656,7 @@ class PerformanceAnalyzer():
             # ax.grid()           
             if save_fig:
                 plt.savefig('sig_fig_{}.png'.format(shot.number),bbox_inches='tight')
-	    plt.close()
+            plt.close()
         else:
             print("Shot hasn't been processed")
 

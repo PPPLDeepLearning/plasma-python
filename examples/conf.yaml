@@ -2,7 +2,6 @@
 
 #will do stuff in fs_path / [username] / signal_data | shot_lists | processed shots, etc.
 
-# for example tigress/alexeys
 fs_path: '/tigress' #'/cscratch/share/frnn' #'/tigress'
 target: 'maxhinge' #'binary' #'hinge' #'maxhinge' #'binary' #'ttd' #'hinge'
 num_gpus: 4
@@ -11,6 +10,7 @@ paths:
     signal_prepath: '/signal_data/' #/signal_data/jet/
     shot_list_dir: '/shot_lists/'
     tensorboard_save_path: '/Graph/'
+    data: 'jet_data'
 
 data:
     cut_shot_ends: True

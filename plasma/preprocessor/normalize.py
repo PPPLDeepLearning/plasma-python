@@ -68,9 +68,9 @@ class Normalizer(object):
         pass
 
     def ensure_machine(self,machine):
-	if machine not in self.means:
-		self.num_processed[machine] = 0
-		self.num_disruptive[machine] = 0
+        if machine not in self.means:
+                self.num_processed[machine] = 0
+                self.num_disruptive[machine] = 0
     ######Modify the above to change the specifics of the normalization scheme#######
 
     def train(self):
@@ -95,7 +95,7 @@ class Normalizer(object):
     def train_on_files(self,shot_files,use_shots):
         conf = self.conf
         all_signals = conf['paths']['all_signals'] 
-	shot_list = ShotList()
+        shot_list = ShotList()
         shot_list.load_from_shot_list_files_objects(shot_files,all_signals)
         shot_list_picked = shot_list.random_sublist(use_shots) 
 
@@ -110,7 +110,7 @@ class Normalizer(object):
             for (i,stats) in enumerate(pool.imap_unordered(self.train_on_single_shot,shot_list_picked)):
             #for (i,stats) in enumerate(map(self.train_on_single_shot,shot_list_picked)):
                 self.incorporate_stats(stats)
-		self.machines.add(stats.machine)
+                self.machines.add(stats.machine)
                 sys.stdout.write('\r' + '{}/{}'.format(i,len(shot_list_picked)))
 
             pool.close()
@@ -144,7 +144,7 @@ class Normalizer(object):
         assert isinstance(shot,Shot), 'should be instance of shot'
         processed_prepath = self.conf['paths']['processed_prepath']
         shot.restore(processed_prepath)
-	#print(shot)
+        #print(shot)
         stats = self.extract_stats(shot) 
         shot.make_light()
         return stats
@@ -162,8 +162,8 @@ class Normalizer(object):
             machines = dat['machines'][()]
             ret =  all([m in machines for m in self.conf['paths']['all_machines']])
             if not ret:
-		print(machines)
-		print(self.conf['paths']['all_machines'])
+                print(machines)
+                print(self.conf['paths']['all_machines'])
                 print('Not all machines present. Recomputing normalizer.')
             return ret
 
@@ -181,12 +181,12 @@ class MeanVarNormalizer(Normalizer):
         self.stds = dict()
 
     def __str__(self):
-	s = ''
-	for machine in self.means:
-	        means = np.median(self.means[machine],axis=0)
-        	stds = np.median(self.stds[machine],axis=0)
-	        s += 'Machine: {}:\nMean Var Normalizer.\nmeans: {}\nstds: {}'.format(machine,means,stds)
-	return s 
+        s = ''
+        for machine in self.means:
+                means = np.median(self.means[machine],axis=0)
+                stds = np.median(self.stds[machine],axis=0)
+                s += 'Machine: {}:\nMean Var Normalizer.\nmeans: {}\nstds: {}'.format(machine,means,stds)
+        return s 
 
     def extract_stats(self,shot):
         stats = Stats()
@@ -199,14 +199,14 @@ class MeanVarNormalizer(Normalizer):
         else:
             print('Warning: shot {} not valid, omitting'.format(shot.number))
         stats.valid = shot.valid
-	stats.machine = shot.machine
+        stats.machine = shot.machine
         return stats
 
 
 
     def incorporate_stats(self,stats):
-	machine = stats.machine
-	self.ensure_machine(stats.machine)
+        machine = stats.machine
+        self.ensure_machine(stats.machine)
         if stats.valid:
             means = stats.means
             stds = stats.stds
@@ -231,6 +231,7 @@ class MeanVarNormalizer(Normalizer):
                 if stds_curr == 0.0:
                     stds_curr = 1.0
                 shot.signals_dict[sig] = (shot.signals_dict[sig] - means[i])/stds_curr
+
         shot.ttd = self.remapper(shot.ttd,self.conf['data']['T_warning'])
         self.cut_end_of_shot(shot)
         # self.apply_positivity_mask(shot)
@@ -254,16 +255,16 @@ class MeanVarNormalizer(Normalizer):
         self.num_processed = dat['num_processed'][()]
         self.num_disruptive = dat['num_disruptive'][()]
         self.machines = dat['machines'][()]
-	for machine in self.means:
-		print('Machine {}:'.format(machine))
-	        print('loaded normalization data from {} shots ( {} disruptive )'.format(self.num_processed,self.num_disruptive))
+        for machine in self.means:
+                print('Machine {}:'.format(machine))
+                print('loaded normalization data from {} shots ( {} disruptive )'.format(self.num_processed,self.num_disruptive))
         #print('loading normalization data from {} shots, {} disruptive'.format(num_processed,num_disruptive))
 
 
 class VarNormalizer(MeanVarNormalizer):
     def apply(self,shot):
         assert self.means is not None and self.stds is not None, "self.means or self.stds not initialized"
-	m = shot.machine
+        m = shot.machine
         stds = np.median(self.stds[m],axis=0)
         for (i,sig) in enumerate(shot.signals):
             if sig.normalize:
@@ -275,12 +276,12 @@ class VarNormalizer(MeanVarNormalizer):
         self.cut_end_of_shot(shot)
 
     def __str__(self):
-	s = ''
-	for m in self.stds:
-        	stds = np.median(self.stds[m],axis=0)
-		s += 'Machine: {}:\n'.format(m)
-	        s += 'Var Normalizer.\nstds: {}\n'.format(stds)
-	return s
+        s = ''
+        for m in self.stds:
+                stds = np.median(self.stds[m],axis=0)
+                s += 'Machine: {}:\n'.format(m)
+                s += 'Var Normalizer.\nstds: {}\n'.format(stds)
+        return s
 
 
 class AveragingVarNormalizer(VarNormalizer):
@@ -299,12 +300,12 @@ class AveragingVarNormalizer(VarNormalizer):
     def __str__(self):
         window_decay = self.conf['data']['window_decay']
         window_size = self.conf['data']['window_size']
-	s = ''
-	for m in self.stds:
-        	stds = np.median(self.stds[m],axis=0)
-		s += 'Machine: {}:\n'.format(m)
-	        s += 'Averaging Var Normalizer.\nstds: {}\nWindow size: {}, Window decay: {}'.format(stds,window_size,window_decay)
-	return s
+        s = ''
+        for m in self.stds:
+                stds = np.median(self.stds[m],axis=0)
+                s += 'Machine: {}:\n'.format(m)
+                s += 'Averaging Var Normalizer.\nstds: {}\nWindow size: {}, Window decay: {}'.format(stds,window_size,window_decay)
+        return s
 
 
 class MinMaxNormalizer(Normalizer):
@@ -315,10 +316,10 @@ class MinMaxNormalizer(Normalizer):
 
 
     def __str__(self):
-	s = ''
-	for m in self.minimums:
-		s += 'Machine {}:\n.Min Max Normalizer.\nminimums: {}\nmaximums: {}'.format(m,self.minimums[m],self.maximums[m])
-	return s 
+        s = ''
+        for m in self.minimums:
+                s += 'Machine {}:\n.Min Max Normalizer.\nminimums: {}\nmaximums: {}'.format(m,self.minimums[m],self.maximums[m])
+        return s 
 
     def extract_stats(self,shot):
         stats = Stats()
@@ -330,14 +331,14 @@ class MinMaxNormalizer(Normalizer):
         else:
             print('Warning: shot {} not valid, omitting'.format(shot.number))
         stats.valid = shot.valid
-	stats.machine = shot.machine
+        stats.machine = shot.machine
         return stats
 
 
     def incorporate_stats(self,stats):
-	self.ensure_machine(stats.machine)
+        self.ensure_machine(stats.machine)
         if stats.valid:
-	    m = stats.machine
+            m = stats.machine
             minimums = stats.minimums
             maximums = stats.maximums
             if self.num_processed == 0:
@@ -352,10 +353,10 @@ class MinMaxNormalizer(Normalizer):
 
     def apply(self,shot):
         assert(self.minimums is not None and self.maximums is not None) 
-	m = shot.machine
-	curr_range = (self.maximums[m] - self.minimums[m])
-	if curr_range == 0.0:
-		curr_range = 1.0
+        m = shot.machine
+        curr_range = (self.maximums[m] - self.minimums[m])
+        if curr_range == 0.0:
+                curr_range = 1.0
         shot.signals = (shot.signals - self.minimums[m])/curr_range
         for (i,sig) in enumerate(shot.signals):
             if sig.normalize:
