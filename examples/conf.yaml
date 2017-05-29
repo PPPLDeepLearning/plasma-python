@@ -10,7 +10,7 @@ paths:
     signal_prepath: '/signal_data/' #/signal_data/jet/
     shot_list_dir: '/shot_lists/'
     tensorboard_save_path: '/Graph/'
-    data: 'd3d_data'
+    data: 'jet_data'
 
 data:
     cut_shot_ends: True
