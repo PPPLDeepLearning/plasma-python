@@ -34,6 +34,9 @@ from plasma.conf import conf
 from plasma.models.loader import Loader
 from plasma.preprocessor.normalize import Normalizer
 
+if conf['model']['shallow']:
+    print("Shallow learning using MPI is not supported yet. set conf['model']['shallow'] to false.")
+    exit(1)
 if conf['data']['normalizer'] == 'minmax':
     from plasma.preprocessor.normalize import MinMaxNormalizer as Normalizer
 elif conf['data']['normalizer'] == 'meanvar':

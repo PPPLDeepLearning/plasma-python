@@ -10,7 +10,7 @@ paths:
     signal_prepath: '/signal_data/' #/signal_data/jet/
     shot_list_dir: '/shot_lists/'
     tensorboard_save_path: '/Graph/'
-    data: 'jet_data'
+    data: 'd3d_data'
 
 data:
     cut_shot_ends: True
@@ -29,7 +29,7 @@ data:
     #maximum TTD considered
     T_max: 1000.0
     #The shortest works best so far: less overfitting. log TTd prediction also works well. 0.5 better than 0.2
-    T_warning: 1.024 #0.512 #0.25 #1.0 #1.0 #warning time in seconds
+    T_warning: 40.0 #1.024 #0.512 #0.25 #1.0 #1.0 #warning time in seconds
     current_thresh: 750000
     current_end_thresh: 10000
     #the characteristic decay length of the decaying moving average window
@@ -40,6 +40,7 @@ data:
     normalizer: 'var'
 
 model:
+    shallow: True
     #length of LSTM memory
     pred_length: 200
     pred_batch_size: 128

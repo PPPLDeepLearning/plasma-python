@@ -648,7 +648,8 @@ class PerformanceAnalyzer():
                 ax.axhline(P_thresh_opt,color='k',label='trigger threshold')
             #ax.set_ylim([1e-5,1.1e0])
             ax.set_ylim([-2,2])
-            ax.axvline(len(truth)-self.T_min_warn,color='r',label='max warning time')
+            if len(truth)-self.T_min_warn >= 0:
+                ax.axvline(len(truth)-self.T_min_warn,color='r',label='max warning time')
             ax.axvline(len(truth)-self.T_max_warn,color='r',label='min warning time')
             ax.set_xlabel('T [ms]')
             ax.legend(loc = 'lower left',fontsize=10)
