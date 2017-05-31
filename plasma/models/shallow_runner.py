@@ -25,7 +25,7 @@ from plasma.utils.state_reset import reset_states
 from keras.utils.generic_utils import Progbar 
 
 debug_use_shots = 100000
-model_path = "saved_model_new.pkl"
+model_filename = "saved_model.pkl"
 dataset_path = "dataset.npz"
 dataset_test_path = "dataset_test.npz"
 
@@ -58,16 +58,21 @@ class FeatureExtractor(object):
         pool.join()
         return X,Y,np.array(Disr)
 
+    def get_save_prepath(self):
+        prepath = self.loader.conf['paths']['processed_prepath']
+        use_signals = self.loader.conf['paths']['use_signals']
+        save_prepath = prepath + "shallow/use_signals_{}/".format(hash(tuple(sorted(use_signals))))
+        return save_prepath
 
     def load_shot(self,shot,sample_prob=1.0):
-        prepath = self.loader.conf['paths']['processed_prepath']
-        save_prepath = prepath + "shallow/"
+        save_prepath = self.get_save_prepath()
         save_path = shot.get_save_path(save_prepath)
         if os.path.isfile(save_path):
             dat = np.load(save_path)
             X,Y,disr = dat["X"],dat["Y"],dat["disr"][()]
         else:
             use_signals = self.loader.conf['paths']['use_signals']
+            prepath = self.loader.conf['paths']['processed_prepath']
             assert(shot.valid)
             shot.restore(prepath)
             if self.loader.normalizer is not None:
@@ -93,10 +98,10 @@ class FeatureExtractor(object):
             Y = []
             while(len(X) == 0):
                 for i in range(length-timesteps+1):
-                    if np.random.rand() < sample_prob:
-                        x,y = self.get_x_y(i,shot)
-                        X.append(x)
-                        Y.append(y)
+                    #if np.random.rand() < sample_prob:
+                    x,y = self.get_x_y(i,shot)
+                    X.append(x)
+                    Y.append(y)
             X = np.stack(X)
             Y = np.stack(Y)
             shot.make_light()
@@ -104,6 +109,10 @@ class FeatureExtractor(object):
                 os.makedirs(save_prepath)
             np.savez(save_path,X=X,Y=Y,disr=disr)
             #print(X.shape,Y.shape)
+        if sample_prob < 1.0: 
+            indices = np.sort(np.random.choice(np.array(range(len(Y))),int(round(sample_prob*len(Y))),replace=False))
+            X = X[indices]
+            Y = Y[indices]
         return X,Y,disr
 
 
@@ -174,24 +183,27 @@ def train(conf,shot_list_train,shot_list_validate,loader):
     print('validate: {} shots, {} disruptive'.format(len(shot_list_validate),shot_list_validate.num_disruptive()))
     print('training: {} shots, {} disruptive'.format(len(shot_list_train),shot_list_train.num_disruptive()))
 
+    sample_prob = conf['data']['shallow_sample_prob']
     feature_extractor = FeatureExtractor(loader)
     shot_list_train = shot_list_train.random_sublist(debug_use_shots)
-    X,Y,_ = feature_extractor.load_shots(shot_list_train,sample_prob = 1.0)
-    Xv,Yv,_ = feature_extractor.load_shots(shot_list_validate,sample_prob = 1.0)
+    X,Y,_ = feature_extractor.load_shots(shot_list_train,sample_prob = sample_prob)
+    Xv,Yv,_ = feature_extractor.load_shots(shot_list_validate,sample_prob = sample_prob)
     X = np.concatenate(X,axis=0)
     Y = np.concatenate(Y,axis=0)
     Xv = np.concatenate(Xv,axis=0)
     Yv = np.concatenate(Yv,axis=0)
 
-    print("Total data: {} samples, {} positive".format(len(X),np.sum(Y > 0)))
-    max_samples = 100000
-    num_samples = min(max_samples,len(Y))
-    indices = np.random.choice(np.array(range(len(Y))),num_samples,replace=False)
-    X = X[indices]
-    Y = Y[indices]
+    print("Total data: {} samples, {} positive".format(1.0/sample_prob*len(X),1.0/sample_prob*np.sum(Y > 0)))
+    #max_samples = 100000
+    #num_samples = min(max_samples,len(Y))
+    #indices = np.random.choice(np.array(range(len(Y))),num_samples,replace=False)
+    #X = X[indices]
+    #Y = Y[indices]
     
     print("fitting on {} samples, {} positive".format(len(X),np.sum(Y > 0)))
 
+    save_prepath = feature_extractor.get_save_prepath()
+    model_path = save_prepath + model_filename
     if not os.path.isfile(model_path):
         
         start_time = time.time()
@@ -218,8 +230,10 @@ def train(conf,shot_list_train,shot_list_validate,loader):
 
 
 def make_predictions(conf,shot_list,loader):
-    model = joblib.load(model_path)
     feature_extractor = FeatureExtractor(loader)
+    save_prepath = feature_extractor.get_save_prepath()
+    model_path = save_prepath + model_filename
+    model = joblib.load(model_path)
     #shot_list = shot_list.random_sublist(10)
 
     y_prime = []

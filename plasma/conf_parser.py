@@ -3,6 +3,7 @@ from plasma.primitives.shots import ShotListFiles
 from data.signals import *
 
 import getpass
+import uuid
 import yaml
 
 def parameters(input_file):
@@ -74,6 +75,10 @@ def parameters(input_file):
             params['paths']['shot_files'] = [jet_carbon_wall]
             params['paths']['shot_files_test'] = [jet_iterlike_wall]
             params['paths']['use_signals'] = jet_signals
+        elif params['paths']['data'] == 'jet_carbon_data':
+            params['paths']['shot_files'] = [jet_carbon_wall]
+            params['paths']['shot_files_test'] = []
+            params['paths']['use_signals'] = jet_signals
         elif params['paths']['data'] == 'd3d_data':
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = [] 
@@ -88,7 +93,8 @@ def parameters(input_file):
             params['paths']['shot_files_test'] = [jet_iterlike_wall]
             params['paths']['use_signals'] = fully_defined_signals
         else: 
-            pass
+            print("Unkown data set {}".format(params['paths']['data']))
+            exit(1)
 
         params['paths']['shot_files_all'] = params['paths']['shot_files']+params['paths']['shot_files_test']
         params['paths']['all_machines'] = list(set([file.machine for file in params['paths']['shot_files_all']]))

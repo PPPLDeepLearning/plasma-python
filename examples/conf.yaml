@@ -3,7 +3,7 @@
 #will do stuff in fs_path / [username] / signal_data | shot_lists | processed shots, etc.
 
 fs_path: '/tigress' #'/cscratch/share/frnn' #'/tigress'
-target: 'maxhinge' #'binary' #'hinge' #'maxhinge' #'binary' #'ttd' #'hinge'
+target: 'hinge' #'binary' #'hinge' #'maxhinge' #'binary' #'ttd' #'hinge'
 num_gpus: 4
 
 paths:
@@ -29,7 +29,7 @@ data:
     #maximum TTD considered
     T_max: 1000.0
     #The shortest works best so far: less overfitting. log TTd prediction also works well. 0.5 better than 0.2
-    T_warning: 40.0 #1.024 #0.512 #0.25 #1.0 #1.0 #warning time in seconds
+    T_warning: 1.024 #1.024 #0.512 #0.25 #1.0 #1.0 #warning time in seconds
     current_thresh: 750000
     current_end_thresh: 10000
     #the characteristic decay length of the decaying moving average window
@@ -38,9 +38,10 @@ data:
     window_size: 10
     #TODO optimize
     normalizer: 'var'
+    shallow_sample_prob: 0.1 #the fraction of samples with which to train the shallow model
 
 model:
-    shallow: True
+    shallow: False
     #length of LSTM memory
     pred_length: 200
     pred_batch_size: 128
@@ -65,8 +66,8 @@ model:
     regularization: 0.0
     dense_regularization: 0.01
     #1e-4 is too high, 5e-7 is too low. 5e-5 seems best at 256 batch size, full dataset and ~10 epochs, and lr decay of 0.90. 1e-4 also works well if we decay a lot (i.e ~0.7 or more)
-    lr: 0.0001 #0.00005 #0.00005 #0.00005
-    lr_decay: 0.99 #0.98 #0.9
+    lr: 0.00001 #0.00005 #0.00005 #0.00005
+    lr_decay: 1.0 #0.98 #0.9
     stateful: True
     return_sequences: True
     dropout_prob: 0.3
@@ -84,7 +85,7 @@ training:
     max_patch_length: 100000
     #How many shots are we loading at once?
     num_shots_at_once: 200
-    num_epochs: 100
+    num_epochs: 40
     use_mock_data: False
     data_parallel: False
     hyperparam_tuning: False

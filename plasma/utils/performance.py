@@ -365,7 +365,8 @@ class PerformanceAnalyzer():
 
             plt.gca().set_xscale('log')
             plt.axvline(T_min_warn,color='r')
-            plt.axvline(T_max_warn,color='r')
+            if T_max_warn < np.max(alarms):
+                plt.axvline(T_max_warn,color='r')
             plt.xlabel('TTD [s]')
             plt.ylabel('Accumulated fraction of detected disruptions')
             plt.xlim([1e-4,max(alarms)*10])
@@ -373,8 +374,8 @@ class PerformanceAnalyzer():
             plt.grid()
             plt.title(title_str)
             plt.show()
-        if save_figure:
-            plt.savefig('accum_disruptions.png',bbox_inches='tight')
+            if save_figure:
+                plt.savefig('accum_disruptions.png',bbox_inches='tight')
         else:
             print(title_str + ": No alarms!")
 
