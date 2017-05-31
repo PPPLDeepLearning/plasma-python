@@ -1,6 +1,7 @@
 #!/bin/bash
-#SBATCH -t 01:00:00
+#SBATCH -t 06:00:00
 #SBATCH -N 1
+#SBATCH --mincpus=16
 #SBATCH --mem=64000
 #SBATCH -o log.out
 #SBATCH --gres=gpu:4

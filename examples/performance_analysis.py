@@ -45,10 +45,11 @@ analyzer.example_plots(P_thresh_opt,'train',['TP'])
 analyzer.example_plots(P_thresh_opt,'train',['late'])
 
 
-#alarms,disr_alarms,nondisr_alarms = analyzer.gather_first_alarms(P_thresh_opt,'test')
-#analyzer.hist_alarms(disr_alarms,'disruptive alarms, P_thresh = {}'.format(P_thresh_opt),save_figure=save_figure)
-#print('{} disruptive alarms'.format(len(disr_alarms)))
-#print('{} seconds mean alarm time'.format(np.mean(disr_alarms[disr_alarms > 0])))
-#analyzer.hist_alarms(nondisr_alarms,'nondisruptive alarms, P_thresh = {}'.format(P_thresh_opt))
-#print('{} nondisruptive alarms'.format(len(nondisr_alarms)))
+alarms,disr_alarms,nondisr_alarms = analyzer.gather_first_alarms(P_thresh_opt,'test')
+analyzer.hist_alarms(disr_alarms,'disruptive alarms, P_thresh = {}'.format(P_thresh_opt),save_figure=save_figure)
+print('{} disruptive alarms'.format(len(disr_alarms)))
+print('{} seconds mean alarm time'.format(np.mean(disr_alarms[disr_alarms > 0])))
+print('{} seconds median alarm time'.format(np.median(disr_alarms[disr_alarms > 0])))
+analyzer.hist_alarms(nondisr_alarms,'nondisruptive alarms, P_thresh = {}'.format(P_thresh_opt))
+print('{} nondisruptive alarms'.format(len(nondisr_alarms)))
 
