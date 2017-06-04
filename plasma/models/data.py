@@ -7,6 +7,7 @@ from scipy.interpolate import UnivariateSpline
 from plasma.utils.processing import get_individual_shot_file
 from plasma.utils.downloading import format_save_path
 
+from plasma.conf import conf
 # class SignalCollection:
 #   """GA Data Obj"""
 #   def __init__(self,signal_descriptions,signal_paths):
@@ -49,7 +50,7 @@ class Signal(object):
 
         file_path = self.get_file_path(prepath,shot.machine,shot.number)
         try:
-            data = np.loadtxt(file_path)
+            data = np.loadtxt(file_path,dtype=conf['data']['floatx'])
         except:
             print('Couldnt load signal {} shot {}. Removing.'.format(file_path,shot.number))
             os.remove(file_path)
@@ -132,7 +133,7 @@ class ProfileSignal(Signal):
             return None,None,False
 
         file_path = self.get_file_path(prepath,shot.machine,shot.number)
-        data = np.loadtxt(file_path)
+        data = np.loadtxt(file_path,dtype=conf['data']['floatx'])
         if np.ndim(data) == 1:
             data = np.expand_dims(data,axis=0)
         _ = data[0,0]
