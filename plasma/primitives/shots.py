@@ -358,7 +358,7 @@ class Shot(object):
         assert((len(signal_arrays) == len(time_arrays) == len(self.signals)) and len(signal_arrays) > 0)
         tr = 0
         for (i,signal) in enumerate(self.signals):
-            tr,sigr = cut_and_resample_signal(time_arrays[i],signal_arrays[i],t_min,t_max,dt)
+            tr,sigr = cut_and_resample_signal(time_arrays[i],signal_arrays[i],t_min,t_max,dt,conf['data']['floatx'])
             signals_dict[signal] = sigr
 
         ttd = self.convert_to_ttd(tr,conf)
