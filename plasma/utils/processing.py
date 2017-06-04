@@ -16,15 +16,13 @@ from scipy.interpolate import UnivariateSpline
 import sys
 
 
-
-
-def resample_signal(t,sig,tmin,tmax,dt):
+def resample_signal(t,sig,tmin,tmax,dt,precision_str='float32'):
 	order = np.argsort(t)
 	t = t[order]
 	sig = sig[order,:]
 	sig_width = sig.shape[1]
-	tt = np.arange(tmin,tmax,dt)
-	sig_interp = np.zeros((len(tt),sig_width))
+	tt = np.arange(tmin,tmax,dt,dtype=precision_str)
+	sig_interp = np.zeros((len(tt),sig_width),dtype=precision_str)
 	for i in range(sig_width):
 		f = UnivariateSpline(t,sig[:,i],s=0,k=1,ext=0)
 		sig_interp[:,i] = f(tt)
@@ -42,9 +40,9 @@ def cut_signal(t,sig,tmin,tmax):
 	mask = np.logical_and(t >= tmin,  t <= tmax)
 	return t[mask],sig[mask,:]
 
-def cut_and_resample_signal(t,sig,tmin,tmax,dt):
+def cut_and_resample_signal(t,sig,tmin,tmax,dt,precision_str):
 	t,sig = cut_signal(t,sig,tmin,tmax)
-	return resample_signal(t,sig,tmin,tmax,dt)
+	return resample_signal(t,sig,tmin,tmax,dt,precision_str)
 
 def get_individual_shot_file(prepath,shot_num,ext='.txt'):
     return prepath + str(shot_num) + ext 
