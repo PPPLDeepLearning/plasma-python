@@ -18,7 +18,7 @@ import numpy as np
 
 from plasma.utils.processing import train_test_split,cut_and_resample_signal
 
-
+import pdb
 
 class ShotListFiles(object):
     def __init__(self,machine,prepath,paths,description=''):
@@ -324,7 +324,7 @@ class Shot(object):
 
         signal_prepath = conf['paths']['signal_prepath']
         for (i,signal) in enumerate(self.signals):
-            t,sig,valid_signal = signal.load_data(signal_prepath,self)
+            t,sig,valid_signal = signal.load_data(signal_prepath,self,conf['data']['floatx'])
             if not valid_signal:
                 return None,None,None,None,False
             else:
@@ -355,6 +355,7 @@ class Shot(object):
         signals_dict = dict()
 
         #resample signals
+        pdb.set_trace()
         assert((len(signal_arrays) == len(time_arrays) == len(self.signals)) and len(signal_arrays) > 0)
         tr = 0
         for (i,signal) in enumerate(self.signals):
