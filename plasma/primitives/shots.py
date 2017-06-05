@@ -355,7 +355,6 @@ class Shot(object):
         signals_dict = dict()
 
         #resample signals
-        pdb.set_trace()
         assert((len(signal_arrays) == len(time_arrays) == len(self.signals)) and len(signal_arrays) > 0)
         tr = 0
         for (i,signal) in enumerate(self.signals):
