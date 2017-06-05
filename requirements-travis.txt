@@ -1,5 +1,4 @@
 scipy
-mpi4py
 h5py
 pyparsing
 pyyaml
