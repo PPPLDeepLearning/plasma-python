@@ -1,31 +1,20 @@
 # FRNN [![Build Status](https://travis-ci.org/PPPLDeepLearning/plasma-python.svg?branch=master)](https://travis-ci.org/PPPLDeepLearning/plasma-python.svg?branch=master)
 
-## FRNN - PPPL deep learning disruption prediction package
+## Package description
 
-The FRNN code workflow is similar to that characteristic of typical distributed deep learning projects.
-First, the raw data is preprocessed and normalized. The pre-processing step involves cutting, resampling, 
-and structuring the data - as well as determining and validating the disruptive properties of
-the shots considered. Various options for normalization are implemented. 
+Fusion Recurrent Neural Net (FRNN) is a Python package implementing deep learning models for disruption prediction in tokamak fusion plasmas.
 
-Secondly, with respect to distributed data-parallel training of the model, the associated parameters are check-pointed after each epoch on the disk, in HDF5 file format. Finally – regarding the cross validation and prediction step on
-unlabeled data, it is planned to also implement a hyper-parameter tuning; approach using a random search algorithm.
+It consists of 4 core modules:
 
-The results are stored as HDF5 files, including the final neural network model parameters together with
-statistical summaries of the variables used during training to allow researchers to produce learning
-curves and performance summary plots.
+- models: Python classes necessary to construct, train and optimize deep RNN models. Including a distributed data-parallel synchronous implementation of mini-batch gradient descent. FRNN makes use of MPI for communication and supports Tensorflow and Theano backends through Keras
 
-The Fusion Recurrent Neural Net (FRNN) deep learning code is implemented as a Python package
-consisting of 4 core modules:
-
-- models: Python classes necessary to construct, train and optimize deep RNN models. Including a distributed data-parallel implementation of mini-batch gradient descent with MPI
-
-- preprocessors: signal preprocessing and normalization classes, including the methods necessary to prepare physical data for stateful RNN training.
+- preprocessors: signal preprocessing and normalization classes, including the methods necessary to prepare physical data for stateful LSTM training.
 
 - primitives: contains abstractions specific to the domain implemented as Python classes. For instance: Shot - a measurement of plasma current as a function of time. The Shot object contains attributes corresponding to unique identifier of a shot, disruption time in milliseconds, time profile of the shot converted to time-to- disruption values, validity of a shot (whether plasma current reaches a certain value during the shot), etc
 
 - utilities: a set of auxiliary functions for preprocessing, performance evaluation and learning curves analysis
 
-This is a pure Python implementation for Python versions 2.6 and 2.7.
+This is a pure Python implementation for Python versions 2.7 and 3.6.
 
 ## Installation
 
