@@ -15,7 +15,7 @@ addons:
 
 install:
   - pip install --upgrade pip
-  - pip install -r requirements.txt
+  - pip install -r requirements-travis.txt
 
 env:
   - TEST_DIR=.;  TEST_SCRIPT="python setup.py test"
