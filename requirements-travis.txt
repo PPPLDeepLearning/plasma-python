@@ -2,5 +2,5 @@ scipy
 mpi4py
 h5py
 pyparsing
-yaml
+pyyaml
 tensorflow
