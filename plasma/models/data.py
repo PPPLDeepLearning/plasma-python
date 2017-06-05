@@ -34,7 +34,7 @@ class Signal(object):
         dirname = self.get_path(machine)
         return get_individual_shot_file(prepath + '/' + machine.name + '/' +dirname + '/',shot_number)
 
-    def is_valid(self,prepath,shot): #,dtype='float32'):
+    def is_valid(self,prepath,shot,dtype='float32'):
         t,data,exists = self.load_data(prepath,shot,dtype)
         return exists 
 
