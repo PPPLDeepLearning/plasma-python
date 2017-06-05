@@ -5,6 +5,7 @@ os:
 
 python:
   - 2.7
+  - 3.6
 
 addons:
   apt:
@@ -15,5 +16,7 @@ addons:
 install:
   - pip install --upgrade pip
 
-script:
-  python setup.py test
+env:
+  - TEST_DIR=plasma-python;  TEST_SCRIPT="python setup.py test"
+
+script: cd $TEST_DIR  &&  $TEST_SCRIPT && cd ..
