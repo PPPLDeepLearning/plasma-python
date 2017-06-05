@@ -1,3 +1,5 @@
+# FRNN [![Build Status](https://travis-ci.org/PPPLDeepLearning/plasma-python.svg?branch=master)](https://travis-ci.org/PPPLDeepLearning/plasma-python.svg?branch=master)
+
 ## FRNN - PPPL deep learning disruption prediction package
 
 The FRNN code workflow is similar to that characteristic of typical distributed deep learning projects.
