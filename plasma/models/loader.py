@@ -14,6 +14,8 @@ import numpy as np
 from plasma.primitives.shots import Shot
 import multiprocessing as mp
 
+import pdb
+
 class Loader(object):
     '''
     A Python class to ...
@@ -117,7 +119,7 @@ class Loader(object):
         old_length = buff.shape[1]
         batch_size = buff.shape[0]
         num_signals = buff.shape[2]
-        new_buff = np.empty((batch_size,new_length,num_signals))
+        new_buff = np.empty((batch_size,new_length,num_signals),dtype=self.conf['data']['floatx'])
         new_buff[:,:old_length,:] = buff
         #print("Resizing buffer to new length {}".format(new_length))
         return new_buff
@@ -144,8 +146,8 @@ class Loader(object):
         batch_size = self.conf['training']['batch_size']
         length = self.conf['model']['length']
         sig,res = self.get_signal_result_from_shot(shot_list.shots[0])
-        Xbuff = np.empty((batch_size,) + sig.shape)
-        Ybuff = np.empty((batch_size,) + res.shape)
+        Xbuff = np.empty((batch_size,) + sig.shape,dtype=self.conf['data']['floatx'])
+        Ybuff = np.empty((batch_size,) + res.shape,dtype=self.conf['data']['floatx'])
         end_indices = np.zeros(batch_size,dtype=np.int)
         batches_to_reset = np.ones(batch_size,dtype=np.bool)
         num_at_once = self.conf['training']['num_shots_at_once']
