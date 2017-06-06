@@ -289,9 +289,9 @@ class Shot(object):
     def is_disruptive_shot(self):
         return self.is_disruptive
 
-    def get_data_arrays(self,use_signals):
+    def get_data_arrays(self,use_signals,dtype='float32'):
         t_array = self.ttd
-        signal_array = np.zeros((len(t_array),sum([sig.num_channels for sig in use_signals])))
+        signal_array = np.zeros((len(t_array),sum([sig.num_channels for sig in use_signals])),dtype=dtype)
         curr_idx = 0
         for sig in use_signals:
             signal_array[:,curr_idx:curr_idx+sig.num_channels] = self.signals_dict[sig]
