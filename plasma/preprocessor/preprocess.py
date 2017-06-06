@@ -19,6 +19,7 @@ import pathos.multiprocessing as mp
 
 from plasma.utils.processing import *
 from plasma.primitives.shots import ShotList
+from plasma.utils.downloading import mkdirdepth
 
 class Preprocessor(object):
 
@@ -195,8 +196,9 @@ class Preprocessor(object):
 
 
     def get_shot_list_path(self,conf):
-        return conf['paths']['base_path'] + '/normalization/shot_lists.npz'
+        return conf['paths']['base_path'] + '/processed_shotlists/' + conf['paths']['data'] + '/shot_lists.npz'
 
     def save_shotlists(self,conf,shot_list_train,shot_list_validate,shot_list_test):
         path = self.get_shot_list_path(conf)
+        mkdirdepth(path)
         np.savez(path,shot_list_train=shot_list_train,shot_list_validate=shot_list_validate,shot_list_test=shot_list_test)
