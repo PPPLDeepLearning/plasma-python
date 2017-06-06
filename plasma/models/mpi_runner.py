@@ -193,7 +193,7 @@ class MPIModel():
     self.model.compile(optimizer=SGD(lr=self.DUMMY_LR),loss=loss)
 
 
-  def get_deltas(self,X_batch,Y_batch,verbose=False):
+  def train_on_batch_get_deltas(self,X_batch,Y_batch,verbose=False):
     '''
     The purpose of the method is to perform a single gradient update over one mini-batch for one model replica.
     Given a mini-batch, it first accesses the current model weights, performs single gradient update over one mini-batch,
@@ -408,7 +408,7 @@ class MPIModel():
       #run the model once to force compilation. Don't actually use these values.
       if step == 0 and self.epoch == 0:
         t0_comp = time.time()
-        _,_ = self.get_deltas(batch_xs,batch_ys,verbose)
+        _,_ = self.train_on_batch_and_get_deltas(batch_xs,batch_ys,verbose)
         self.comm.Barrier()
         sys.stdout.flush()
         print_unique('Compilation finished in {:.2f}s'.format(time.time()-t0_comp))
@@ -416,7 +416,7 @@ class MPIModel():
         sys.stdout.flush()  
 
       t0 = time.time()
-      deltas,loss = self.get_deltas(batch_xs,batch_ys,verbose)
+      deltas,loss = self.train_on_batch_and_get_deltas(batch_xs,batch_ys,verbose)
       t1 = time.time()
       self.set_new_weights(deltas,num_replicas)
       t2 = time.time()
