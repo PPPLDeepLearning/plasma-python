@@ -245,7 +245,7 @@ class Loader(object):
 
             if self.conf['training']['use_mock_data']:
                 signal,ttd = self.get_mock_data()
-            ttd,signal = shot.get_data_arrays(use_signals,conf['data']['floatx'])
+            ttd,signal = shot.get_data_arrays(use_signals,self.conf['data']['floatx'])
             if len(ttd) < self.conf['model']['length']:
                 print(ttd)
                 print(shot)
@@ -278,7 +278,7 @@ class Loader(object):
 
         if self.conf['training']['use_mock_data']:
             signal,ttd = self.get_mock_data()
-        ttd,signal = shot.get_data_arrays(use_signals,conf['data']['floatx'])
+        ttd,signal = shot.get_data_arrays(use_signals,self.conf['data']['floatx'])
         if len(ttd) < self.conf['model']['length']:
             print(ttd)
             print(shot)
