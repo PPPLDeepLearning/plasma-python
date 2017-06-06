@@ -15,7 +15,7 @@ This work was supported by the DOE CSGF program.
 '''
 
 from __future__ import print_function
-import datetime,time
+import datetime,time,random
 import sys
 import dill
 from functools import partial
@@ -30,9 +30,8 @@ from pprint import pprint
 pprint(conf)
 from plasma.primitives.shots import Shot, ShotList
 from plasma.preprocessor.normalize import Normalizer
-from plasma.preprocessor.preprocess import Preprocessor
+from plasma.preprocessor.preprocess import Preprocessor, guarantee_preprocessed
 from plasma.models.loader import Loader
-from plasma.utils.processing import guarantee_preprocessed
 
 if conf['model']['shallow']:
     from plasma.models.shallow_runner import train, make_predictions_and_evaluate_gpu

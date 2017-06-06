@@ -9,8 +9,7 @@ import numpy as np
 from plasma.conf import conf
 from pprint import pprint
 pprint(conf)
-from plasma.preprocessor.preprocess import Preprocessor
-from plasma.utils.processing import guarantee_preprocessed
+from plasma.preprocessor.preprocess import guarantee_preprocessed
 
 #####################################################
 ####################PREPROCESSING####################

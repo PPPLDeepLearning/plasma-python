@@ -121,89 +121,10 @@ class Preprocessor(object):
     def get_individual_channel_dirs(self):
         signals_dirs = self.conf['paths']['signals_dirs']
 
-
-    # def get_signals_and_times_from_file(self,shot,t_disrupt):
-    #     valid = True
-    #     t_min = -1
-    #     t_max = np.Inf
-    #     t_thresh = -1
-    #     signals = []
-    #     times = []
-    #     conf = self.conf
-
-    #     disruptive = t_disrupt >= 0
-
-    #     signal_prepath = conf['paths']['signal_prepath']
-    #     signals_dirs = concatenate_sublists(conf['paths']['signals_dirs'])
-    #     current_index = conf['data']['current_index']
-    #     current_thresh = conf['data']['current_thresh']
-    #     current_end_thresh = conf['data']['current_end_thresh']
-    #     for (i,dirname) in enumerate(signals_dirs):
-    #         data = np.loadtxt(get_individual_shot_file(signal_prepath+dirname + '/',shot))
-    #         t = data[:,0]
-    #         sig = data[:,1]
-    #         t_min = max(t_min,t[0])
-    #         t_max = min(t_max,t[-1])
-    #         if i == current_index:
-    #             #throw out shots that never reach curren threshold
-    #             if not (np.any(abs(sig) > current_thresh)):
-    #                 valid = False
-    #                 print('Shot {} does not exceed current threshold... invalid.'.format(shot))
-    #             else:
-    #                 #begin shot once current reaches threshold
-    #                 index_thresh = np.argwhere(abs(sig) > current_thresh)[0][0]
-    #                 t_thresh = t[index_thresh]
-    #                 #end shot once current drops below current_end_thresh
-    #                 if not disruptive:
-    #                     acceptable_region = np.zeros_like(sig,dtype=bool)
-    #                     acceptable_region[index_thresh:] = True
-    #                     index_end_thresh = np.argwhere(np.logical_and(abs(sig) < current_end_thresh,acceptable_region))[0][0]
-    #                     t_end_thresh = t[index_end_thresh]
-    #                     assert(t_thresh < t_end_thresh < t_max)
-    #                     t_max = t_end_thresh
-    #         signals.append(sig)
-    #         times.append(t)
-    #     if not valid:
-    #         t_thresh = t_min
-    #     assert(t_thresh >= t_min)
-    #     assert(t_disrupt <= t_max)
-    #     if disruptive:
-    #         assert(t_thresh < t_disrupt)
-    #         t_max = t_disrupt
-    #     t_min = t_thresh
-
-    #     return signals,times,t_min,t_max,t_thresh,valid
-
-
-
-    # def cut_and_resample_signals(self,times,signals,t_min,t_max,is_disruptive):
-    #     dt = self.conf['data']['dt']
-    #     T_max = self.conf['data']['T_max']
-
-    #     #resample signals
-    #     signals_processed = []
-    #     assert(len(signals) == len(times) and len(signals) > 0)
-    #     tr = 0
-    #     for i in range(len(signals)):
-    #         tr,sigr = cut_and_resample_signal(times[i],signals[i],t_min,t_max,dt)
-    #         signals_processed.append(sigr)
-
-    #     signals = signals_processed
-    #     signals = np.column_stack(signals)
-
-    #     if is_disruptive:
-    #         ttd = max(tr) - tr
-    #         ttd = np.clip(ttd,0,T_max)
-    #     else:
-    #         ttd = T_max*np.ones_like(tr)
-    #     ttd = np.log10(ttd + 1.0*dt/10)
-    #     return signals,ttd
-
-
     def get_shot_list_path(self):
         return self.conf['paths']['base_path'] + '/processed_shotlists/' + self.conf['paths']['data'] + '/shot_lists.npz'
 
-    def load_shotlists(self,conf):
+    def load_shotlists(self):
         path = self.get_shot_list_path()
         data = np.load(path)
         shot_list_train = data['shot_list_train'][()]
@@ -216,3 +137,29 @@ class Preprocessor(object):
         path = self.get_shot_list_path()
         mkdirdepth(path)
         np.savez(path,shot_list_train=shot_list_train,shot_list_validate=shot_list_validate,shot_list_test=shot_list_test)
+
+
+def guarantee_preprocessed(conf):
+    pp = Preprocessor(conf)
+    if pp.all_are_preprocessed():
+        print("shots already processed.")
+        shot_list_train,shot_list_validate,shot_list_test = pp.load_shotlists()
+    else:
+        print("preprocessing all shots",end='')
+        pp.clean_shot_lists()
+        shot_list = pp.preprocess_all()
+        shot_list.sort()
+        shot_list_train,shot_list_test = shot_list.split_train_test(conf)
+        num_shots = len(shot_list_train) + len(shot_list_test)
+        validation_frac = conf['training']['validation_frac']
+        if validation_frac <= 0.05:
+            print('Setting validation to a minimum of 0.05')
+            validation_frac = 0.05
+        shot_list_train,shot_list_validate = shot_list_train.split_direct(1.0-validation_frac,do_shuffle=True)
+        pp.save_shotlists(shot_list_train,shot_list_validate,shot_list_test)
+    print('validate: {} shots, {} disruptive'.format(len(shot_list_validate),shot_list_validate.num_disruptive()))
+    print('training: {} shots, {} disruptive'.format(len(shot_list_train),shot_list_train.num_disruptive()))
+    print('testing: {} shots, {} disruptive'.format(len(shot_list_test),shot_list_test.num_disruptive()))
+    print("...done")
+    return shot_list_train,shot_list_validate,shot_list_test
+
