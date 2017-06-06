@@ -48,6 +48,11 @@ class Preprocessor(object):
             os.remove(path)
 
 
+    def all_are_preprocessed(self):
+        return os.path.isfile(self.get_shot_list_path())
+
+    
+
     def preprocess_all(self):
         conf = self.conf
         shot_files_all = conf['paths']['shot_files_all']
@@ -195,10 +200,10 @@ class Preprocessor(object):
     #     return signals,ttd
 
 
-    def get_shot_list_path(self,conf):
-        return conf['paths']['base_path'] + '/processed_shotlists/' + conf['paths']['data'] + '/shot_lists.npz'
+    def get_shot_list_path(self):
+        return self.conf['paths']['base_path'] + '/processed_shotlists/' + self.conf['paths']['data'] + '/shot_lists.npz'
 
-    def save_shotlists(self,conf,shot_list_train,shot_list_validate,shot_list_test):
-        path = self.get_shot_list_path(conf)
+    def save_shotlists(self,shot_list_train,shot_list_validate,shot_list_test):
+        path = self.get_shot_list_path()
         mkdirdepth(path)
         np.savez(path,shot_list_train=shot_list_train,shot_list_validate=shot_list_validate,shot_list_test=shot_list_test)

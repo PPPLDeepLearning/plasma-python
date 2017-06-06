@@ -16,6 +16,9 @@ from plasma.preprocessor.preprocess import Preprocessor
 #####################################################
 print("preprocessing all shots",end='')
 pp = Preprocessor(conf)
+if pp.all_are_preprocessed():
+    print("\nalready preprocessed.")
+    exit(0)
 pp.clean_shot_lists()
 shot_list = pp.preprocess_all()
 sorted(shot_list,key = lambda shot: shot.get_number())
@@ -31,4 +34,4 @@ print('training: {} shots, {} disruptive'.format(len(shot_list_train),shot_list_
 print('testing: {} shots, {} disruptive'.format(len(shot_list_test),shot_list_test.num_disruptive()))
 print("...done")
 
-pp.save_shotlists(conf,shot_list_train,shot_list_validate,shot_list_test)
+pp.save_shotlists(shot_list_train,shot_list_validate,shot_list_test)

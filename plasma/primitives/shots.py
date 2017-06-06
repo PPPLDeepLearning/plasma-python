@@ -157,6 +157,17 @@ class ShotList(object):
                 new_shot_list.append(shot)
         return new_shot_list
 
+    def set_weights(self,weights):
+        assert(len(weights) == len(self.shots))
+        for (i,w) in enumerate(weights):
+            self.shots[i].weight = w
+
+    def sample_weighted(self):
+        p = np.array([shot.weight for shot in self.shots])
+        p = p/np.sum(p)
+        idx = np.random.choice(range(len(self.shots)),p=p)
+        return self.shots[idx]
+
     def num_disruptive(self):
         return len([shot for shot in self.shots if shot.is_disruptive_shot()])
 
@@ -247,6 +258,7 @@ class Shot(object):
         self.valid =valid 
         self.is_disruptive = is_disruptive
         self.t_disrupt = t_disrupt
+        self.weight = 1.0
         if t_disrupt is not None:
             self.is_disruptive = Shot.is_disruptive_given_disruption_time(t_disrupt)
         else:
