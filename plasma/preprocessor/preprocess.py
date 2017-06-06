@@ -203,6 +203,15 @@ class Preprocessor(object):
     def get_shot_list_path(self):
         return self.conf['paths']['base_path'] + '/processed_shotlists/' + self.conf['paths']['data'] + '/shot_lists.npz'
 
+    def load_shotlists(self,conf):
+        path = self.get_shot_list_path()
+        data = np.load(path)
+        shot_list_train = data['shot_list_train'][()]
+        shot_list_validate = data['shot_list_validate'][()]
+        shot_list_test = data['shot_list_test'][()]
+        return shot_list_train,shot_list_validate,shot_list_test
+
+
     def save_shotlists(self,shot_list_train,shot_list_validate,shot_list_test):
         path = self.get_shot_list_path()
         mkdirdepth(path)

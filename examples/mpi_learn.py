@@ -72,6 +72,13 @@ if only_predict:
 #####################################################
 ####################Normalization####################
 #####################################################
+if task_index == 0: #make sure preprocessing has been run, and is saved as a file
+    shot_list_train,shot_list_validate,shot_list_test = guarantee_preprocessed(conf)
+comm.Barrier()
+shot_list_train,shot_list_validate,shot_list_test = guarantee_preprocessed(conf)
+
+
+
 print("normalization",end='')
 nn = Normalizer(conf)
 nn.train()

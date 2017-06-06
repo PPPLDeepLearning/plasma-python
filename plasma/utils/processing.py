@@ -14,9 +14,31 @@ import itertools
 import numpy as np
 from scipy.interpolate import UnivariateSpline
 import sys
+from plasma.preprocessor import Preprocessor
 
-
-
+def guarantee_preprocessed(conf):
+    pp = Preprocessor(conf)
+    if pp.all_are_preprocessed():
+        print("shots already processed.")
+        shot_list_train,shot_list_validate,shot_list_test = pp.load_shotlists()
+    else:
+        print("preprocessing all shots",end='')
+        pp.clean_shot_lists()
+        shot_list = pp.preprocess_all()
+        shot_list.sort()
+        shot_list_train,shot_list_test = shot_list.split_train_test(conf)
+        num_shots = len(shot_list_train) + len(shot_list_test)
+        validation_frac = conf['training']['validation_frac']
+        if validation_frac <= 0.05:
+            print('Setting validation to a minimum of 0.05')
+            validation_frac = 0.05
+        shot_list_train,shot_list_validate = shot_list_train.split_direct(1.0-validation_frac,do_shuffle=True)
+        pp.save_shotlists(shot_list_train,shot_list_validate,shot_list_test)
+    print('validate: {} shots, {} disruptive'.format(len(shot_list_validate),shot_list_validate.num_disruptive()))
+    print('training: {} shots, {} disruptive'.format(len(shot_list_train),shot_list_train.num_disruptive()))
+    print('testing: {} shots, {} disruptive'.format(len(shot_list_test),shot_list_test.num_disruptive()))
+    print("...done")
+    return shot_list_train,shot_list_validate,shot_list_test
 
 def resample_signal(t,sig,tmin,tmax,dt):
 	order = np.argsort(t)

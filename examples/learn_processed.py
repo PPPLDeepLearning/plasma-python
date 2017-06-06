@@ -32,6 +32,8 @@ from plasma.primitives.shots import Shot, ShotList
 from plasma.preprocessor.normalize import Normalizer
 from plasma.preprocessor.preprocess import Preprocessor
 from plasma.models.loader import Loader
+from plasma.utils.processing import guarantee_preprocessed
+
 if conf['model']['shallow']:
     from plasma.models.shallow_runner import train, make_predictions_and_evaluate_gpu
 else:
@@ -59,25 +61,16 @@ stateful = conf['model']['stateful']
 # else:
 #     batch_size = conf['training']['batch_size_large']
 
-np.random.seed(1)
+np.random.seed(0)
+random.seed(0)
 #####################################################
 ####################PREPROCESSING####################
 #####################################################
-
-#print("preprocessing all shots",end='')
-#pp = Preprocessor(conf)
-#pp.clean_shot_lists()
-#shot_list = pp.preprocess_all()
-#sorted(shot_list)
-#shot_list_train,shot_list_test = shot_list.split_train_test(conf)
-#num_shots = len(shot_list_train) + len(shot_list_test)
-#print("...done")
-
+shot_list_train,shot_list_validate,shot_list_test = guarantee_preprocessed()
 
 #####################################################
 ####################Normalization####################
 #####################################################
-
 
 print("normalization",end='')
 nn = Normalizer(conf)
@@ -85,7 +78,6 @@ nn.train()
 loader = Loader(conf,nn)
 print("...done")
 
-shot_list_train,shot_list_validate,shot_list_test = loader.load_shotlists(conf)
 
 print('Training on {} shots, testing on {} shots'.format(len(shot_list_train),len(shot_list_test)))
 

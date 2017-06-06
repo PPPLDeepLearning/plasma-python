@@ -594,13 +594,6 @@ class Loader(object):
     def get_num_skips(length,skip):
         return 1 + (length-1)//skip
 
-    def load_shotlists(self,conf):
-        path = conf['paths']['saved_shotlist_path']
-        data = np.load(path)
-        shot_list_train = data['shot_list_train'][()]
-        shot_list_validate = data['shot_list_validate'][()]
-        shot_list_test = data['shot_list_test'][()]
-        return shot_list_train,shot_list_validate,shot_list_test
 
 class ProcessGenerator(object):
     def __init__(self,generator):
