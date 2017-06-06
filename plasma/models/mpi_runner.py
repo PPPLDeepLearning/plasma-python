@@ -193,7 +193,7 @@ class MPIModel():
     self.model.compile(optimizer=SGD(lr=self.DUMMY_LR),loss=loss)
 
 
-  def train_on_batch_get_deltas(self,X_batch,Y_batch,verbose=False):
+  def train_on_batch_and_get_deltas(self,X_batch,Y_batch,verbose=False):
     '''
     The purpose of the method is to perform a single gradient update over one mini-batch for one model replica.
     Given a mini-batch, it first accesses the current model weights, performs single gradient update over one mini-batch,
