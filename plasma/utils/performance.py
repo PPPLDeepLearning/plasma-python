@@ -86,6 +86,7 @@ class PerformanceAnalyzer():
                 early_th_te,correct_th_te,late_th_te,nd_th_te = self.get_threshold_arrays(all_preds_te,all_truths_te,all_disruptive_te)
                 all_thresholds = np.sort(np.concatenate((early_th_tr,correct_th_tr,late_th_tr,nd_th_tr,early_th_te,correct_th_te,late_th_te,nd_th_te)))
                 self.p_thresh_range = all_thresholds
+        #print(np.unique(self.p_thresh_range))
         return self.p_thresh_range
                 
 
@@ -364,7 +365,8 @@ class PerformanceAnalyzer():
 
             plt.gca().set_xscale('log')
             plt.axvline(T_min_warn,color='r')
-            plt.axvline(T_max_warn,color='r')
+            if T_max_warn < np.max(alarms):
+                plt.axvline(T_max_warn,color='r')
             plt.xlabel('TTD [s]')
             plt.ylabel('Accumulated fraction of detected disruptions')
             plt.xlim([1e-4,max(alarms)*10])
@@ -372,8 +374,8 @@ class PerformanceAnalyzer():
             plt.grid()
             plt.title(title_str)
             plt.show()
-        if save_figure:
-            plt.savefig('accum_disruptions.png',bbox_inches='tight')
+            if save_figure:
+                plt.savefig('accum_disruptions.png',bbox_inches='tight')
         else:
             print(title_str + ": No alarms!")
 
@@ -648,8 +650,9 @@ class PerformanceAnalyzer():
                 ax.axhline(P_thresh_opt,color='k',label='trigger threshold')
             #ax.set_ylim([1e-5,1.1e0])
             ax.set_ylim([-2,2])
+            if len(truth)-self.T_max_warn >= 0:
+                ax.axvline(len(truth)-self.T_max_warn,color='r',label='min warning time')
             ax.axvline(len(truth)-self.T_min_warn,color='r',label='max warning time')
-            ax.axvline(len(truth)-self.T_max_warn,color='r',label='min warning time')
             ax.set_xlabel('T [ms]')
             ax.legend(loc = 'lower left',fontsize=10)
             plt.setp(ax.get_yticklabels(),fontsize=7)

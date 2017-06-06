@@ -583,6 +583,7 @@ def mpi_make_predictions_and_evaluate(conf,shot_list,loader,custom_path=None):
 
 
 def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=None):   
+    conf['num_workers'] = comm.Get_size()
 
     specific_builder = builder.ModelBuilder(conf)
     train_model = specific_builder.build_model(False)

@@ -32,7 +32,10 @@ from plasma.primitives.shots import Shot, ShotList
 from plasma.preprocessor.normalize import Normalizer
 from plasma.preprocessor.preprocess import Preprocessor
 from plasma.models.loader import Loader
-from plasma.models.runner import train, make_predictions,make_predictions_gpu,make_predictions_and_evaluate_gpu
+if conf['model']['shallow']:
+    from plasma.models.shallow_runner import train, make_predictions_and_evaluate_gpu
+else:
+    from plasma.models.runner import train, make_predictions_and_evaluate_gpu
 
 if conf['data']['normalizer'] == 'minmax':
     from plasma.preprocessor.normalize import MinMaxNormalizer as Normalizer

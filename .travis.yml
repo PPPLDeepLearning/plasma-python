@@ -5,6 +5,7 @@ os:
 
 python:
   - 2.7
+  - 3.6
 
 addons:
   apt:
@@ -14,6 +15,9 @@ addons:
 
 install:
   - pip install --upgrade pip
+  - pip install -r requirements-travis.txt
 
-script:
-  python setup.py test
+env:
+  - TEST_DIR=.;  TEST_SCRIPT="python setup.py test"
+
+script: cd $TEST_DIR  &&  $TEST_SCRIPT && cd ..

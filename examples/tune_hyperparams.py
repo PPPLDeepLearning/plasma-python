@@ -67,7 +67,7 @@ def create_slurm_script(subdir,num_machines,idx):
 		f.write('module load anaconda\n')
 		#f.write('source activate PPPL\n')
 		f.write('module load cudatoolkit/8.0 cudann/cuda-8.0/5.1 openmpi/intel-17.0/1.10.2/64 intel/17.0/64/17.0.2.174\n')
-		f.write('rm -f /tigress/{}/model_checkpoints/*\n'.format(user))
+		f.write('rm -f /tigress/{}/model_checkpoints/*.h5\n'.format(user))
 		f.write('cd {}\n'.format(subdir))
 		f.write('srun python mpi_learn.py\n')	
 		f.write('echo "done."')

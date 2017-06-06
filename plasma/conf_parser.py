@@ -3,6 +3,7 @@ from plasma.primitives.shots import ShotListFiles
 from data.signals import *
 
 import getpass
+import uuid
 import yaml
 
 def parameters(input_file):
@@ -55,7 +56,7 @@ def parameters(input_file):
 
         #signals
         params['paths']['all_signals'] = all_signals
-        params['paths']['use_signals'] = [q95,li,ip,betan,energy,lm,dens,pradcore,pradedge,pin,pechin,torquein,ipdirect,etemp_profile,edens_profile] #d3d_signals #fully_defined_signals#d3d_signals#fully_defined_signals #d3d_signals#fully_defined_signals# [ip,lm,li,dens,q95,energy,pin,pradcore]#,edens_profile,etemp_profile]#jet_signals#all_signals
+        params['paths']['use_signals'] = [q95,li,ip,lm,betan,energy,dens,pradcore,pradedge,pin,pechin,torquein,ipdirect,etemp_profile,edens_profile] #d3d_signals #fully_defined_signals#d3d_signals#fully_defined_signals #d3d_signals#fully_defined_signals# [ip,lm,li,dens,q95,energy,pin,pradcore]#,edens_profile,etemp_profile]#jet_signals#all_signals
 
         #shot lists
         jet_carbon_wall = ShotListFiles(jet,params['paths']['shot_list_dir'],['CWall_clear.txt','CFC_unint.txt'],'jet carbon wall data')
@@ -74,11 +75,15 @@ def parameters(input_file):
             params['paths']['shot_files'] = [jet_carbon_wall]
             params['paths']['shot_files_test'] = [jet_iterlike_wall]
             params['paths']['use_signals'] = jet_signals
+        elif params['paths']['data'] == 'jet_carbon_data':
+            params['paths']['shot_files'] = [jet_carbon_wall]
+            params['paths']['shot_files_test'] = []
+            params['paths']['use_signals'] = jet_signals
         elif params['paths']['data'] == 'd3d_data':
             params['paths']['shot_files'] = [d3d_full]
-            params['paths']['shot_files_test'] = []
+            params['paths']['shot_files_test'] = [] 
             #make sure all 1D signals appear last!
-            params['paths']['use_signals'] = d3d_signals
+            params['paths']['use_signals'] = [q95,li,ip,lm,betan,energy,dens,pradcore,pradedge,pin,pechin,torquein,ipdirect,etemp_profile,edens_profile][:-2]
         elif params['paths']['data'] == 'jet_to_d3d_data':
             params['paths']['shot_files'] = [jet_carbon_wall]
             params['paths']['shot_files_test'] = [d3d_full]
@@ -88,7 +93,8 @@ def parameters(input_file):
             params['paths']['shot_files_test'] = [jet_iterlike_wall]
             params['paths']['use_signals'] = fully_defined_signals
         else: 
-            pass
+            print("Unkown data set {}".format(params['paths']['data']))
+            exit(1)
 
         params['paths']['shot_files_all'] = params['paths']['shot_files']+params['paths']['shot_files_test']
         params['paths']['all_machines'] = list(set([file.machine for file in params['paths']['shot_files_all']]))
