@@ -3,8 +3,7 @@ import numpy as np
 import time
 import sys
 
-from plasma.models.data import Signal,ProfileSignal,Machine
-
+from plasma.primitives.data import Signal,ProfileSignal,Machine
 
 def create_missing_value_filler():
 	time = np.linspace(0,100,100)
@@ -118,7 +117,6 @@ d3d = Machine("d3d","atlas.gat.com",fetch_d3d_data,max_cores=32,current_threshol
 jet = Machine("jet","mdsplus.jet.efda.org",fetch_jet_data,max_cores=8,current_threshold=1e5)
 nstx = Machine("nstx","skylark.pppl.gov:8501::",fetch_nstx_data,max_cores=8)
 
-
 all_machines = [d3d,jet]
 
 profile_num_channels = 32
@@ -151,10 +149,10 @@ tmfreq2 = Signal("Tearing Mode frequency (rotating 3/2)", ['d3d/nssfrqn2l'],[d3d
 ipdirect = Signal("plasma current direction",["d3d/iptdirect"],[d3d])
 
 #for downloading
-all_signals = [q95,li,ip,
-betan,energy,lm,dens,pradcore,pradedge,pradtot,pin,
-torquein,tmamp1,tmamp2,tmfreq1,tmfreq2,pechin,energydt,ipdirect,etemp_profile,edens_profile,
-]
+all_signals = {'q95':q95,'li':li,'ip':ip,'betan':betan,'energy':energy,'lm':lm,'dens':dens,'pradcore':pradcore,
+'pradedge':pradedge,'pradtot':pradtot,'pin':pin,
+'torquein':torquein,'tmamp1':tmamp1,'tmamp2':tmamp2,'tmfreq1':tmfreq1,'tmfreq2':tmfreq2,
+'pechin':pechin,'energydt':energydt,'ipdirect':ipdirect,'etemp_profile':etemp_profile,'edens_profile':edens_profile}
 
 #for actual data analysis
 #all_signals_restricted = [q95,li,ip,energy,lm,dens,pradcore,pradtot,pin,etemp_profile,edens_profile]
@@ -162,12 +160,11 @@ torquein,tmamp1,tmamp2,tmfreq1,tmfreq2,pechin,energydt,ipdirect,etemp_profile,ed
 all_signals_restricted = all_signals
 
 print('all signals:')
-print(all_signals)
+print(all_signals.values())
 
-fully_defined_signals = [sig for sig in all_signals_restricted if sig.is_defined_on_machines(all_machines)]
-d3d_signals = [sig for sig in all_signals_restricted if sig.is_defined_on_machine(d3d)]
-jet_signals = [sig for sig in all_signals_restricted if sig.is_defined_on_machine(jet)]
-
+fully_defined_signals = {sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if sig.is_defined_on_machines(all_machines)}
+d3d_signals = {sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if sig.is_defined_on_machine(d3d)}
+jet_signals = {sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if sig.is_defined_on_machine(jet)}
 
 
 #['pcechpwrf'] #Total ECH Power Not always on!
@@ -192,6 +189,3 @@ jet_signals = [sig for sig in all_signals_restricted if sig.is_defined_on_machin
 #['$E_{D}$'],
 ##ppf signal labels
 #['ECE unit?']]
-
-
-
