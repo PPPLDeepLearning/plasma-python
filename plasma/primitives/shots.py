@@ -18,7 +18,7 @@ import numpy as np
 
 from plasma.utils.processing import train_test_split,cut_and_resample_signal
 
-
+import pdb
 
 class ShotListFiles(object):
     def __init__(self,machine,prepath,paths,description=''):
@@ -301,9 +301,9 @@ class Shot(object):
     def is_disruptive_shot(self):
         return self.is_disruptive
 
-    def get_data_arrays(self,use_signals):
+    def get_data_arrays(self,use_signals,dtype='float32'):
         t_array = self.ttd
-        signal_array = np.zeros((len(t_array),sum([sig.num_channels for sig in use_signals])))
+        signal_array = np.zeros((len(t_array),sum([sig.num_channels for sig in use_signals])),dtype=dtype)
         curr_idx = 0
         for sig in use_signals:
             signal_array[:,curr_idx:curr_idx+sig.num_channels] = self.signals_dict[sig]
@@ -336,7 +336,7 @@ class Shot(object):
 
         signal_prepath = conf['paths']['signal_prepath']
         for (i,signal) in enumerate(self.signals):
-            t,sig,valid_signal = signal.load_data(signal_prepath,self)
+            t,sig,valid_signal = signal.load_data(signal_prepath,self,conf['data']['floatx'])
             if not valid_signal:
                 return None,None,None,None,False
             else:
@@ -370,7 +370,7 @@ class Shot(object):
         assert((len(signal_arrays) == len(time_arrays) == len(self.signals)) and len(signal_arrays) > 0)
         tr = 0
         for (i,signal) in enumerate(self.signals):
-            tr,sigr = cut_and_resample_signal(time_arrays[i],signal_arrays[i],t_min,t_max,dt)
+            tr,sigr = cut_and_resample_signal(time_arrays[i],signal_arrays[i],t_min,t_max,dt,conf['data']['floatx'])
             signals_dict[signal] = sigr
 
         ttd = self.convert_to_ttd(tr,conf)

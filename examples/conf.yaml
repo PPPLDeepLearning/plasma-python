@@ -2,15 +2,16 @@
 
 #will do stuff in fs_path / [username] / signal_data | shot_lists | processed shots, etc.
 
-fs_path: '/tigress' #'/cscratch/share/frnn' #'/tigress'
-target: 'maxhinge' #'binary' #'hinge' #'maxhinge' #'binary' #'ttd' #'hinge'
+fs_path: '/tigress'
+target: 'maxhinge' #'binary' #'hinge' 
 num_gpus: 4
 
 paths:
     signal_prepath: '/signal_data/' #/signal_data/jet/
     shot_list_dir: '/shot_lists/'
     tensorboard_save_path: '/Graph/'
-    data: 'd3d_data'
+    data: 'jet_data'
+    specific_signals: [] #if left empty will use all valid signals defined on a machine. Only use if need a custom set
 
 data:
     cut_shot_ends: True
@@ -39,6 +40,7 @@ data:
     #TODO optimize
     normalizer: 'var'
     shallow_sample_prob: 0.1 #the fraction of samples with which to train the shallow model
+    floatx: 'float64'
 
 model:
     shallow: False
@@ -66,7 +68,7 @@ model:
     regularization: 0.0
     dense_regularization: 0.01
     #1e-4 is too high, 5e-7 is too low. 5e-5 seems best at 256 batch size, full dataset and ~10 epochs, and lr decay of 0.90. 1e-4 also works well if we decay a lot (i.e ~0.7 or more)
-    lr: 0.00001 #0.00005 #0.00005 #0.00005
+    lr: 0.00001 #0.0005 #for adam plots 0.0000001 #0.00005 #0.00005 #0.00005
     lr_decay: 1.0 #0.98 #0.9
     stateful: True
     return_sequences: True
@@ -74,7 +76,7 @@ model:
     #only relevant if we want to do mpi training. The number of steps with a single replica
     warmup_steps: 0
     ignore_timesteps: 100 #how many initial timesteps to ignore during evaluation (to let the internal state settle)
-    backend: 'tensorflow' #'theano' #'tensorflow' #theano
+    backend: 'tensorflow'
 training:
     as_array_of_shots: True
     shuffle_training: True

@@ -67,7 +67,7 @@ for i in range(num_workers):
     from keras.layers.recurrent import LSTM
     from keras.layers.wrappers import TimeDistributed
     from keras.models import Model
-    from keras.optimizers import SGD
+    from keras.optimizers import *
     from keras.utils.generic_utils import Progbar 
     import keras.callbacks as cbks
 
@@ -195,11 +195,23 @@ class MPIModel():
   def load_weights(self,path):
     self.model.load_weights(path)
 
-  def compile(self,loss='mse'):
-    self.model.compile(optimizer=SGD(lr=self.DUMMY_LR),loss=loss)
+  def compile(self,optimizer,loss='mse'):
+    if optimizer == 'sgd':
+        optimizer_class = SGD
+    elif optimizer == 'adam':
+        optimizer_class = Adam
+    elif optimizer == 'rmsprop':
+        optimizer_class = RMSprop
+    elif optimizer == 'nadam':
+        optimizer_class = Nadam
+    else:
+        print("Optimizer not implemented yet")
+        exit(1)
+    self.model.compile(optimizer=optimizer_class(lr=self.DUMMY_LR),loss=loss)
 
 
-  def get_deltas(self,X_batch,Y_batch,verbose=False):
+
+  def train_on_batch_and_get_deltas(self,X_batch,Y_batch,verbose=False):
     '''
     The purpose of the method is to perform a single gradient update over one mini-batch for one model replica.
     Given a mini-batch, it first accesses the current model weights, performs single gradient update over one mini-batch,
@@ -409,7 +421,7 @@ class MPIModel():
       if first_run:
         first_run = False
         t0_comp = time.time()
-        _,_ = self.get_deltas(batch_xs,batch_ys,verbose)
+        _,_ = self.train_on_batch_and_get_deltas(batch_xs,batch_ys,verbose)
         self.comm.Barrier()
         sys.stdout.flush()
         print_unique('Compilation finished in {:.2f}s'.format(time.time()-t0_comp))
@@ -420,7 +432,7 @@ class MPIModel():
         reset_states(self.model,batches_to_reset)
 
       t0 = time.time()
-      deltas,loss = self.get_deltas(batch_xs,batch_ys,verbose)
+      deltas,loss = self.train_on_batch_and_get_deltas(batch_xs,batch_ys,verbose)
       t1 = time.time()
       if not is_warmup_period:
         self.set_new_weights(deltas,num_replicas)
@@ -609,7 +621,15 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
     lr = conf['model']['lr']
     warmup_steps = conf['model']['warmup_steps']
     num_batches_minimum = conf['training']['num_batches_minimum']
-    optimizer = MPIAdam(lr=lr)
+
+    if conf['model']['optimizer'] == 'adam':
+        optimizer = MPIAdam(lr=lr)
+    elif conf['model']['optimizer'] == 'sgd':
+        optimizer = MPISGD(lr=lr)
+    else:
+        print("Optimizer not implemented yet")
+        exit(1)
+
     print('{} epochs left to go'.format(num_epochs - 1 - e))
 
     # batch_generator = partial(loader.training_batch_generator,shot_list=shot_list_train)
@@ -627,7 +647,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
         tensorboard.set_model(mpi_model.model)
         mpi_model.model.summary()
 
-    mpi_model.compile(loss=conf['data']['target'].loss)
+    mpi_model.compile(conf['model']['optimizer'],loss=conf['data']['target'].loss)
 
     if task_index == 0:
         callbacks = mpi_model.build_callbacks(conf,callbacks_list)
@@ -787,4 +807,3 @@ class TensorBoard(object):
 
     def on_train_end(self, _):
         self.writer.close()
-

@@ -34,22 +34,22 @@ class Signal(object):
         dirname = self.get_path(machine)
         return get_individual_shot_file(prepath + '/' + machine.name + '/' +dirname + '/',shot_number)
 
-    def is_valid(self,prepath,shot):
-        t,data,exists = self.load_data(prepath,shot)
+    def is_valid(self,prepath,shot,dtype='float32'):
+        t,data,exists = self.load_data(prepath,shot,dtype)
         return exists 
 
     def is_saved(self,prepath,shot):
         file_path = self.get_file_path(prepath,shot.machine,shot.number)
         return os.path.isfile(file_path)
 
-    def load_data(self,prepath,shot):
+    def load_data(self,prepath,shot,dtype='float32'):
         if not self.is_saved(prepath,shot):
             print('Signal {}, shot {} was never downloaded'.format(self.description,shot.number))
             return None,None,False
 
         file_path = self.get_file_path(prepath,shot.machine,shot.number)
         try:
-            data = np.loadtxt(file_path)
+            data = np.loadtxt(file_path,dtype=dtype)
         except:
             print('Couldnt load signal {} shot {}. Removing.'.format(file_path,shot.number))
             os.remove(file_path)
@@ -126,13 +126,13 @@ class ProfileSignal(Signal):
         self.mapping_range = mapping_range
         self.num_channels = num_channels
 
-    def load_data(self,prepath,shot):
+    def load_data(self,prepath,shot,dtype='float32'):
         if not self.is_saved(prepath,shot):
             print('Signal {}, shot {} was never downloaded'.format(self.description,shot.number))
             return None,None,False
 
         file_path = self.get_file_path(prepath,shot.machine,shot.number)
-        data = np.loadtxt(file_path)
+        data = np.loadtxt(file_path,dtype=dtype)
         if np.ndim(data) == 1:
             data = np.expand_dims(data,axis=0)
         _ = data[0,0]
