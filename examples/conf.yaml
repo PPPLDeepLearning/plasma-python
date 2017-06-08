@@ -3,7 +3,7 @@
 #will do stuff in fs_path / [username] / signal_data | shot_lists | processed shots, etc.
 
 fs_path: '/tigress'
-target: 'hinge' #'binary' #'hinge'
+target: 'maxhinge' #'binary' #'hinge' 
 num_gpus: 4
 
 paths:
@@ -87,14 +87,17 @@ training:
     max_patch_length: 100000
     #How many shots are we loading at once?
     num_shots_at_once: 200
-    num_epochs: 40
+    num_epochs: 400
     use_mock_data: False
     data_parallel: False
     hyperparam_tuning: False
+    batch_generator_warmup_steps: 0
+    num_batches_minimum: 200 #minimum number of batches per epoch
+    ranking_difficulty_fac: 1.0 #how much to upweight incorrectly classified shots during training
 callbacks:
     list: ['earlystop']
     metrics: ['val_loss','val_roc','train_loss']
     mode: 'max'
     monitor: 'val_roc'
-    patience: 2
+    patience: 4
     write_grads: False

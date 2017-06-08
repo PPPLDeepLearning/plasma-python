@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import os
 from pprint import pprint
 import numpy as np
+from scipy import stats
 
 from plasma.preprocessor.normalize import VarNormalizer as Normalizer 
 from plasma.conf import conf
@@ -129,6 +130,25 @@ class PerformanceAnalyzer():
         return self.get_accuracy_and_fp_rate_from_stats(TPs,FPs,FNs,TNs,earlies,lates)
 
 
+    def get_shot_difficulty(self,preds,truths,disruptives):
+        disruptives = np.array(disruptives)
+        d_early_thresholds, d_correct_thresholds,d_late_thresholds, nd_thresholds = self.get_threshold_arrays(preds,truths,disruptives)
+        d_thresholds = np.maximum(d_early_thresholds,d_correct_thresholds)
+        #rank shots by difficulty. rank 1 is assigned to lowest value, should be highest difficulty
+        d_ranks = stats.rankdata(d_thresholds,method='min')#difficulty is highest when threshold is low, can't detect disruption
+        nd_ranks = stats.rankdata(-nd_thresholds,method='min')#difficulty is highest when threshold is high, can't avoid false positive 
+        ranking_fac = self.conf['training']['ranking_difficulty_fac']
+        facs_d = np.linspace(ranking_fac,1,len(d_ranks))[d_ranks-1]
+        facs_nd = np.linspace(ranking_fac,1,len(nd_ranks))[nd_ranks-1]
+        ret_facs = np.ones(len(disruptives))
+        ret_facs[disruptives] = facs_d
+        ret_facs[~disruptives] = facs_nd
+        #print("setting shot difficulty")
+        #print(disruptives)
+        #print(d_thresholds)
+        #print(nd_thresholds)
+        #print(ret_facs)
+        return ret_facs
 
     def get_threshold_arrays(self,preds,truths,disruptives):
         num_d = np.sum(disruptives)

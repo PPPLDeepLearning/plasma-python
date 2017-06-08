@@ -15,7 +15,7 @@ This work was supported by the DOE CSGF program.
 '''
 
 from __future__ import print_function
-import datetime,time
+import datetime,time,random
 import sys
 import dill
 from functools import partial
@@ -30,8 +30,9 @@ from pprint import pprint
 pprint(conf)
 from plasma.primitives.shots import Shot, ShotList
 from plasma.preprocessor.normalize import Normalizer
-from plasma.preprocessor.preprocess import Preprocessor
+from plasma.preprocessor.preprocess import Preprocessor, guarantee_preprocessed
 from plasma.models.loader import Loader
+
 if conf['model']['shallow']:
     from plasma.models.shallow_runner import train, make_predictions_and_evaluate_gpu
 else:
@@ -59,37 +60,22 @@ stateful = conf['model']['stateful']
 # else:
 #     batch_size = conf['training']['batch_size_large']
 
-np.random.seed(1)
+np.random.seed(0)
+random.seed(0)
 #####################################################
 ####################PREPROCESSING####################
 #####################################################
-
-print("preprocessing all shots",end='')
-pp = Preprocessor(conf)
-pp.clean_shot_lists()
-shot_list = pp.preprocess_all()
-sorted(shot_list)
-shot_list_train,shot_list_test = shot_list.split_train_test(conf)
-num_shots = len(shot_list_train) + len(shot_list_test)
-if validation_frac <= 0.0:
-    print('Setting validation to a minimum of 0.05')
-    validation_frac = 0.05
-shot_list_train,shot_list_validate = shot_list_train.split_direct(1.0-validation_frac,do_shuffle=True)
-print("...done")
-
+shot_list_train,shot_list_validate,shot_list_test = guarantee_preprocessed(conf)
 
 #####################################################
 ####################Normalization####################
 #####################################################
-
 
 print("normalization",end='')
 nn = Normalizer(conf)
 nn.train()
 loader = Loader(conf,nn)
 print("...done")
-
-
 print('Training on {} shots, testing on {} shots'.format(len(shot_list_train),len(shot_list_test)))
 
 
@@ -140,7 +126,7 @@ y_gold = y_gold_train + y_gold_test
 y_prime = y_prime_train + y_prime_test
 disruptive = np.concatenate((disruptive_train,disruptive_test))
 
-shot_list.make_light()
+shot_list_validate.make_light()
 shot_list_test.make_light()
 shot_list_train.make_light()
 
@@ -149,7 +135,7 @@ np.savez(conf['paths']['results_prepath']+save_str,
     y_gold=y_gold,y_gold_train=y_gold_train,y_gold_test=y_gold_test,
     y_prime=y_prime,y_prime_train=y_prime_train,y_prime_test=y_prime_test,
     disruptive=disruptive,disruptive_train=disruptive_train,disruptive_test=disruptive_test,
-    shot_list=shot_list,shot_list_train=shot_list_train,shot_list_test=shot_list_test,
+    shot_list_validate=shot_list_validate,shot_list_train=shot_list_train,shot_list_test=shot_list_test,
     conf = conf)
 
 print('finished.')

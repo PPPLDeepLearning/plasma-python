@@ -15,8 +15,9 @@ addons:
 
 install:
   - pip install --upgrade pip
+  - pip install -r requirements-travis.txt
 
 env:
-  - TEST_DIR=plasma-python;  TEST_SCRIPT="python setup.py test"
+  - TEST_DIR=.;  TEST_SCRIPT="python setup.py test"
 
 script: cd $TEST_DIR  &&  $TEST_SCRIPT && cd ..

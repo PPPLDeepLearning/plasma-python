@@ -84,23 +84,27 @@ def train(conf,shot_list_train,shot_list_validate,loader):
         while num_so_far < (e - e_start)*num_total or num_batches_current < num_batches_minimum:
             num_so_far_old = num_so_far
             try:
-                batch_xs,batch_ys,batches_to_reset,num_so_far_curr,num_total = next(batch_iterator)
+                batch_xs,batch_ys,batches_to_reset,num_so_far_curr,num_total,is_warmup_period = next(batch_iterator)
             except StopIteration:
                 print("Resetting batch iterator.")
                 num_so_far_accum = num_so_far
                 batch_iterator = ProcessGenerator(batch_generator())
-                batch_xs,batch_ys,batches_to_reset,num_so_far_curr,num_total = next(batch_iterator)
-            num_so_far = num_so_far_accum+num_so_far_curr
-
-            num_batches_current +=1 
-
+                batch_xs,batch_ys,batches_to_reset,num_so_far_curr,num_total,is_warmup_period = next(batch_iterator)
             if np.any(batches_to_reset):
                 reset_states(train_model,batches_to_reset)
+            if not is_warmup_period:
+                num_so_far = num_so_far_accum+num_so_far_curr
 
-            loss = train_model.train_on_batch(batch_xs,batch_ys)
-            training_losses_tmp.append(loss)
-            pbar.add(num_so_far - num_so_far_old, values=[("train loss", loss)])
-            loader.verbose=False#True during the first iteration
+                num_batches_current +=1 
+
+
+                loss = train_model.train_on_batch(batch_xs,batch_ys)
+                training_losses_tmp.append(loss)
+                pbar.add(num_so_far - num_so_far_old, values=[("train loss", loss)])
+                loader.verbose=False#True during the first iteration
+            else:
+                _ = train_model.predict(batch_xs,batch_size=conf['training']['batch_size'])
+           
 
 
         e = e_start+1.0*num_so_far/num_total
@@ -114,11 +118,21 @@ def train(conf,shot_list_train,shot_list_validate,loader):
             validation_losses.append(loss)
             validation_roc.append(roc_area)
 
+            if conf['training']['ranking_difficulty_fac'] != 1.0:
+                _,_,_,roc_area_train,loss_train = make_predictions_and_evaluate_gpu(conf,shot_list_train,loader)
+                batch_iterator.__exit__()
+                batch_generator = partial(loader.training_batch_generator_partial_reset,shot_list=shot_list_train)
+                batch_iterator = ProcessGenerator(batch_generator())
+                num_so_far_accum = num_so_far
+
         print('=========Summary========')
-        print('Training Loss: {:.3e}'.format(training_losses[-1]))
+        print('Training Loss Numpy: {:.3e}'.format(training_losses[-1]))
         if conf['training']['validation_frac'] > 0.0:
             print('Validation Loss: {:.3e}'.format(validation_losses[-1]))
             print('Validation ROC: {:.4f}'.format(validation_roc[-1]))
+            if conf['training']['ranking_difficulty_fac'] != 1.0:
+                print('Train Loss: {:.3e}'.format(loss_train))
+                print('Train ROC: {:.4f}'.format(roc_area_train))
         
 
 
@@ -358,6 +372,7 @@ def make_predictions_and_evaluate_gpu(conf,shot_list,loader):
     y_prime,y_gold,disruptive = make_predictions_gpu(conf,shot_list,loader)
     analyzer = PerformanceAnalyzer(conf=conf)
     roc_area = analyzer.get_roc_area(y_prime,y_gold,disruptive)
+    shot_list.set_weights(analyzer.get_shot_difficulty(y_prime,y_gold,disruptive))
     loss = get_loss_from_list(y_prime,y_gold,conf['data']['target'])
     return y_prime,y_gold,disruptive,roc_area,loss
 

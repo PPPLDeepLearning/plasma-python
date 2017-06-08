@@ -150,24 +150,31 @@ class Loader(object):
         Ybuff = np.empty((batch_size,) + res.shape,dtype=self.conf['data']['floatx'])
         end_indices = np.zeros(batch_size,dtype=np.int)
         batches_to_reset = np.ones(batch_size,dtype=np.bool)
-        num_at_once = self.conf['training']['num_shots_at_once']
         # epoch = 0
         num_total = len(shot_list)
         num_so_far = 0
         returned = False
+        warmup_steps = self.conf['training']['batch_generator_warmup_steps']
+        is_warmup_period = warmup_steps > 0
         while True:
             # the list of all shots
             shot_list.shuffle() 
-            for shot in shot_list:
+            for i in range(len(shot_list)):
+                if self.conf['training']['ranking_difficulty_fac'] == 1.0:
+                    shot = shot_list.shots[i]
+                else: #draw the shot weighted
+                    shot = shot_list.sample_weighted()
                 while not np.any(end_indices == 0):
                     X,Y = self.return_from_training_buffer(Xbuff,Ybuff,end_indices)
-                    yield X,Y,batches_to_reset,num_so_far,num_total
+                    yield X,Y,batches_to_reset,num_so_far,num_total,is_warmup_period
                     returned = True
+                    warmup_steps -= 1
+                    is_warmup_period = warmup_steps > 0
                     batches_to_reset[:] = False
 
                 Xbuff,Ybuff,batch_idx = self.fill_training_buffer(Xbuff,Ybuff,end_indices,shot)
                 batches_to_reset[batch_idx] = True
-                if returned:
+                if returned and not is_warmup_period:
                     num_so_far += 1
             # epoch += 1
 
@@ -589,13 +596,6 @@ class Loader(object):
     def get_num_skips(length,skip):
         return 1 + (length-1)//skip
 
-    def load_shotlists(self,conf):
-        path = conf['paths']['saved_shotlist_path']
-        data = np.load(path)
-        shot_list_train = data['shot_list_train'][()]
-        shot_list_validate = data['shot_list_validate'][()]
-        shot_list_test = data['shot_list_test'][()]
-        return shot_list_train,shot_list_validate,shot_list_test
 
 class ProcessGenerator(object):
     def __init__(self,generator):
@@ -607,7 +607,7 @@ class ProcessGenerator(object):
     def fill_batch_queue(self):
         print("Starting process to fetch data")
         while True:
-            self.queue.put(next(self.generator),True,-1) 
+            self.queue.put(next(self.generator),True) 
 
     def __next__(self):
         return self.queue.get(True)
