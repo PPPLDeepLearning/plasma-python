@@ -189,8 +189,20 @@ class MPIModel():
   def load_weights(self,path):
     self.model.load_weights(path)
 
-  def compile(self,loss='mse'):
-    self.model.compile(optimizer=SGD(lr=self.DUMMY_LR),loss=loss)
+  def compile(self,optimizer,loss='mse'):
+    if optimizer == 'sgd':
+        optimizer_class = SGD
+    elif optimizer == 'adam':
+        optimizer_class = Adam
+    elif optimizer == 'rmsprop':
+        optimizer_class = RMSprop
+    elif optimizer == 'nadam':
+        optimizer_class = Nadam
+    else:
+        print("Optimizer not implemented yet")
+        exit(1)
+    self.model.compile(optimizer=optimizer_class(lr=self.DUMMY_LR),loss=loss)
+
 
 
   def train_on_batch_and_get_deltas(self,X_batch,Y_batch,verbose=False):
@@ -597,7 +609,14 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
     batch_size = conf['training']['batch_size']
     lr = conf['model']['lr']
     warmup_steps = conf['model']['warmup_steps']
-    optimizer = MPIAdam(lr=lr)
+    if conf['model']['optimizer'] == 'adam':
+        optimizer = MPIAdam(lr=lr)
+    elif conf['model']['optimizer'] == 'sgd':
+        optimizer = MPISGD(lr=lr)
+    else:
+        print("Optimizer not implemented yet")
+        exit(1)
+
     print('{} epochs left to go'.format(num_epochs - 1 - e))
 
     # batch_generator = partial(loader.training_batch_generator,shot_list=shot_list_train)
@@ -615,7 +634,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
         tensorboard.set_model(mpi_model.model)
         mpi_model.model.summary()
 
-    mpi_model.compile(loss=conf['data']['target'].loss)
+    mpi_model.compile(conf['model']['optimizer'],loss=conf['data']['target'].loss)
 
     if task_index == 0:
         callbacks = mpi_model.build_callbacks(conf,callbacks_list)
