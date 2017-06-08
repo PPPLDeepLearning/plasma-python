@@ -56,7 +56,7 @@ def parameters(input_file):
 
         #signals
         params['paths']['all_signals'] = all_signals
-        params['paths']['use_signals'] = [q95,li,ip,lm,betan,energy,dens,pradcore,pradedge,pin,pechin,torquein,ipdirect,etemp_profile,edens_profile] #d3d_signals #fully_defined_signals#d3d_signals#fully_defined_signals #d3d_signals#fully_defined_signals# [ip,lm,li,dens,q95,energy,pin,pradcore]#,edens_profile,etemp_profile]#jet_signals#all_signals
+        #assert order q95,li,ip,lm,betan,energy,dens,pradcore,pradedge,pin,pechin,torquein,ipdirect,etemp_profile,edens_profile
 
         #shot lists
         jet_carbon_wall = ShotListFiles(jet,params['paths']['shot_list_dir'],['CWall_clear.txt','CFC_unint.txt'],'jet carbon wall data')
@@ -74,27 +74,43 @@ def parameters(input_file):
         if params['paths']['data'] == 'jet_data':
             params['paths']['shot_files'] = [jet_carbon_wall]
             params['paths']['shot_files_test'] = [jet_iterlike_wall]
-            params['paths']['use_signals'] = jet_signals
+            params['paths']['use_signals_dict'] = jet_signals
         elif params['paths']['data'] == 'jet_carbon_data':
             params['paths']['shot_files'] = [jet_carbon_wall]
             params['paths']['shot_files_test'] = []
-            params['paths']['use_signals'] = jet_signals
+            params['paths']['use_signals_dict'] = jet_signals
         elif params['paths']['data'] == 'd3d_data':
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = [] 
             #make sure all 1D signals appear last!
-            params['paths']['use_signals'] = [q95,li,ip,lm,betan,energy,dens,pradcore,pradedge,pin,pechin,torquein,ipdirect,etemp_profile,edens_profile][:-2]
+            params['paths']['use_signals_dict'] = {'q95':q95,'li':li,'ip':ip,'lm':lm,'betan':betan,'energy':energy,'dens':dens,'pradcore':pradcore,
+'pradedge':pradedge,'pin':pin,'pechin':pechin,'torquein':torquein,'ipdirect':ipdirect} #'etemp_profile':etemp_profile,'edens_profile'}
+            #[q95,li,ip,lm,betan,energy,dens,pradcore,pradedge,pin,pechin,torquein,ipdirect,etemp_profile,edens_profile][:-2]
+
         elif params['paths']['data'] == 'jet_to_d3d_data':
             params['paths']['shot_files'] = [jet_carbon_wall]
             params['paths']['shot_files_test'] = [d3d_full]
-            params['paths']['use_signals'] = fully_defined_signals
+            params['paths']['use_signals_dict'] = fully_defined_signals
         elif params['paths']['data'] == 'd3d_to_jet_data':
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = [jet_iterlike_wall]
-            params['paths']['use_signals'] = fully_defined_signals
+            params['paths']['use_signals_dict'] = fully_defined_signals
         else: 
             print("Unkown data set {}".format(params['paths']['data']))
             exit(1)
+
+        if len(params['paths']['specific_signals']):
+            for sig in params['paths']['specific_signals']:
+                if sig not in params['paths']['use_signals_dict'].keys():
+                    print("Signal {} is not fully defined for {} machine. Skipping...".format(sig,params['paths']['data'].split("_")[0]))
+            params['paths']['specific_signals'] = list(filter(lambda x: x in params['paths']['use_signals_dict'].keys(), params['paths']['specific_signals']))
+            selected_signals = {k: params['paths']['use_signals_dict'][k] for k in params['paths']['specific_signals']}
+            params['paths']['use_signals'] = selected_signals.values()
+        else:
+            #default case
+            params['paths']['use_signals'] = params['paths']['use_signals_dict'].values()
+
+        print("Selected signals {}".format(params['paths']['use_signals']))
 
         params['paths']['shot_files_all'] = params['paths']['shot_files']+params['paths']['shot_files_test']
         params['paths']['all_machines'] = list(set([file.machine for file in params['paths']['shot_files_all']]))
