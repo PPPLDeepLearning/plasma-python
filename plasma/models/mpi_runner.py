@@ -66,7 +66,7 @@ for i in range(num_workers):
     from keras.layers.recurrent import LSTM
     from keras.layers.wrappers import TimeDistributed
     from keras.models import Model
-    from keras.optimizers import SGD
+    from keras.optimizers import *
     from keras.utils.generic_utils import Progbar 
     import keras.callbacks as cbks
 
