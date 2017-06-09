@@ -150,26 +150,26 @@ if left empty `[]` will use all valid signals defined on a machine. Only use if 
 
 ### Current signals and notations
 
-| Signal name | Description |
-|-----|:------:|:----------:|
-| q95 | q95 safety factor| 
-| ip | plasma current| 
-| li | internal inductance| 
-| lm | Locked mode amplitude| 
-| dens | Plasma density| 
-| energy | stored energy| 
-| pin | Input Power (beam for d3d)| 
-| pradtot | Radiated Power| 
-| pradcore | Radiated Power Core| 
-| pradedge | Radiated Power Edge| 
-| pechin | ECH input power, not always on| 
-| pechin | ECH input power, not always on| 
-| betan | Normalized Beta| 
-| energydt | stored energy time derivative| 
-| torquein | Input Beam Torque| 
-| tmamp1 | Tearing Mode amplitude (rotating 2/1)| 
-| tmamp2 | Tearing Mode amplitude (rotating 3/2)| 
-| tmfreq1 | Tearing Mode frequency (rotating 2/1)| 
-| tmfreq2 | Tearing Mode frequency (rotating 3/2)| 
-| ipdirect | plasma current direction| 
+Signal name | Description 
+--- | --- 
+q95 | q95 safety factor
+ip | plasma current
+li | internal inductance 
+lm | Locked mode amplitude
+dens | Plasma density
+energy | stored energy
+pin | Input Power (beam for d3d)
+pradtot | Radiated Power
+pradcore | Radiated Power Core
+pradedge | Radiated Power Edge
+pechin | ECH input power, not always on
+pechin | ECH input power, not always on
+betan | Normalized Beta
+energydt | stored energy time derivative
+torquein | Input Beam Torque
+tmamp1 | Tearing Mode amplitude (rotating 2/1)
+tmamp2 | Tearing Mode amplitude (rotating 3/2)
+tmfreq1 | Tearing Mode frequency (rotating 2/1)
+tmfreq2 | Tearing Mode frequency (rotating 3/2)
+ipdirect | plasma current direction
 
