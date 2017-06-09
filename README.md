@@ -128,17 +128,48 @@ Then launch the application from the command line:
 mpirun -npernode 4 python examples/mpi_learn.py
 ```
 
-### Understanding the configuration files
+### Understanding the data
 
-All the configuration parameters are summarised in `examples/conf.yaml`. Highlighting the important ones:
+All the configuration parameters are summarised in `examples/conf.yaml`. Highlighting the important ones to control the data.
+Currently, FRNN is capable of working with JET and D3D data as well as cross-machine regime. The switch is done in the configuration file:
 
 ```yaml
 paths:
     ... 
     data: 'jet_data'
+```
+use `d3d_data` for D3D signals, use `jet_to_d3d_data` ir `d3d_to_jet_data` for cross-machine regime.
+    
+By default, FRNN will select, preprocess and normalize all valid signals available. To chose only specific signals use:
+```yaml
+paths:
+    ... 
+    specific_signals: [q95,ip] 
+```    
+if left empty `[]` will use all valid signals defined on a machine. Only use if need a custom set.
 
-data:
+### Current signals and notations
 
-    floatx: 'float64'
-
+| Signal name | Description |
+|-----|:------:|:----------:|
+| q95 | q95 safety factor| 
+| ip | plasma current| 
+| li | internal inductance| 
+| lm | Locked mode amplitude| 
+| dens | Plasma density| 
+| energy | stored energy| 
+| pin | Input Power (beam for d3d)| 
+| pradtot | Radiated Power| 
+| pradcore | Radiated Power Core| 
+| pradedge | Radiated Power Edge| 
+| pechin | ECH input power, not always on| 
+| pechin | ECH input power, not always on| 
+| betan | Normalized Beta| 
+| energydt | stored energy time derivative| 
+| torquein | Input Beam Torque| 
+| tmamp1 | Tearing Mode amplitude (rotating 2/1)| 
+| tmamp2 | Tearing Mode amplitude (rotating 3/2)| 
+| tmfreq1 | Tearing Mode frequency (rotating 2/1)| 
+| tmfreq2 | Tearing Mode frequency (rotating 3/2)| 
+| ipdirect | plasma current direction| 
 
