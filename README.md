@@ -173,3 +173,62 @@ tmfreq1 | Tearing Mode frequency (rotating 2/1)
 tmfreq2 | Tearing Mode frequency (rotating 3/2)
 ipdirect | plasma current direction
 
+### Visualizing learning
+
+A regular FRNN run will produce several outputs and callbacks.
+
+#### TensorBoard visualization
+
+Currently supports graph visualization, histograms of weights, activations and biases, and scalar variable summaries of losses and accuracies.
+
+The summaries are written real time to `/tigress/<netid>/Graph`. For MacOS, you can set up the `sshfs` mount of /tigress filesystem and view those summaries in your browser.
+
+For Mac, you could follow the instructions here:
+https://github.com/osxfuse/osxfuse/wiki/SSHFS
+
+then do something like:
+```
+sshfs -o allow_other,defer_permissions netid@tigergpu.princeton.edu:/tigress/netid/ /mnt/<destination folder name on your laptop>/
+```
+
+Launch TensorBoard locally:
+```
+python -m tensorflow.tensorboard --logdir /mnt/<destination folder name on your laptop>/Graph
+```
+You should see something like:
+
+![alt text](http://url/to/img.png)
+
+#### Learning curves and ROC per epoch
+
+Besides TensorBoard summaries you can check the scalar variable summaries for training loss, validation loss and validation ROC logged at `/tigress/netid/csv_logs` (each run will produce a new log file with a timestamp in name).
+
+A sample code to analyze can be found in `examples/notebooks`. For instance:
+
+```python
+import pandas as pd
+import numpy as np
+from bokeh.plotting import figure, show, output_file, save
+
+data = pd.read_csv("/mnt/<destination folder name on your laptop>/csv_logs/<name of the log file>.csv")
+
+from bokeh.io import output_notebook
+output_notebook()
+
+from bokeh.models import Range1d
+#optionally set the plotting range
+#left, right, bottom, top = -0.1, 31, 0.005, 1.51
+
+p = figure(title="Learning curve", y_axis_label="Training loss", x_axis_label='Epoch number') #,y_axis_type="log")
+#p.set(x_range=Range1d(left, right), y_range=Range1d(bottom, top))
+
+p.line(data['epoch'].values, data['train_loss'].values, legend="Test description",
+       line_color="tomato", line_dash="dotdash", line_width=2)
+p.legend.location = "top_right"
+show(p, notebook_handle=True)
+```
+
+### Learning curve summaries per mini-batch
+
+To extract per mini-batch summaries, use the output produced by FRNN logged to the standard out (in case of the batch jobs, it will all be contained in the Slurm output file). Refer to the following notebook to perform the analysis of learning curve on a mini-batch level:
+https://github.com/PPPLDeepLearning/plasma-python/blob/master/examples/notebooks/FRNN_scaling.ipynb
