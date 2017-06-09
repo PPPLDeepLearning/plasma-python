@@ -55,7 +55,7 @@ def parameters(input_file):
         #params['model']['loss'] = params['data']['target'].loss
 
         #signals
-        params['paths']['all_signals'] = list(all_signals.values())
+        params['paths']['all_signals_dict'] = all_signals
         #assert order q95,li,ip,lm,betan,energy,dens,pradcore,pradedge,pin,pechin,torquein,ipdirect,etemp_profile,edens_profile
 
         #shot lists
@@ -106,9 +106,13 @@ def parameters(input_file):
             params['paths']['specific_signals'] = list(filter(lambda x: x in params['paths']['use_signals_dict'].keys(), params['paths']['specific_signals']))
             selected_signals = {k: params['paths']['use_signals_dict'][k] for k in params['paths']['specific_signals']}
             params['paths']['use_signals'] = list(selected_signals.values())
+
+            selected_signals = {k: params['paths']['all_signals_dict'][k] for k in params['paths']['specific_signals']}
+            params['paths']['all_signals'] = list(selected_signals.values())
         else:
             #default case
             params['paths']['use_signals'] = list(params['paths']['use_signals_dict'].values())
+            params['paths']['all_signals'] = list(params['paths']['all_signals_dict'].values())
 
         print("Selected signals {}".format(params['paths']['use_signals']))
 
