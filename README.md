@@ -197,7 +197,7 @@ python -m tensorflow.tensorboard --logdir /mnt/<destination folder name on your 
 ```
 You should see something like:
 
-![alt text](http://url/to/img.png)
+![alt text](https://github.com/PPPLDeepLearning/plasma-python/blob/master/docs/tb.png)
 
 #### Learning curves and ROC per epoch
 
