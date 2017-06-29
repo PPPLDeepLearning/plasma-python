@@ -6,7 +6,7 @@ rm /tigress/alexeys/csv_logs/*
 rm /tigress/alexeys/Graph/*
 
 ls ${PWD}
-cd examples
+#cd examples
 
 module load anaconda
 source activate PPPL
