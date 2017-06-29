@@ -7,6 +7,7 @@ rm /tigress/alexeys/Graph/*
 
 ls ${PWD}
 #cd examples
+echo $hostname
 
 module load anaconda
 source activate PPPL
