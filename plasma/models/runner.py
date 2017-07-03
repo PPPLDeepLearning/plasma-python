@@ -68,6 +68,14 @@ def train(conf,shot_list_train,shot_list_validate,loader):
     num_so_far_accum = 0
     num_so_far = 0
     num_total = np.inf
+
+    if conf['callbacks']['mode'] == 'max':
+        best_so_far = -np.inf
+        cmp_fn = max
+    else:
+        best_so_far = np.inf
+        cmp_fn = min
+
     while e < num_epochs-1:
         e += 1
         print('\nEpoch {}/{}'.format(e+1,num_epochs))
@@ -104,12 +112,12 @@ def train(conf,shot_list_train,shot_list_validate,loader):
                 loader.verbose=False#True during the first iteration
             else:
                 _ = train_model.predict(batch_xs,batch_size=conf['training']['batch_size'])
-           
 
 
         e = e_start+1.0*num_so_far/num_total
         sys.stdout.flush()
-        training_losses.append(np.mean(training_losses_tmp))
+        ave_loss = np.mean(training_losses_tmp)
+        training_losses.append(ave_loss)
         specific_builder.save_model_weights(train_model,int(round(e)))
 
         if conf['training']['validation_frac'] > 0.0:
@@ -117,6 +125,14 @@ def train(conf,shot_list_train,shot_list_validate,loader):
             _,_,_,roc_area,loss = make_predictions_and_evaluate_gpu(conf,shot_list_validate,loader)
             validation_losses.append(loss)
             validation_roc.append(roc_area)
+
+            epoch_logs = {}
+            epoch_logs['val_roc'] = roc_area 
+            epoch_logs['val_loss'] = loss
+            epoch_logs['train_loss'] = ave_loss
+            best_so_far = cmp_fn(epoch_logs[conf['callbacks']['monitor']],best_so_far)
+            if best_so_far != epoch_logs[conf['callbacks']['monitor']]: #only save model weights if quantity we are tracking is improving
+                specific_builder.delete_model_weights(train_model,int(round(e)))
 
             if conf['training']['ranking_difficulty_fac'] != 1.0:
                 _,_,_,roc_area_train,loss_train = make_predictions_and_evaluate_gpu(conf,shot_list_train,loader)
