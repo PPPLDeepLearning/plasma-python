@@ -659,6 +659,12 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
         'batch_size': batch_size,
         })
         callbacks.on_train_begin()
+    if conf['callbacks']['mode'] == 'max':
+        best_so_far = -np.inf
+        cmp_fn = max
+    else:
+        best_so_far = np.inf
+        cmp_fn = min
 
     while e < num_epochs-1:
         if task_index == 0:
@@ -686,6 +692,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
         epoch_logs['val_roc'] = roc_area 
         epoch_logs['val_loss'] = loss
         epoch_logs['train_loss'] = ave_loss
+        best_so_far = cmp_fn(epoch_logs[conf['callbacks']['monitor']],best_so_far)
 
         stop_training = False
         if task_index == 0:
@@ -700,6 +707,8 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
             callbacks.on_epoch_end(int(round(e)), epoch_logs)
             if hasattr(mpi_model.model,'stop_training'):
                 stop_training = mpi_model.model.stop_training
+            if best_so_far != epoch_logs[conf['callbacks']['monitor']]: #only save model weights if quantity we are tracking is improving
+                specific_builder.delete_model_weights(train_model,int(round(e)))
 
             #tensorboard
             if backend != 'theano':
