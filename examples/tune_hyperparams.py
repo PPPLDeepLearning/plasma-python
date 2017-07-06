@@ -1,4 +1,4 @@
-from plasma.models.hyperparameters import CategoricalHyperparam,ContinuousHyperparam,LogContinuousHyperparam
+from plasma.primitives.hyperparameters import CategoricalHyperparam,ContinuousHyperparam,LogContinuousHyperparam
 from pprint import pprint
 import yaml
 import datetime
@@ -20,7 +20,7 @@ fac = CategoricalHyperparam(['data','positive_example_penalty'],[1.0,2.0,4.0,8.0
 
 tunables = [lr,lr_decay,fac] #target
 
-run_directory = "/tigress/jk7/hyperparams/"
+run_directory = "/tigress/{}/hyperparams/".format(getpass.getuser())
 template_path = "/home/{}/plasma-python/examples/".format(getpass.getuser())
 conf_name = "conf.yaml"
 executable_name = "mpi_learn.py"
