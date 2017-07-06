@@ -38,6 +38,14 @@ class CategoricalHyperparam(Hyperparam):
 	def choice(self):
 		return random.choice(self.values)
 
+class GridCategoricalHyperparam(Hyperparam):
+
+    def __init__(self,path,values):
+        self.path = path
+        self.values = iter(values)
+
+    def choice(self):
+        return next(self.values)
 
 class ContinuousHyperparam(Hyperparam):
 	def __init__(self,path,lo,hi):
