@@ -723,8 +723,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
 
     if task_index == 0:
         callbacks.on_train_end()
-        pass
-        #tensorboard.on_train_end()
+        tensorboard.on_train_end()
 
     mpi_model.close()
 
@@ -786,7 +785,14 @@ class TensorBoard(object):
         logs = logs or {}
 
         for name, value in logs.items():
-            tf.summary.scalar(name,value)
+            if name in ['batch', 'size']:
+                continue
+            summary = tf.Summary()
+            summary_value = summary.value.add()
+            summary_value.simple_value = value.item()
+            summary_value.tag = name
+            self.writer.add_summary(summary, epoch)
+            self.writer.flush()
 
         tensors = (self.model.inputs +
                    self.model.targets +
@@ -814,5 +820,5 @@ class TensorBoard(object):
             if val_steps <= 0: break
 
 
-    def on_train_end(self, _):
+    def on_train_end(self):
         self.writer.close()
