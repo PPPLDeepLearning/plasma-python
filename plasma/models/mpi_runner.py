@@ -541,6 +541,16 @@ def mpi_make_predictions(conf,shot_list,loader,custom_path=None):
 
     model = specific_builder.build_model(True)
     specific_builder.load_model_weights(model,custom_path)
+
+    #broadcast model weights then set it explicitely: fix for Py3.6
+    if sys.version_info[0] > 2:
+        if task_index == 0:
+            new_weights = model.get_weights()
+        else:
+            new_weights = None
+        nw = comm.bcast(new_weights,root=0)
+        model.set_weights(nw)
+
     model.reset_states()
     if task_index == 0:
         pbar =  Progbar(len(shot_list))
