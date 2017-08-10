@@ -4,7 +4,6 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 import numpy as np
-from itertools import imap
 
 from hyperopt import hp, STATUS_OK
 
@@ -13,6 +12,9 @@ import sys
 import os
 from functools import partial
 import pathos.multiprocessing as mp
+
+if sys.version_info[0] < 3:
+    from itertools import imap
 
 from plasma.conf import conf
 from plasma.models.loader import Loader, ProcessGenerator
