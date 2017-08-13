@@ -767,17 +767,25 @@ class TensorBoard(object):
 
     def set_model(self, model):
         self.model = model
+        print(type(self.model))
         self.sess = K.get_session()
 
         if self.histogram_freq and self.merged is None:
             for layer in self.model.layers:
 
                 for weight in layer.weights:
-                    tf.summary.histogram(weight.name, weight)
+                    mapped_weight_name = weight.name.replace(':', '_')
+                    tf.summary.histogram(mapped_weight_name, weight)
                     if self.write_grads:
-                        grads = model.optimizer.get_gradients(model.total_loss,
+                        grads = self.model.optimizer.get_gradients(self.model.total_loss,
                                                             weight)
-                        tf.summary.histogram('{}_grad'.format(weight.name), grads)
+                        def is_indexed_slices(grad):
+                            return type(grad).__name__ == 'IndexedSlices'
+                        grads = [
+                            grad.values if is_indexed_slices(grad) else grad
+                            for grad in grads]
+                        for grad in grads: 
+                            tf.summary.histogram('{}_grad'.format(mapped_weight_name), grad)
 
                 if hasattr(layer, 'output'):
                     tf.summary.histogram('{}_out'.format(layer.name),
