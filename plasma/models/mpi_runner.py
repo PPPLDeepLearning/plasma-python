@@ -105,6 +105,25 @@ class MPISGD(MPIOptimizer):
     self.iterations += 1
     return deltas
 
+class MPIMomentumSGD(MPIOptimizer):
+    def __init__(self, lr):
+        super(MPIMomentumSGD, self).__init__(lr)
+        self.momentum = 0.9
+
+    def get_deltas(self, raw_deltas): 
+        deltas = []
+
+        if self.iterations == 0:
+            self.velocity_list = [np.zeros_like(g) for g in raw_deltas]
+
+        for (i,g) in enumerate(raw_deltas):
+            self.velocity_list[i] = self.momentum * self.velocity_list[i] + self.lr * g
+            deltas.append(self.velocity_list[i])
+
+        self.iterations += 1
+
+        return deltas
+
 class MPIAdam(MPIOptimizer):
   def __init__(self,lr):
     super(MPIAdam,self).__init__(lr)
