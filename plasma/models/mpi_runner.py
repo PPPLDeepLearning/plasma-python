@@ -648,6 +648,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
 
     print("warmup {}".format(warmup_steps))
     mpi_model = MPIModel(train_model,optimizer,comm,batch_generator,batch_size,lr=lr,warmup_steps = warmup_steps,num_batches_minimum=num_batches_minimum)
+    mpi_model.compile(conf['model']['optimizer'],loss=conf['data']['target'].loss)
 
     tensorboard = None
     if backend != "theano" and task_index == 0:
@@ -656,8 +657,6 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
         tensorboard = TensorBoard(log_dir=tensorboard_save_path,histogram_freq=1,write_graph=True,write_grads=write_grads)
         tensorboard.set_model(mpi_model.model)
         mpi_model.model.summary()
-
-    mpi_model.compile(conf['model']['optimizer'],loss=conf['data']['target'].loss)
 
     if task_index == 0:
         callbacks = mpi_model.build_callbacks(conf,callbacks_list)
