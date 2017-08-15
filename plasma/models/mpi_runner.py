@@ -45,7 +45,7 @@ MY_GPU = task_index % NUM_GPUS
 backend = conf['model']['backend']
 
 if backend == 'tf' or backend == 'tensorflow':
-    os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(MY_GPU)#,mode=NanGuardMode'
+    if NUM_GPUS > 1: os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(MY_GPU)#,mode=NanGuardMode'
     os.environ['KERAS_BACKEND'] = 'tensorflow'
     import tensorflow as tf
     from keras.backend.tensorflow_backend import set_session
@@ -182,7 +182,6 @@ class MPIModel():
     self.model = model
     self.optimizer = optimizer
     self.max_lr = 0.1
-    self.lr = lr if (lr < self.max_lr) else self.max_lr
     self.DUMMY_LR = 0.001
     self.comm = comm
     self.batch_size = batch_size
@@ -197,6 +196,7 @@ class MPIModel():
         self.num_replicas = self.num_workers
     else:
         self.num_replicas = num_replicas
+    self.lr = lr/(1.0+self.num_replicas/100.0) if (lr < self.max_lr) else self.max_lr/(1.0+self.num_replicas/100.0)
 
 
   def set_batch_iterator_func(self):
@@ -214,19 +214,25 @@ class MPIModel():
   def load_weights(self,path):
     self.model.load_weights(path)
 
-  def compile(self,optimizer,loss='mse'):
+  def compile(self,optimizer,lr,clipnorm,loss='mse'):
     if optimizer == 'sgd':
-        optimizer_class = SGD
+        optimizer_class = SGD(lr=lr,clipnorm=clipnorm)
+    elif optimizer == 'momentum_sgd':
+        optimizer_class = SGD(lr=lr, clipnorm=clipnorm, decay=1e-6, momentum=0.9)
+    elif optimizer == 'tf_momentum_sgd':
+        optimizer_class = TFOptimizer(tf.train.MomentumOptimizer(learning_rate=lr,momentum=0.9))
     elif optimizer == 'adam':
-        optimizer_class = Adam
+        optimizer_class = Adam(lr=lr,clipnorm=clipnorm)
+    elif optimizer == 'tf_adam':
+        optimizer_class = TFOptimizer(tf.train.AdamOptimizer(learning_rate=lr))
     elif optimizer == 'rmsprop':
-        optimizer_class = RMSprop
+        optimizer_class = RMSprop(lr=lr,clipnorm=clipnorm)
     elif optimizer == 'nadam':
-        optimizer_class = Nadam
+        optimizer_class = Nadam(lr=lr,clipnorm=clipnorm)
     else:
         print("Optimizer not implemented yet")
         exit(1)
-    self.model.compile(optimizer=optimizer_class(lr=self.DUMMY_LR),loss=loss)
+    self.model.compile(optimizer=optimizer_class,loss=loss)        
 
 
 
@@ -551,6 +557,7 @@ def load_shotlists(conf):
 #shot_list_train,shot_list_validate,shot_list_test = load_shotlists(conf)
 
 def mpi_make_predictions(conf,shot_list,loader,custom_path=None):
+    np.random.seed(task_index)
     shot_list.sort()#make sure all replicas have the same list
     specific_builder = builder.ModelBuilder(conf) 
 
@@ -648,13 +655,16 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
     lr_decay = conf['model']['lr_decay']
     batch_size = conf['training']['batch_size']
     lr = conf['model']['lr']
+    clipnorm = conf['model']['clipnorm']
     warmup_steps = conf['model']['warmup_steps']
     num_batches_minimum = conf['training']['num_batches_minimum']
 
-    if conf['model']['optimizer'] == 'adam':
+    if 'adam' in conf['model']['optimizer']:
         optimizer = MPIAdam(lr=lr)
-    elif conf['model']['optimizer'] == 'sgd':
+    elif conf['model']['optimizer'] == 'sgd' or conf['model']['optimizer'] == 'tf_sgd':
         optimizer = MPISGD(lr=lr)
+    elif 'momentum_sgd' in conf['model']['optimizer']:
+        optimizer = MPIMomentumSGD(lr=lr)
     else:
         print("Optimizer not implemented yet")
         exit(1)
@@ -667,7 +677,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
 
     print("warmup {}".format(warmup_steps))
     mpi_model = MPIModel(train_model,optimizer,comm,batch_generator,batch_size,lr=lr,warmup_steps = warmup_steps,num_batches_minimum=num_batches_minimum)
-    mpi_model.compile(conf['model']['optimizer'],loss=conf['data']['target'].loss)
+    mpi_model.compile(conf['model']['optimizer'],lr,clipnorm,conf['data']['target'].loss)
 
     tensorboard = None
     if backend != "theano" and task_index == 0:
@@ -785,7 +795,6 @@ class TensorBoard(object):
 
     def set_model(self, model):
         self.model = model
-        print(type(self.model))
         self.sess = K.get_session()
 
         if self.histogram_freq and self.merged is None:
