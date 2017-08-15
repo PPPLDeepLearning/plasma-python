@@ -182,7 +182,6 @@ class MPIModel():
     self.model = model
     self.optimizer = optimizer
     self.max_lr = 0.1
-    self.lr = lr if (lr < self.max_lr) else self.max_lr
     self.DUMMY_LR = 0.001
     self.comm = comm
     self.batch_size = batch_size
@@ -197,6 +196,7 @@ class MPIModel():
         self.num_replicas = self.num_workers
     else:
         self.num_replicas = num_replicas
+    self.lr = lr/(1.0+self.num_replicas/100.0) if (lr < self.max_lr) else self.max_lr/(1.0+self.num_replicas/100.0)
 
 
   def set_batch_iterator_func(self):
