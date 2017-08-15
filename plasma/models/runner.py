@@ -49,11 +49,15 @@ def train(conf,shot_list_train,shot_list_validate,loader):
 
     from keras.utils.generic_utils import Progbar 
     from keras import backend as K
+    from keras.optimizers import *
     from plasma.models import builder
 
     print('Build model...',end='')
     specific_builder = builder.ModelBuilder(conf)
     train_model = specific_builder.build_model(False) 
+    print('Compile model',end='')
+    optimizer_class = optimizer_class(conf['model']['optimizer'])
+    train_model.compile(optimizer=optimizer_class(lr=conf['model']['lr'],clipnorm=conf['model']['clipnorm']),loss=conf['data']['target'].loss)
     print('...done')
 
     #load the latest epoch we did. Returns -1 if none exist yet
@@ -65,7 +69,6 @@ def train(conf,shot_list_train,shot_list_validate,loader):
     num_epochs = conf['training']['num_epochs']
     num_at_once = conf['training']['num_shots_at_once']
     lr_decay = conf['model']['lr_decay']
-    lr = conf['model']['lr']
     print('{} epochs left to go'.format(num_epochs - 1 - e))
     num_so_far_accum = 0
     num_so_far = 0
@@ -160,6 +163,22 @@ def train(conf,shot_list_train,shot_list_validate,loader):
     batch_iterator.__exit__()
     print('...done')
 
+
+def optimizer_class(optimizer):
+    if optimizer == 'sgd':
+        optimizer_class = SGD
+    elif optimizer == 'adam':
+        optimizer_class = Adam
+    elif optimizer == 'rmsprop':
+        optimizer_class = RMSprop
+    elif optimizer == 'nadam':
+        optimizer_class = Nadam
+    else:
+        print("Optimizer not implemented yet")
+        exit(1)
+    return optimizer_class
+
+
 class HyperRunner(object):
     def __init__(self,conf,loader,shot_list):
         self.loader = loader
@@ -172,7 +191,9 @@ class HyperRunner(object):
 
         specific_builder = builder.ModelBuilder(self.conf)
 
-        train_model, test_model = specific_builder.hyper_build_model(space,False), specific_builder.hyper_build_model(space,True)
+        train_model = specific_builder.hyper_build_model(space,False)
+        optimizer_class = optimizer_class(conf['model']['optimizer'])
+        train_model.compile(optimizer=optimizer_class(lr=conf['model']['lr'],clipnorm=conf['model']['clipnorm']),loss=conf['data']['target'].loss)
 
         np.random.seed(1)
         validation_losses = []
@@ -186,7 +207,6 @@ class HyperRunner(object):
         num_epochs = self.conf['training']['num_epochs']
         num_at_once = self.conf['training']['num_shots_at_once']
         lr_decay = self.conf['model']['lr_decay']
-        lr = self.conf['model']['lr']
 
         resulting_dict = {'loss':None,'status':STATUS_OK,'model':None}
 
@@ -295,6 +315,9 @@ def make_predictions(conf,shot_list,loader):
     disruptive = []
 
     model = specific_builder.build_model(True)
+    optimizer_class = optimizer_class(conf['model']['optimizer'])
+    model.compile(optimizer=optimizer_class(lr=conf['model']['lr'],clipnorm=conf['model']['clipnorm']),loss=conf['data']['target'].loss)
+
     specific_builder.load_model_weights(model)
     model_save_path = specific_builder.get_latest_save_path()
 
@@ -317,6 +340,9 @@ def make_predictions(conf,shot_list,loader):
 
 def make_single_prediction(shot,specific_builder,loader,model_save_path):
     model = specific_builder.build_model(True)
+    optimizer_class = optimizer_class(conf['model']['optimizer'])
+    model.compile(optimizer=optimizer_class(lr=conf['model']['lr'],clipnorm=conf['model']['clipnorm']),loss=conf['data']['target'].loss)
+
     model.load_weights(model_save_path)
     model.reset_states()
     X,y = loader.load_as_X_y(shot,prediction_mode=True)
@@ -357,6 +383,9 @@ def make_predictions_gpu(conf,shot_list,loader):
     disruptive = []
 
     model = specific_builder.build_model(True)
+    optimizer_class = optimizer_class(conf['model']['optimizer'])
+    model.compile(optimizer=optimizer_class(lr=conf['model']['lr'],clipnorm=conf['model']['clipnorm']),loss=conf['data']['target'].loss)
+
     specific_builder.load_model_weights(model)
     model.reset_states()
 
@@ -426,6 +455,9 @@ def make_evaluations_gpu(conf,shot_list,loader):
     for (i,shot_sublist) in enumerate(shot_sublists):
         batch_size = len(shot_sublist)
         model = specific_builder.build_model(True,custom_batch_size=batch_size)
+        optimizer_class = optimizer_class(conf['model']['optimizer'])
+        model.compile(optimizer=optimizer_class(lr=conf['model']['lr'],clipnorm=conf['model']['clipnorm']),loss=conf['data']['target'].loss)
+
         specific_builder.load_model_weights(model)
         model.reset_states()
         X,y,shot_lengths,disr = loader.load_as_X_y_pred(shot_sublist,custom_batch_size=batch_size)

@@ -9,7 +9,6 @@ from keras.utils.data_utils import get_file
 from keras.layers.wrappers import TimeDistributed
 from keras.layers.merge import Concatenate
 from keras.callbacks import Callback
-from keras.optimizers import *
 from keras.regularizers import l1,l2,l1_l2
 
 
@@ -73,27 +72,9 @@ class ModelBuilder(object):
         model_conf = conf['model']
         rnn_size = model_conf['rnn_size']
         rnn_type = model_conf['rnn_type']
-        optimizer = model_conf['optimizer']
-        lr = model_conf['lr']
-        clipnorm = model_conf['clipnorm']
         regularization = model_conf['regularization']
         dense_regularization = model_conf['dense_regularization']
 
-        if optimizer == 'sgd':
-            optimizer_class = SGD
-        elif optimizer == 'adam':
-            optimizer_class = Adam
-        elif optimizer == 'rmsprop':
-            optimizer_class = RMSprop 
-        elif optimizer == 'nadam':
-            optimizer_class = Nadam
-        else:
-            optimizer = optimizer
-
-        if lr is not None or clipnorm is not None:
-            optimizer = optimizer_class(lr = lr,clipnorm=clipnorm)
-
-        loss_fn = conf['data']['target'].loss#model_conf['loss']
         dropout_prob = model_conf['dropout_prob']
         length = model_conf['length']
         pred_length = model_conf['pred_length']
@@ -108,7 +89,6 @@ class ModelBuilder(object):
         size_conv_filters = model_conf['size_conv_filters']
         pool_size = model_conf['pool_size']
         dense_size = model_conf['dense_size']
-        # num_signals = conf['data']['num_signals']
 
 
         batch_size = self.conf['training']['batch_size']
@@ -203,7 +183,6 @@ class ModelBuilder(object):
         else:
             x_out = Dense(1,activation=output_activation) (x_in)
         model = Model(inputs=x_input,outputs=x_out)
-        model.compile(loss=loss_fn, optimizer=optimizer)
         #bug with tensorflow/Keras
         if conf['model']['backend'] == 'tf' or conf['model']['backend'] == 'tensorflow':
                 first_time = "tensorflow" not in sys.modules
@@ -212,7 +191,6 @@ class ModelBuilder(object):
                     K.get_session().run(tf.global_variables_initializer())
 
         model.reset_states()
-        #model.compile(loss='mean_squared_error', optimizer='sgd') #for numerical output
         return model
 
     def build_train_test_models(self):
@@ -293,26 +271,8 @@ class ModelBuilder(object):
         model_conf = conf['model']
         rnn_size = model_conf['rnn_size']
         rnn_type = model_conf['rnn_type']
-        optimizer = model_conf['optimizer']
-        lr = model_conf['lr']
-        clipnorm = model_conf['clipnorm']
         regularization = model_conf['regularization']
 
-        if optimizer == 'sgd':
-            optimizer_class = SGD
-        elif optimizer == 'adam':
-            optimizer_class = Adam
-        elif optimizer == 'rmsprop':
-            optimizer_class = RMSprop
-        elif optimizer == 'nadam':
-            optimizer_class = Nadam
-        else:
-            optimizer = optimizer
-
-        if lr is not None or clipnorm is not None:
-            optimizer = optimizer_class(lr = lr,clipnorm=clipnorm)
-
-        loss_fn = conf['data']['target'].loss#model_conf['loss']
         dropout_prob = model_conf['dropout_prob']
         length = model_conf['length']
         pred_length = model_conf['pred_length']
@@ -355,9 +315,6 @@ class ModelBuilder(object):
             model.add(TimeDistributed(Dense(1,activation=output_activation)))
         else:
             model.add(Dense(1,activation=output_activation))
-        model.compile(loss=loss_fn, optimizer=optimizer)
         model.reset_states()
-        #model.compile(loss='mean_squared_error', optimizer='sgd') #for numerical output
 
         return model
-

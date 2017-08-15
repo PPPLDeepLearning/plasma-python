@@ -214,7 +214,7 @@ class MPIModel():
   def load_weights(self,path):
     self.model.load_weights(path)
 
-  def compile(self,optimizer,loss='mse'):
+  def compile(self,optimizer,lr,clipnorm,loss='mse'):
     if optimizer == 'sgd':
         optimizer_class = SGD
     elif optimizer == 'adam':
@@ -226,7 +226,7 @@ class MPIModel():
     else:
         print("Optimizer not implemented yet")
         exit(1)
-    self.model.compile(optimizer=optimizer_class(lr=self.DUMMY_LR),loss=loss)
+    self.model.compile(optimizer=optimizer_class(lr=lr,clipnorm=clipnorm),loss=loss)
 
 
 
@@ -551,6 +551,7 @@ def load_shotlists(conf):
 #shot_list_train,shot_list_validate,shot_list_test = load_shotlists(conf)
 
 def mpi_make_predictions(conf,shot_list,loader,custom_path=None):
+    np.random.seed(task_index)
     shot_list.sort()#make sure all replicas have the same list
     specific_builder = builder.ModelBuilder(conf) 
 
@@ -648,6 +649,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
     lr_decay = conf['model']['lr_decay']
     batch_size = conf['training']['batch_size']
     lr = conf['model']['lr']
+    clipnorm = conf['model']['clipnorm']
     warmup_steps = conf['model']['warmup_steps']
     num_batches_minimum = conf['training']['num_batches_minimum']
 
@@ -667,7 +669,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
 
     print("warmup {}".format(warmup_steps))
     mpi_model = MPIModel(train_model,optimizer,comm,batch_generator,batch_size,lr=lr,warmup_steps = warmup_steps,num_batches_minimum=num_batches_minimum)
-    mpi_model.compile(conf['model']['optimizer'],loss=conf['data']['target'].loss)
+    mpi_model.compile(conf['model']['optimizer'],lr,clipnorm,conf['data']['target'].loss)
 
     tensorboard = None
     if backend != "theano" and task_index == 0:
@@ -785,7 +787,6 @@ class TensorBoard(object):
 
     def set_model(self, model):
         self.model = model
-        print(type(self.model))
         self.sess = K.get_session()
 
         if self.histogram_freq and self.merged is None:
