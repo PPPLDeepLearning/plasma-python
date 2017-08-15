@@ -45,7 +45,7 @@ MY_GPU = task_index % NUM_GPUS
 backend = conf['model']['backend']
 
 if backend == 'tf' or backend == 'tensorflow':
-    os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(MY_GPU)#,mode=NanGuardMode'
+    if NUM_GPUS > 1: os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(MY_GPU)#,mode=NanGuardMode'
     os.environ['KERAS_BACKEND'] = 'tensorflow'
     import tensorflow as tf
     from keras.backend.tensorflow_backend import set_session
