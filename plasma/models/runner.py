@@ -49,7 +49,7 @@ def train(conf,shot_list_train,shot_list_validate,loader):
 
     from keras.utils.generic_utils import Progbar 
     from keras import backend as K
-    from keras.optimizers import *
+    from keras.optimizers import SGD,Adam,RMSprop,Nadam,TFOptimizer
     from plasma.models import builder
 
     print('Build model...',end='')
@@ -57,7 +57,7 @@ def train(conf,shot_list_train,shot_list_validate,loader):
     train_model = specific_builder.build_model(False) 
     print('Compile model',end='')
     optimizer_class = optimizer_class(conf['model']['optimizer'])
-    train_model.compile(optimizer=optimizer_class(lr=conf['model']['lr'],clipnorm=conf['model']['clipnorm']),loss=conf['data']['target'].loss)
+    train_model.compile(optimizer=optimizer_class,loss=conf['data']['target'].loss)
     print('...done')
 
     #load the latest epoch we did. Returns -1 if none exist yet
@@ -163,19 +163,25 @@ def train(conf,shot_list_train,shot_list_validate,loader):
     batch_iterator.__exit__()
     print('...done')
 
-
-def optimizer_class(optimizer):
+def optimizer_class(conf,optimizer):
     if optimizer == 'sgd':
-        optimizer_class = SGD
+        optimizer_class = SGD(lr=conf['model']['lr'],clipnorm=conf['model']['clipnorm'])
+    elif optimizer == 'momentum_sgd':
+        optimizer_class = SGD(lr=conf['model']['lr'],clipnorm=conf['model']['clipnorm'], decay=1e-6, momentum=0.9)
+    elif optimizer == 'tf_momentum_sgd':
+        optimizer_class = TFOptimizer(tf.train.MomentumOptimizer(learning_rate=conf['model']['lr'],momentum=0.9))
     elif optimizer == 'adam':
-        optimizer_class = Adam
+        optimizer_class = Adam(lr=conf['model']['lr'],clipnorm=conf['model']['clipnorm'])
+    elif optimizer == 'tf_adam':
+        optimizer_class = TFOptimizer(tf.train.AdamOptimizer(learning_rate=conf['model']['lr']))
     elif optimizer == 'rmsprop':
-        optimizer_class = RMSprop
+        optimizer_class = RMSprop(lr=conf['model']['lr'],clipnorm=conf['model']['clipnorm'])
     elif optimizer == 'nadam':
-        optimizer_class = Nadam
+        optimizer_class = Nadam(lr=conf['model']['lr'],clipnorm=conf['model']['clipnorm'])
     else:
         print("Optimizer not implemented yet")
         exit(1)
+
     return optimizer_class
 
 
@@ -193,7 +199,7 @@ class HyperRunner(object):
 
         train_model = specific_builder.hyper_build_model(space,False)
         optimizer_class = optimizer_class(conf['model']['optimizer'])
-        train_model.compile(optimizer=optimizer_class(lr=conf['model']['lr'],clipnorm=conf['model']['clipnorm']),loss=conf['data']['target'].loss)
+        train_model.compile(optimizer=optimizer_class,loss=conf['data']['target'].loss)
 
         np.random.seed(1)
         validation_losses = []
@@ -316,7 +322,7 @@ def make_predictions(conf,shot_list,loader):
 
     model = specific_builder.build_model(True)
     optimizer_class = optimizer_class(conf['model']['optimizer'])
-    model.compile(optimizer=optimizer_class(lr=conf['model']['lr'],clipnorm=conf['model']['clipnorm']),loss=conf['data']['target'].loss)
+    model.compile(optimizer=optimizer_class,loss=conf['data']['target'].loss)
 
     specific_builder.load_model_weights(model)
     model_save_path = specific_builder.get_latest_save_path()
@@ -341,7 +347,7 @@ def make_predictions(conf,shot_list,loader):
 def make_single_prediction(shot,specific_builder,loader,model_save_path):
     model = specific_builder.build_model(True)
     optimizer_class = optimizer_class(conf['model']['optimizer'])
-    model.compile(optimizer=optimizer_class(lr=conf['model']['lr'],clipnorm=conf['model']['clipnorm']),loss=conf['data']['target'].loss)
+    model.compile(optimizer=optimizer_class,loss=conf['data']['target'].loss)
 
     model.load_weights(model_save_path)
     model.reset_states()
@@ -384,7 +390,7 @@ def make_predictions_gpu(conf,shot_list,loader):
 
     model = specific_builder.build_model(True)
     optimizer_class = optimizer_class(conf['model']['optimizer'])
-    model.compile(optimizer=optimizer_class(lr=conf['model']['lr'],clipnorm=conf['model']['clipnorm']),loss=conf['data']['target'].loss)
+    model.compile(optimizer=optimizer_class,loss=conf['data']['target'].loss)
 
     specific_builder.load_model_weights(model)
     model.reset_states()
@@ -456,7 +462,7 @@ def make_evaluations_gpu(conf,shot_list,loader):
         batch_size = len(shot_sublist)
         model = specific_builder.build_model(True,custom_batch_size=batch_size)
         optimizer_class = optimizer_class(conf['model']['optimizer'])
-        model.compile(optimizer=optimizer_class(lr=conf['model']['lr'],clipnorm=conf['model']['clipnorm']),loss=conf['data']['target'].loss)
+        model.compile(optimizer=optimizer_class,loss=conf['data']['target'].loss)
 
         specific_builder.load_model_weights(model)
         model.reset_states()

@@ -216,17 +216,23 @@ class MPIModel():
 
   def compile(self,optimizer,lr,clipnorm,loss='mse'):
     if optimizer == 'sgd':
-        optimizer_class = SGD
+        optimizer_class = SGD(lr=lr,clipnorm=clipnorm)
+    elif optimizer == 'momentum_sgd':
+        optimizer_class = SGD(lr=lr, clipnorm=clipnorm, decay=1e-6, momentum=0.9)
+    elif optimizer == 'tf_momentum_sgd':
+        optimizer_class = TFOptimizer(tf.train.MomentumOptimizer(learning_rate=lr,momentum=0.9))
     elif optimizer == 'adam':
-        optimizer_class = Adam
+        optimizer_class = Adam(lr=lr,clipnorm=clipnorm)
+    elif optimizer == 'tf_adam':
+        optimizer_class = TFOptimizer(tf.train.AdamOptimizer(learning_rate=lr))
     elif optimizer == 'rmsprop':
-        optimizer_class = RMSprop
+        optimizer_class = RMSprop(lr=lr,clipnorm=clipnorm)
     elif optimizer == 'nadam':
-        optimizer_class = Nadam
+        optimizer_class = Nadam(lr=lr,clipnorm=clipnorm)
     else:
         print("Optimizer not implemented yet")
         exit(1)
-    self.model.compile(optimizer=optimizer_class(lr=lr,clipnorm=clipnorm),loss=loss)
+    self.model.compile(optimizer=optimizer_class,loss=loss)        
 
 
 
@@ -653,10 +659,12 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
     warmup_steps = conf['model']['warmup_steps']
     num_batches_minimum = conf['training']['num_batches_minimum']
 
-    if conf['model']['optimizer'] == 'adam':
+    if 'adam' in conf['model']['optimizer']:
         optimizer = MPIAdam(lr=lr)
-    elif conf['model']['optimizer'] == 'sgd':
+    elif conf['model']['optimizer'] == 'sgd' or conf['model']['optimizer'] == 'tf_sgd':
         optimizer = MPISGD(lr=lr)
+    elif 'momentum_sgd' in conf['model']['optimizer']:
+        optimizer = MPIMomentumSGD(lr=lr)
     else:
         print("Optimizer not implemented yet")
         exit(1)
