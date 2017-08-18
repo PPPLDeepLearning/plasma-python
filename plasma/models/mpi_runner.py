@@ -63,10 +63,6 @@ for i in range(num_workers):
   if i == task_index:
     print('[{}] importing Keras'.format(task_index))
     from keras import backend as K
-    from keras.layers import Input,Dense, Dropout
-    from keras.layers.recurrent import LSTM
-    from keras.layers.wrappers import TimeDistributed
-    from keras.models import Model
     from keras.optimizers import *
     from keras.utils.generic_utils import Progbar 
     import keras.callbacks as cbks
