@@ -210,21 +210,21 @@ class MPIModel():
   def load_weights(self,path):
     self.model.load_weights(path)
 
-  def compile(self,optimizer,lr,clipnorm,loss='mse'):
+  def compile(self,optimizer,clipnorm,loss='mse'):
     if optimizer == 'sgd':
-        optimizer_class = SGD(lr=lr,clipnorm=clipnorm)
+        optimizer_class = SGD(lr=self.DUMMY_LR,clipnorm=clipnorm)
     elif optimizer == 'momentum_sgd':
-        optimizer_class = SGD(lr=lr, clipnorm=clipnorm, decay=1e-6, momentum=0.9)
+        optimizer_class = SGD(lr=self.DUMMY_LR, clipnorm=clipnorm, decay=1e-6, momentum=0.9)
     elif optimizer == 'tf_momentum_sgd':
-        optimizer_class = TFOptimizer(tf.train.MomentumOptimizer(learning_rate=lr,momentum=0.9))
+        optimizer_class = TFOptimizer(tf.train.MomentumOptimizer(learning_rate=self.DUMMY_LR,momentum=0.9))
     elif optimizer == 'adam':
-        optimizer_class = Adam(lr=lr,clipnorm=clipnorm)
+        optimizer_class = Adam(lr=self.DUMMY_LR,clipnorm=clipnorm)
     elif optimizer == 'tf_adam':
-        optimizer_class = TFOptimizer(tf.train.AdamOptimizer(learning_rate=lr))
+        optimizer_class = TFOptimizer(tf.train.AdamOptimizer(learning_rate=self.DUMMY_LR))
     elif optimizer == 'rmsprop':
-        optimizer_class = RMSprop(lr=lr,clipnorm=clipnorm)
+        optimizer_class = RMSprop(lr=self.DUMMY_LR,clipnorm=clipnorm)
     elif optimizer == 'nadam':
-        optimizer_class = Nadam(lr=lr,clipnorm=clipnorm)
+        optimizer_class = Nadam(lr=self.DUMMY_LR,clipnorm=clipnorm)
     else:
         print("Optimizer not implemented yet")
         exit(1)
@@ -673,7 +673,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
 
     print("warmup {}".format(warmup_steps))
     mpi_model = MPIModel(train_model,optimizer,comm,batch_generator,batch_size,lr=lr,warmup_steps = warmup_steps,num_batches_minimum=num_batches_minimum)
-    mpi_model.compile(conf['model']['optimizer'],lr,clipnorm,conf['data']['target'].loss)
+    mpi_model.compile(conf['model']['optimizer'],clipnorm,conf['data']['target'].loss)
 
     tensorboard = None
     if backend != "theano" and task_index == 0:
