@@ -52,8 +52,9 @@ First, create an isolated Anaconda environment and load CUDA drivers:
 ```
 #cd plasma-python
 module load anaconda3
-module load cudatoolkit/8.0 cudann/cuda-8.0/5.1 openmpi/intel-17.0/1.10.2/64 intel/17.0/64/17.0.2.174
-conda create --name my_env --files requirements.txt
+module load cudatoolkit/8.0 cudnn/cuda-8.0/6.0 openmpi/cuda-8.0/intel-17.0/2.1.0/64 intel/17.0/64/17.0.2.174
+module load intel/17.0/64/17.0.4.196 intel-mkl/2017.3/4/64
+conda create --name my_env --file requirements.txt
 source activate my_env
 ```
 
@@ -93,10 +94,10 @@ For batch analysis, make sure to allocate 1 process per GPU:
 #SBATCH --gres=gpu:4
 #SBATCH -c 4
 
-module load anaconda
+module load anaconda3
 source activate my_env
-module load cudatoolkit/8.0 cudann/cuda-8.0/5.1 openmpi/intel-17.0/1.10.2/64 intel/17.0/64/17.0.2.174
-
+module load cudatoolkit/8.0 cudnn/cuda-8.0/6.0 openmpi/cuda-8.0/intel-17.0/2.1.0/64 intel/17.0/64/17.0.2.174
+module load intel/17.0/64/17.0.4.196 intel-mkl/2017.3/4/64
 srun python mpi_learn.py
 
 ```
@@ -203,7 +204,14 @@ You should see something like:
 
 #### Learning curves and ROC per epoch
 
-Besides TensorBoard summaries you can check the scalar variable summaries for training loss, validation loss and validation ROC logged at `/tigress/netid/csv_logs` (each run will produce a new log file with a timestamp in name).
+Besides TensorBoard summaries you can produce the ROC curves for validation and test data as well as visualizations of shots:
+```
+cd examples/
+python performance_analysis.py
+```
+this uses the resulting file produced as a result of training the neural network as an input, and produces several `.png` files with plots as an output.
+
+In addition, you can check the scalar variable summaries for training loss, validation loss and validation ROC logged at `/tigress/netid/csv_logs` (each run will produce a new log file with a timestamp in name).
 
 A sample code to analyze can be found in `examples/notebooks`. For instance:
 
