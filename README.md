@@ -67,6 +67,16 @@ python setup.py install
 
 Where `my_env` should contain the Python packages as per `requirements.txt` file.
 
+#### Location of the data on Tigress
+
+The JET and D3D datasets containing multi-modal time series of sensory measurements leading up to deleterious events called plasma disruptions are located on /tigress filesystem on Princeton U clusters.
+Fo convenience, create following symbolic links:
+
+```bash
+cd /tigress/<netid>
+ln -s /tigress/FRNN/shot_lists shot_lists
+ln -s /tigress/FRNN/signal_data signal_data
+```
 
 #### Preprocessing
 
