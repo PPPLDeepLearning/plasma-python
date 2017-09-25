@@ -7,11 +7,9 @@ python:
   - 2.7
   - 3.6
 
-
 matrix:
   include:
     - env: MPI_LIBRARY=openmpi MPI_LIBRARY_VERSION=1.10.7
-      rust: stable
 
 addons:
   apt:
