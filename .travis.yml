@@ -10,6 +10,9 @@ python:
 matrix:
   include:
     - env: MPI_LIBRARY=openmpi MPI_LIBRARY_VERSION=1.10.7
+      python: 2
+    - env: MPI_LIBRARY=openmpi MPI_LIBRARY_VERSION=1.10.7
+      python: 3
 
 addons:
   apt:
