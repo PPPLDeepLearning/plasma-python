@@ -1,18 +1,20 @@
 language: python
 
+sudo: required
+
 os:
   - linux
 
-python:
-  - 2.7
-  - 3.6
+#python:
+#  - 2.7
+#  - 3.6
 
 matrix:
   include:
-    - env: MPI_LIBRARY=openmpi MPI_LIBRARY_VERSION=1.10.7
-      python: 2
-    - env: MPI_LIBRARY=openmpi MPI_LIBRARY_VERSION=1.10.7
-      python: 3
+    - env: MPI_LIBRARY=openmpi MPI_LIBRARY_VERSION=2.0.0
+      python: 2.7
+    - env: MPI_LIBRARY=openmpi MPI_LIBRARY_VERSION=2.0.0
+      python: 3.6
 
 addons:
   apt:
