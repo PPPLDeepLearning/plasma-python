@@ -1,7 +1,0 @@
-mkl-service
-scipy
-mpi4py
-h5py
-pyparsing
-yaml
-tensorflow-gpu
