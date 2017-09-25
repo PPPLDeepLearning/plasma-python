@@ -43,3 +43,9 @@ optionally add `--user` to install in a home directory.
 ## Module index
 
 The Sphinx pages for FRNN are building up here: http://tigress-web.princeton.edu/~alexeys/docs-web/html/
+
+
+## Tutorials
+
+For tutorial check:
+https://github.com/PPPLDeepLearning/plasma-python/blob/mpicc-travis/docs/PrincetonUTutorial.md
