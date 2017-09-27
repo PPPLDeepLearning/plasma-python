@@ -126,7 +126,7 @@ class Preprocessor(object):
 
     def load_shotlists(self):
         path = self.get_shot_list_path()
-        data = np.load(path)
+        data = np.load(path,encoding="latin1")
         shot_list_train = data['shot_list_train'][()]
         shot_list_validate = data['shot_list_validate'][()]
         shot_list_test = data['shot_list_test'][()]
