@@ -32,8 +32,10 @@ sys.setrecursionlimit(10000)
 
 from plasma.conf import conf
 from plasma.models.loader import Loader
-from plasma.preprocessor.normalize import Normalizer
+from plasma.preprocessor.normalize import Normalizer, Augmentator
 from plasma.preprocessor.preprocess import guarantee_preprocessed
+
+import pdb
 
 if conf['model']['shallow']:
     print("Shallow learning using MPI is not supported yet. set conf['model']['shallow'] to false.")
@@ -81,8 +83,11 @@ shot_list_train,shot_list_validate,shot_list_test = guarantee_preprocessed(conf)
 
 
 print("normalization",end='')
-nn = Normalizer(conf)
-nn.train()
+pdb.set_trace()
+raw_normalizer = Normalizer(conf)
+raw_normalizer.train()
+is_inference= False
+normalizer = Augmentator(Normalizer,is_inference,conf)
 loader = Loader(conf,nn)
 print("...done")
 
@@ -97,6 +102,8 @@ disruptive= []
 
 # y_prime_train,y_gold_train,disruptive_train = make_predictions(conf,shot_list_train,loader)
 # y_prime_test,y_gold_test,disruptive_test = make_predictions(conf,shot_list_test,loader)
+
+normalizer.set_inference(True)
 
 y_prime_train,y_gold_train,disruptive_train,roc_train,loss_train = mpi_make_predictions_and_evaluate(conf,shot_list_train,loader,custom_path)
 y_prime_test,y_gold_test,disruptive_test,roc_test,loss_test = mpi_make_predictions_and_evaluate(conf,shot_list_test,loader,custom_path)
