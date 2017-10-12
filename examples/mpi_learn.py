@@ -32,10 +32,9 @@ sys.setrecursionlimit(10000)
 
 from plasma.conf import conf
 from plasma.models.loader import Loader
-from plasma.preprocessor.normalize import Normalizer, Augmentator
+from plasma.preprocessor.normalize import Normalizer
+from plasma.preprocessor.augment import Augmentator
 from plasma.preprocessor.preprocess import guarantee_preprocessed
-
-import pdb
 
 if conf['model']['shallow']:
     print("Shallow learning using MPI is not supported yet. set conf['model']['shallow'] to false.")
@@ -83,12 +82,11 @@ shot_list_train,shot_list_validate,shot_list_test = guarantee_preprocessed(conf)
 
 
 print("normalization",end='')
-pdb.set_trace()
 raw_normalizer = Normalizer(conf)
 raw_normalizer.train()
 is_inference= False
-normalizer = Augmentator(Normalizer,is_inference,conf)
-loader = Loader(conf,nn)
+normalizer = Augmentator(raw_normalizer,is_inference,conf)
+loader = Loader(conf,normalizer)
 print("...done")
 
 if not only_predict:
