@@ -5,9 +5,6 @@ import abc
 import numpy as np
 import random
 
-from plasma.preprocessor.normalize import Normalizer
-from plasma.primitives.shots import ShotList, Shot
-
 class AbstractAugmentator(object):
 
     def __init__(self,normalizer,is_inference,conf):
