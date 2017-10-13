@@ -3,14 +3,16 @@ import os
 import time,sys
 import abc
 import numpy as np
+import random
 
+from plasma.preprocessor.normalize import Normalizer
 from plasma.primitives.shots import ShotList, Shot
 
 class AbstractAugmentator(object):
 
     def __init__(self,normalizer,is_inference,conf):
         self.conf = conf
-        self.to_augment = self.conf['data']['signals_to_augment']
+        self.to_augment_str = self.conf['data']['signals_to_augment']
         self.normalizer = normalizer
         self.is_inference = is_inference
 
@@ -20,8 +22,8 @@ class AbstractAugmentator(object):
 
     def __str__(self):
         s = self.normalizer.__str__()
-        s += "\nIs being augmented!".format(self.to_augment)
-        s += "Signal to augmented: {}\n".format(self.to_augment)
+        s += "\nIs being augmented!".format(self.to_augment_str)
+        s += "Signal to augmented: {}\n".format(self.to_augment_str)
         s += "Is inference: {}\n".format(self.is_inference)
         return s
 
@@ -36,21 +38,34 @@ class AbstractAugmentator(object):
 class Augmentator(AbstractAugmentator):
 
     def apply(self,shot):
+        '''
+        The purpose of the method is to apply normalization to a shot and then optionally apply augmentation.
+        During inference, a specific signal (one at a time) is augmented based on the string supplied in the config file.
+        During training, augment a random signal (again, one at a time) or do not augment at all.
+
+        It performs calls to: Augmentator.augment(), random.random.choice
+
+        Argument list: 
+          - shot: plasma shot
+
+        Config parameters list:
+          - conf['data']['augment_during_training']: boolean flag, yes or no to augment during training
+        '''
         #first just apply normalization as usual.
         self.normalizer.apply(shot)
-        #during inference, augment a specific signal
         if self.is_inference:
-            to_augment = self.to_augment
+            #during inference, augment a specific signal (one at a time)
+            to_augment_str = self.to_augment_str
         else: 
-            #during training augment a random signal
+            #during training augment a random signal, one at a time
             if self.conf['data']['augment_during_training']:
-                to_augment =np.random.sample([x.description for x in shot.signals])
+                to_augment_str = random.choice([x.description for x in shot.signals])
             else:
-                to_augment = None 
-        if to_augment is not None:
-            #FIXME 
+                to_augment_str = None 
+        if to_augment_str is not None:
+            #FIXME might be better to use search. are we always going to augment 1 signal at a time? 
             for (i,sig) in enumerate(shot.signals):
-                if sig.description in self.conf['data']['signals_to_augment']:
+                if sig.description == to_augment_str:
                     print ('Augmenting {} signal'.format(sig.description))
                     shot.signals_dict[sig] = self.augment(shot.signals_dict[sig])
 
