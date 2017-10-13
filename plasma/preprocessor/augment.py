@@ -9,7 +9,7 @@ class AbstractAugmentator(object):
 
     def __init__(self,normalizer,is_inference,conf):
         self.conf = conf
-        self.to_augment_str = self.conf['data']['signals_to_augment']
+        self.to_augment_str = self.conf['data']['signal_to_augment']
         self.normalizer = normalizer
         self.is_inference = is_inference
 

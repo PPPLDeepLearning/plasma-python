@@ -120,7 +120,7 @@ def parameters(input_file):
         params['paths']['all_machines'] = list(set([file.machine for file in params['paths']['shot_files_all']]))
 
         #type assertations
-        assert type(params['data']['signals_to_augment']) == str or type(params['data']['signals_to_augment']) == None
+        assert type(params['data']['signal_to_augment']) == str or type(params['data']['signal_to_augment']) == None
         assert type(params['data']['augment_during_training']) == bool
 
     return params
