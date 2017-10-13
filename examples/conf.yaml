@@ -14,8 +14,9 @@ paths:
     specific_signals: [] #['q95','li','ip','betan','energy','lm','pradcore','pradedge','pradtot','pin','torquein','tmamp1','tmamp2','tmfreq1','tmfreq2','pechin','energydt','ipdirect','etemp_profile','edens_profile'] #if left empty will use all valid signals defined on a machine. Only use if need a custom set
 
 data:
-    signals_to_augment: [] #['plasma current']
+    signal_to_augment: 'plasma current' #or None
     augmentation_mode: 'noise'
+    augment_during_training: True
     cut_shot_ends: True
     T_min_warn: 30
     recompute: False
