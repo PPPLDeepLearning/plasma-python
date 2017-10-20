@@ -15,6 +15,13 @@ import numpy as np
 from scipy.interpolate import UnivariateSpline
 import sys
 
+#interpolate in a way that doesn't use future information. 
+#It simply finds the latest time point in the original array
+#that is less than or equal than the time point in question
+#and interpolates to there.
+def time_sensitive_interp(x,t,t_new):
+    indices = np.maximum(0,np.searchsorted(t,t_new,side='right')-1)
+    return x[indices]
 
 def resample_signal(t,sig,tmin,tmax,dt,precision_str='float32'):
 	order = np.argsort(t)
@@ -24,8 +31,9 @@ def resample_signal(t,sig,tmin,tmax,dt,precision_str='float32'):
 	tt = np.arange(tmin,tmax,dt,dtype=precision_str)
 	sig_interp = np.zeros((len(tt),sig_width),dtype=precision_str)
 	for i in range(sig_width):
-		f = UnivariateSpline(t,sig[:,i],s=0,k=1,ext=0)
-		sig_interp[:,i] = f(tt)
+        sig_interp[:,i] = time_sensitive_interp(sig[:,i],t,tt) #make sure to not use future information
+		# f = UnivariateSpline(t,sig[:,i],s=0,k=1,ext=0)
+		# sig_interp[:,i] = f(tt)
 
 	if(np.any(np.isnan(sig_interp))):
 		print("signals contains nan")
