@@ -11,9 +11,12 @@ paths:
     shot_list_dir: '/shot_lists/'
     tensorboard_save_path: '/Graph/'
     data: 'jet_data'
-    specific_signals: [] #if left empty will use all valid signals defined on a machine. Only use if need a custom set
+    specific_signals: [] #['q95','li','ip','betan','energy','lm','pradcore','pradedge','pradtot','pin','torquein','tmamp1','tmamp2','tmfreq1','tmfreq2','pechin','energydt','ipdirect','etemp_profile','edens_profile'] #if left empty will use all valid signals defined on a machine. Only use if need a custom set
 
 data:
+    signal_to_augment: 'plasma current' #or None
+    augmentation_mode: 'noise'
+    augment_during_training: True
     cut_shot_ends: True
     T_min_warn: 30
     recompute: False
@@ -69,7 +72,7 @@ model:
     dense_regularization: 0.01
     #1e-4 is too high, 5e-7 is too low. 5e-5 seems best at 256 batch size, full dataset and ~10 epochs, and lr decay of 0.90. 1e-4 also works well if we decay a lot (i.e ~0.7 or more)
     lr: 0.00001 #0.0005 #for adam plots 0.0000001 #0.00005 #0.00005 #0.00005
-    lr_decay: 1.0 #0.98 #0.9
+    lr_decay: 0.9 #0.98 #0.9
     stateful: True
     return_sequences: True
     dropout_prob: 0.3
@@ -87,7 +90,7 @@ training:
     max_patch_length: 100000
     #How many shots are we loading at once?
     num_shots_at_once: 200
-    num_epochs: 4
+    num_epochs: 400
     use_mock_data: False
     data_parallel: False
     hyperparam_tuning: False
@@ -99,5 +102,5 @@ callbacks:
     metrics: ['val_loss','val_roc','train_loss']
     mode: 'max'
     monitor: 'val_roc'
-    patience: 4
+    patience: 3
     write_grads: False

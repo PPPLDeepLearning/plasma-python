@@ -45,7 +45,7 @@ MY_GPU = task_index % NUM_GPUS
 backend = conf['model']['backend']
 
 if backend == 'tf' or backend == 'tensorflow':
-    os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(MY_GPU)#,mode=NanGuardMode'
+    if NUM_GPUS > 1: os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(MY_GPU)#,mode=NanGuardMode'
     os.environ['KERAS_BACKEND'] = 'tensorflow'
     import tensorflow as tf
     from keras.backend.tensorflow_backend import set_session
@@ -63,10 +63,6 @@ for i in range(num_workers):
   if i == task_index:
     print('[{}] importing Keras'.format(task_index))
     from keras import backend as K
-    from keras.layers import Input,Dense, Dropout
-    from keras.layers.recurrent import LSTM
-    from keras.layers.wrappers import TimeDistributed
-    from keras.models import Model
     from keras.optimizers import *
     from keras.utils.generic_utils import Progbar 
     import keras.callbacks as cbks
@@ -104,6 +100,25 @@ class MPISGD(MPIOptimizer):
 
     self.iterations += 1
     return deltas
+
+class MPIMomentumSGD(MPIOptimizer):
+    def __init__(self, lr):
+        super(MPIMomentumSGD, self).__init__(lr)
+        self.momentum = 0.9
+
+    def get_deltas(self, raw_deltas): 
+        deltas = []
+
+        if self.iterations == 0:
+            self.velocity_list = [np.zeros_like(g) for g in raw_deltas]
+
+        for (i,g) in enumerate(raw_deltas):
+            self.velocity_list[i] = self.momentum * self.velocity_list[i] + self.lr * g
+            deltas.append(self.velocity_list[i])
+
+        self.iterations += 1
+
+        return deltas
 
 class MPIAdam(MPIOptimizer):
   def __init__(self,lr):
@@ -163,7 +178,6 @@ class MPIModel():
     self.model = model
     self.optimizer = optimizer
     self.max_lr = 0.1
-    self.lr = lr if (lr < self.max_lr) else self.max_lr
     self.DUMMY_LR = 0.001
     self.comm = comm
     self.batch_size = batch_size
@@ -178,6 +192,7 @@ class MPIModel():
         self.num_replicas = self.num_workers
     else:
         self.num_replicas = num_replicas
+    self.lr = lr/(1.0+self.num_replicas/100.0) if (lr < self.max_lr) else self.max_lr/(1.0+self.num_replicas/100.0)
 
 
   def set_batch_iterator_func(self):
@@ -195,19 +210,25 @@ class MPIModel():
   def load_weights(self,path):
     self.model.load_weights(path)
 
-  def compile(self,optimizer,loss='mse'):
+  def compile(self,optimizer,clipnorm,loss='mse'):
     if optimizer == 'sgd':
-        optimizer_class = SGD
+        optimizer_class = SGD(lr=self.DUMMY_LR,clipnorm=clipnorm)
+    elif optimizer == 'momentum_sgd':
+        optimizer_class = SGD(lr=self.DUMMY_LR, clipnorm=clipnorm, decay=1e-6, momentum=0.9)
+    elif optimizer == 'tf_momentum_sgd':
+        optimizer_class = TFOptimizer(tf.train.MomentumOptimizer(learning_rate=self.DUMMY_LR,momentum=0.9))
     elif optimizer == 'adam':
-        optimizer_class = Adam
+        optimizer_class = Adam(lr=self.DUMMY_LR,clipnorm=clipnorm)
+    elif optimizer == 'tf_adam':
+        optimizer_class = TFOptimizer(tf.train.AdamOptimizer(learning_rate=self.DUMMY_LR))
     elif optimizer == 'rmsprop':
-        optimizer_class = RMSprop
+        optimizer_class = RMSprop(lr=self.DUMMY_LR,clipnorm=clipnorm)
     elif optimizer == 'nadam':
-        optimizer_class = Nadam
+        optimizer_class = Nadam(lr=self.DUMMY_LR,clipnorm=clipnorm)
     else:
         print("Optimizer not implemented yet")
         exit(1)
-    self.model.compile(optimizer=optimizer_class(lr=self.DUMMY_LR),loss=loss)
+    self.model.compile(optimizer=optimizer_class,loss=loss)        
 
 
 
@@ -532,6 +553,7 @@ def load_shotlists(conf):
 #shot_list_train,shot_list_validate,shot_list_test = load_shotlists(conf)
 
 def mpi_make_predictions(conf,shot_list,loader,custom_path=None):
+    np.random.seed(task_index)
     shot_list.sort()#make sure all replicas have the same list
     specific_builder = builder.ModelBuilder(conf) 
 
@@ -541,6 +563,16 @@ def mpi_make_predictions(conf,shot_list,loader,custom_path=None):
 
     model = specific_builder.build_model(True)
     specific_builder.load_model_weights(model,custom_path)
+
+    #broadcast model weights then set it explicitely: fix for Py3.6
+    if sys.version_info[0] > 2:
+        if task_index == 0:
+            new_weights = model.get_weights()
+        else:
+            new_weights = None
+        nw = comm.bcast(new_weights,root=0)
+        model.set_weights(nw)
+
     model.reset_states()
     if task_index == 0:
         pbar =  Progbar(len(shot_list))
@@ -619,13 +651,16 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
     lr_decay = conf['model']['lr_decay']
     batch_size = conf['training']['batch_size']
     lr = conf['model']['lr']
+    clipnorm = conf['model']['clipnorm']
     warmup_steps = conf['model']['warmup_steps']
     num_batches_minimum = conf['training']['num_batches_minimum']
 
-    if conf['model']['optimizer'] == 'adam':
+    if 'adam' in conf['model']['optimizer']:
         optimizer = MPIAdam(lr=lr)
-    elif conf['model']['optimizer'] == 'sgd':
+    elif conf['model']['optimizer'] == 'sgd' or conf['model']['optimizer'] == 'tf_sgd':
         optimizer = MPISGD(lr=lr)
+    elif 'momentum_sgd' in conf['model']['optimizer']:
+        optimizer = MPIMomentumSGD(lr=lr)
     else:
         print("Optimizer not implemented yet")
         exit(1)
@@ -638,6 +673,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
 
     print("warmup {}".format(warmup_steps))
     mpi_model = MPIModel(train_model,optimizer,comm,batch_generator,batch_size,lr=lr,warmup_steps = warmup_steps,num_batches_minimum=num_batches_minimum)
+    mpi_model.compile(conf['model']['optimizer'],clipnorm,conf['data']['target'].loss)
 
     tensorboard = None
     if backend != "theano" and task_index == 0:
@@ -646,8 +682,6 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
         tensorboard = TensorBoard(log_dir=tensorboard_save_path,histogram_freq=1,write_graph=True,write_grads=write_grads)
         tensorboard.set_model(mpi_model.model)
         mpi_model.model.summary()
-
-    mpi_model.compile(conf['model']['optimizer'],loss=conf['data']['target'].loss)
 
     if task_index == 0:
         callbacks = mpi_model.build_callbacks(conf,callbacks_list)
@@ -723,8 +757,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
 
     if task_index == 0:
         callbacks.on_train_end()
-        pass
-        #tensorboard.on_train_end()
+        tensorboard.on_train_end()
 
     mpi_model.close()
 
@@ -764,11 +797,18 @@ class TensorBoard(object):
             for layer in self.model.layers:
 
                 for weight in layer.weights:
-                    tf.summary.histogram(weight.name, weight)
+                    mapped_weight_name = weight.name.replace(':', '_')
+                    tf.summary.histogram(mapped_weight_name, weight)
                     if self.write_grads:
-                        grads = model.optimizer.get_gradients(model.total_loss,
+                        grads = self.model.optimizer.get_gradients(self.model.total_loss,
                                                             weight)
-                        tf.summary.histogram('{}_grad'.format(weight.name), grads)
+                        def is_indexed_slices(grad):
+                            return type(grad).__name__ == 'IndexedSlices'
+                        grads = [
+                            grad.values if is_indexed_slices(grad) else grad
+                            for grad in grads]
+                        for grad in grads: 
+                            tf.summary.histogram('{}_grad'.format(mapped_weight_name), grad)
 
                 if hasattr(layer, 'output'):
                     tf.summary.histogram('{}_out'.format(layer.name),
@@ -786,7 +826,14 @@ class TensorBoard(object):
         logs = logs or {}
 
         for name, value in logs.items():
-            tf.summary.scalar(name,value)
+            if name in ['batch', 'size']:
+                continue
+            summary = tf.Summary()
+            summary_value = summary.value.add()
+            summary_value.simple_value = value.item()
+            summary_value.tag = name
+            self.writer.add_summary(summary, epoch)
+            self.writer.flush()
 
         tensors = (self.model.inputs +
                    self.model.targets +
@@ -814,5 +861,5 @@ class TensorBoard(object):
             if val_steps <= 0: break
 
 
-    def on_train_end(self, _):
+    def on_train_end(self):
         self.writer.close()

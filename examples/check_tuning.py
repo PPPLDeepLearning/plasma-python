@@ -1,4 +1,4 @@
-from plasma.models.hyperparameters import CategoricalHyperparam,ContinuousHyperparam,LogContinuousHyperparam
+from plasma.primitives.hyperparameters import CategoricalHyperparam,ContinuousHyperparam,LogContinuousHyperparam
 from pprint import pprint
 import yaml
 import datetime
@@ -9,7 +9,7 @@ import subprocess as sp
 import pandas
 import numpy as np
 
-dir_path = "/tigress/jk7/hyperparams/"
+dir_path = "/tigress/{}/hyperparams/".format(getpass.getuser())
 if len(sys.argv) <= 1:
     dir_path = dir_path + os.listdir(dir_path)[0] + '/'
     print("using default dir {}".format(dir_path))

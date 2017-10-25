@@ -75,7 +75,7 @@ class PerformanceAnalyzer():
 
     def get_p_thresh_range(self):
         #return self.conf['data']['target'].threshold_range(self.conf['data']['T_warning'])
-        if self.p_thresh_range == None:
+        if np.any(self.p_thresh_range) == None:
                 all_preds_tr = self.pred_train
                 all_truths_tr = self.truth_train
                 all_disruptive_tr = self.disruptive_train
