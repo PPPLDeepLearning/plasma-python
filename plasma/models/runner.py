@@ -132,6 +132,7 @@ def train(conf,shot_list_train,shot_list_validate,loader):
             epoch_logs['train_loss'] = ave_loss
             best_so_far = cmp_fn(epoch_logs[conf['callbacks']['monitor']],best_so_far)
             if best_so_far != epoch_logs[conf['callbacks']['monitor']]: #only save model weights if quantity we are tracking is improving
+                print("Not saving model weights")
                 specific_builder.delete_model_weights(train_model,int(round(e)))
 
             if conf['training']['ranking_difficulty_fac'] != 1.0:
