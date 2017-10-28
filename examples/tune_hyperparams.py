@@ -21,7 +21,6 @@ tunables = [lr,lr_decay,fac] #target
 run_directory = "/tigress/{}/hyperparams/".format(getpass.getuser())
 template_path = os.environ['PWD'] #"/home/{}/plasma-python/examples/".format(getpass.getuser())
 conf_name = "conf.yaml"
-executable_name = "mpi_learn.py"
 num_nodes = 2
 num_trials = 2
 
