@@ -35,6 +35,7 @@ def generate_conf_file(tunables,template_path = "../",save_path = "./",conf_name
     conf['training']['hyperparam_tuning'] = True #rely on early stopping to terminate training
     with open(os.path.join(save_path,conf_name), 'w') as outfile:
         yaml.dump(conf, outfile, default_flow_style=False)
+    return conf
 
 
 def generate_working_dirname(run_directory):
@@ -43,12 +44,16 @@ def generate_working_dirname(run_directory):
     return run_directory + s
 
 
-def start_slurm_job(subdir,executable,num_nodes,i):
-    os.system(" ".join(["cp -p",executable,subdir]))
-    script = create_slurm_script(subdir,num_nodes,i)
+def start_slurm_job(subdir,num_nodes,i,conf):
+    if conf['model']['shallow']:
+        executable_name = conf['paths']['shallow_executable']
+    else:
+        executable_name = conf['paths']['executable']
+    os.system(" ".join(["cp -p",executable_name,subdir]))
+    script = create_slurm_script(subdir,num_nodes,i,executable_name)
     sp.Popen("sbatch "+script,shell=True)
 
-def create_slurm_script(subdir,num_nodes,idx):
+def create_slurm_script(subdir,num_nodes,idx,executable_name):
     filename = "run_{}_nodes.cmd".format(num_nodes)
     filepath = subdir+filename
     user = getpass.getuser()
@@ -69,7 +74,7 @@ def create_slurm_script(subdir,num_nodes,idx):
         f.write('rm -f /tigress/{}/model_checkpoints/*.h5\n'.format(user))
         f.write('cd {}\n'.format(subdir))
         f.write('export OMPI_MCA_btl=\"tcp,self,sm\"\n')
-        f.write('srun python mpi_learn.py\n')
+        f.write('srun python {}\n'.format(executable_name))
         f.write('echo "done."')
 
     return filepath
@@ -95,8 +100,8 @@ for i in range(num_trials):
     os.makedirs(subdir)
     copy_files_to_environment(subdir)
     print("Making modified conf")
-    generate_conf_file(tunables,working_directory,subdir,conf_name)
+    conf = generate_conf_file(tunables,working_directory,subdir,conf_name)
     print("Starting job")
-    start_slurm_job(subdir,executable_name,num_nodes,i)
+    start_slurm_job(subdir,num_nodes,i,conf)
 
 print("submitted {} jobs.".format(num_trials))
