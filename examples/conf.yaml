@@ -55,6 +55,7 @@ model:
         max_depth: 20 #for random forest
         C: 1.0 #for svm
         kernel: "rbf" #rbf, sigmoid, linear, poly, for svm
+        skip_train: False #should a finished model be loaded if available
     #length of LSTM memory
     pred_length: 200
     pred_batch_size: 128
