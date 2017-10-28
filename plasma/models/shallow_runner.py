@@ -248,10 +248,10 @@ def train(conf,shot_list_train,shot_list_validate,loader):
 
     save_prepath = feature_extractor.get_save_prepath()
     model_path = save_prepath + model_filename
-    if not os.path.isfile(model_path):
+    model_conf = conf['model']['shallow_model']
+    if not model_conf['skip_train'] or not os.path.isfile(model_path):
         
         start_time = time.time()
-        model_conf = conf['model']['shallow_model']
         if model_conf['type'] == "svm":
             model = svm.SVC(probability=True,
                 C=model_conf["C"],
