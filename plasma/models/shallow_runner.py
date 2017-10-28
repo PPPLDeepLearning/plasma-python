@@ -177,7 +177,7 @@ from sklearn.externals import joblib
 from sklearn.metrics import accuracy_score,auc,classification_report,confusion_matrix
 import keras.callbacks as cbks
 
-def build_callbacks(self,conf,callbacks_list):
+def build_callbacks(self,conf):
     '''
     The purpose of the method is to set up logging and history. It is based on Keras Callbacks
     https://github.com/fchollet/keras/blob/fbc9a18f0abc5784607cd4a2a3886558efa3f794/keras/callbacks.py
@@ -237,7 +237,7 @@ def train(conf,shot_list_train,shot_list_validate,loader):
     #Y = Y[indices]
 
     print("fitting on {} samples, {} positive".format(len(X),np.sum(Y > 0)))
-    callbacks = build_callbacks(conf,callbacks_list)
+    callbacks = build_callbacks(conf)
     callback_metrics = conf['callbacks']['metrics']
     callbacks.set_params({
         'metrics': callback_metrics,
