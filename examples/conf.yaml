@@ -46,7 +46,7 @@ data:
     floatx: 'float32'
 
 model:
-    shallow: False
+    shallow: True
     shallow_model: 
         type: "svm" #"random_forest"
         n_estimators: 50 #for random forest
