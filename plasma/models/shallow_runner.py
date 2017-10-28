@@ -177,7 +177,7 @@ from sklearn.externals import joblib
 from sklearn.metrics import accuracy_score,auc,classification_report,confusion_matrix
 import keras.callbacks as cbks
 
-def build_callbacks(self,conf):
+def build_callbacks(conf):
     '''
     The purpose of the method is to set up logging and history. It is based on Keras Callbacks
     https://github.com/fchollet/keras/blob/fbc9a18f0abc5784607cd4a2a3886558efa3f794/keras/callbacks.py
