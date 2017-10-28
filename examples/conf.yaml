@@ -10,11 +10,11 @@ paths:
     signal_prepath: '/signal_data/' #/signal_data/jet/
     shot_list_dir: '/shot_lists/'
     tensorboard_save_path: '/Graph/'
-    data: 'jet_data'
+    data: 'jet_to_d3d_data'
     specific_signals: [] #['q95','li','ip','betan','energy','lm','pradcore','pradedge','pradtot','pin','torquein','tmamp1','tmamp2','tmfreq1','tmfreq2','pechin','energydt','ipdirect','etemp_profile','edens_profile'] #if left empty will use all valid signals defined on a machine. Only use if need a custom set
 
 data:
-    signal_to_augment: 'plasma current' #or None
+    signal_to_augment: None #'plasma current' #or None
     augmentation_mode: 'noise'
     augment_during_training: True
     cut_shot_ends: True
@@ -43,7 +43,7 @@ data:
     #TODO optimize
     normalizer: 'var'
     shallow_sample_prob: 0.1 #the fraction of samples with which to train the shallow model
-    floatx: 'float64'
+    floatx: 'float32'
 
 model:
     shallow: False
