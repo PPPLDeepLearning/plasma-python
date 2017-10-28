@@ -47,6 +47,12 @@ data:
 
 model:
     shallow: False
+    shallow_model: 
+        type: "svm" #"random_forest"
+        n_estimators: 50 #for random forest
+        max_depth: 20 #for random forest
+        C: 1.0 #for svm
+        kernel: "rbf" #rbf, sigmoid, linear, poly, for svm
     #length of LSTM memory
     pred_length: 200
     pred_batch_size: 128
