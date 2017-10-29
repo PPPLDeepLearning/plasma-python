@@ -31,146 +31,165 @@ dataset_path = "dataset.npz"
 dataset_test_path = "dataset_test.npz"
 
 class FeatureExtractor(object):
-        def __init__(self,loader,timesteps = 32):
-                self.loader = loader
-                self.timesteps = timesteps
-                self.positional_fit_order = 4
-                self.num_positional_features = self.positional_fit_order + 1 + 3
-                self.temporal_fit_order = 3
-                self.num_temporal_features = self.temporal_fit_order + 1 + 3
+    def __init__(self,loader,timesteps = 32):
+        self.loader = loader
+        self.timesteps = timesteps
+        self.positional_fit_order = 4
+        self.num_positional_features = self.positional_fit_order + 1 + 3
+        self.temporal_fit_order = 3
+        self.num_temporal_features = self.temporal_fit_order + 1 + 3
+
+    def get_sample_probs(self,shot_list,num_samples):
+        print("Calculating number of timesteps")
+        timesteps_total,timesteps_d,timesteps_nd = shot_list.num_timesteps()
+        print("Total data: {} time samples, {} disruptive".format(timesteps_total,timesteps_d/timesteps_total))
+        if self.loader.conf['data']['equalize_classes']:
+            sample_prob_d = np.minimum(1.0,timesteps_nd/timesteps_d)
+            sample_prob_nd = np.minimum(1.0,timesteps_d/timesteps_nd)
+            timesteps_total = sample_prob_d*timesteps_d+sample_prob_nd*timesteps_nd 
+            sample_prob = np.minimum(1.0,num_samples/timesteps_total)
+            sample_prob_d *= sample_prob
+            sample_prob_nd *= sample_prob
+        else:
+            sample_prob_d = np.minimum(1.0,num_samples/timesteps_total)
+            sample_prob_nd = sample_prob_d
+        return sample_prob_d,sample_prob_nd
+
+    def load_shots(self,shot_list,as_list=False,num_samples=np.Inf):
+        X = []
+        Y = []
+        Disr = []
+        print("loading...")
+        pbar =  Progbar(len(shot_list))
+        
+        sample_prob_d,sample_prob_nd = self.get_sample_probs(shot_list,num_samples)
+        fn = partial(self.load_shot,sample_prob_d=sample_prob_d,sample_prob_nd=sample_prob_nd)
+        pool = mp.Pool()
+        print('loading data in parallel on {} processes'.format(pool._processes))
+        for x,y,disr in pool.imap(fn,shot_list):
+            X.append(x)
+            Y.append(y)
+            Disr.append(disr)
+            pbar.add(1.0)
+        pool.close()
+        pool.join()
+        return X,Y,np.array(Disr)
+
+    def get_save_prepath(self):
+        prepath = self.loader.conf['paths']['processed_prepath']
+        use_signals = self.loader.conf['paths']['use_signals']
+        save_prepath = prepath + "shallow/use_signals_{}/".format(hash(tuple(sorted(use_signals))))
+        return save_prepath
+
+    def load_shot(self,shot,sample_prob_d=1.0,sample_prob_nd=1.0):
+        save_prepath = self.get_save_prepath()
+        save_path = shot.get_save_path(save_prepath)
+        if os.path.isfile(save_path):
+            dat = np.load(save_path)
+            X,Y,disr = dat["X"],dat["Y"],dat["disr"][()]
+        else:
+            use_signals = self.loader.conf['paths']['use_signals']
+            prepath = self.loader.conf['paths']['processed_prepath']
+            assert(shot.valid)
+            shot.restore(prepath)
+            if self.loader.normalizer is not None:
+                self.loader.normalizer.apply(shot)
+            else:
+                print('Warning, no normalization. Training data may be poorly conditioned')
+            # sig,res = self.get_signal_result_from_shot(shot)
+            disr = 1 if shot.is_disruptive else 0
+            sig_sample = shot.signals_dict[use_signals[0]] 
+            if len(shot.ttd.shape) == 1:
+                shot.ttd = np.expand_dims(shot.ttd,axis=1)
+            ttd_sample = shot.ttd
+            timesteps = self.timesteps
+            length = sig_sample.shape[0]
+            if length < timesteps:
+                print(ttd,shot,shot.number)
+                print("Shot must be at least as long as the RNN length.")
+                exit(1)
+            assert(len(sig_sample.shape) == len(ttd_sample.shape) == 2)
+            assert(ttd_sample.shape[1] == 1)
+
+            X = []
+            Y = []
+            while(len(X) == 0):
+                for i in range(length-timesteps+1):
+                    #if np.random.rand() < sample_prob:
+                    x,y = self.get_x_y(i,shot)
+                    X.append(x)
+                    Y.append(y)
+            X = np.stack(X)
+            Y = np.stack(Y)
+            shot.make_light()
+            if not os.path.exists(save_prepath):
+                os.makedirs(save_prepath)
+            np.savez(save_path,X=X,Y=Y,disr=disr)
+            #print(X.shape,Y.shape)
+        sample_prob = sample_prob_nd
+        if disr:
+            sample_prob = sample_prob_d
+        if sample_prob < 1.0: 
+            indices = np.sort(np.random.choice(np.array(range(len(Y))),int(round(sample_prob*len(Y))),replace=False))
+            X = X[indices]
+            Y = Y[indices]
+        return X,Y,disr
 
 
-        def load_shots(self,shot_list,sample_prob = 1.0,as_list=False):
-                X = []
-                Y = []
-                Disr = []
-                print("loading...")
-                pbar =  Progbar(len(shot_list))
-                
-                fn = partial(self.load_shot,sample_prob=sample_prob)
-                pool = mp.Pool()
-                print('loading data in parallel on {} processes'.format(pool._processes))
-                for x,y,disr in pool.imap(fn,shot_list):
-                        X.append(x)
-                        Y.append(y)
-                        Disr.append(disr)
-                        pbar.add(1.0)
-                pool.close()
-                pool.join()
-                return X,Y,np.array(Disr)
-
-        def get_save_prepath(self):
-                prepath = self.loader.conf['paths']['processed_prepath']
-                use_signals = self.loader.conf['paths']['use_signals']
-                save_prepath = prepath + "shallow/use_signals_{}/".format(hash(tuple(sorted(use_signals))))
-                return save_prepath
-
-        def load_shot(self,shot,sample_prob=1.0):
-                save_prepath = self.get_save_prepath()
-                save_path = shot.get_save_path(save_prepath)
-                if os.path.isfile(save_path):
-                        dat = np.load(save_path)
-                        X,Y,disr = dat["X"],dat["Y"],dat["disr"][()]
-                else:
-                        use_signals = self.loader.conf['paths']['use_signals']
-                        prepath = self.loader.conf['paths']['processed_prepath']
-                        assert(shot.valid)
-                        shot.restore(prepath)
-                        if self.loader.normalizer is not None:
-                                self.loader.normalizer.apply(shot)
-                        else:
-                                print('Warning, no normalization. Training data may be poorly conditioned')
-                        # sig,res = self.get_signal_result_from_shot(shot)
-                        disr = 1 if shot.is_disruptive else 0
-                        sig_sample = shot.signals_dict[use_signals[0]] 
-                        if len(shot.ttd.shape) == 1:
-                                shot.ttd = np.expand_dims(shot.ttd,axis=1)
-                        ttd_sample = shot.ttd
-                        timesteps = self.timesteps
-                        length = sig_sample.shape[0]
-                        if length < timesteps:
-                                print(ttd,shot,shot.number)
-                                print("Shot must be at least as long as the RNN length.")
-                                exit(1)
-                        assert(len(sig_sample.shape) == len(ttd_sample.shape) == 2)
-                        assert(ttd_sample.shape[1] == 1)
-
-                        X = []
-                        Y = []
-                        while(len(X) == 0):
-                                for i in range(length-timesteps+1):
-                                        #if np.random.rand() < sample_prob:
-                                        x,y = self.get_x_y(i,shot)
-                                        X.append(x)
-                                        Y.append(y)
-                        X = np.stack(X)
-                        Y = np.stack(Y)
-                        shot.make_light()
-                        if not os.path.exists(save_prepath):
-                                os.makedirs(save_prepath)
-                        np.savez(save_path,X=X,Y=Y,disr=disr)
-                        #print(X.shape,Y.shape)
-                if sample_prob < 1.0: 
-                        indices = np.sort(np.random.choice(np.array(range(len(Y))),int(round(sample_prob*len(Y))),replace=False))
-                        X = X[indices]
-                        Y = Y[indices]
-                return X,Y,disr
+    def get_x_y(self,timestep,shot):
+        x = []
+        use_signals = self.loader.conf['paths']['use_signals']
+        for sig in use_signals:
+            x += [self.extract_features(timestep,shot,sig)]
+            # x = sig[timestep:timestep+timesteps,:]
+        x = np.concatenate(x,axis=0)
+        y = np.round(shot.ttd[timestep+self.timesteps-1,0]).astype(np.int)
+        return x,y
 
 
-        def get_x_y(self,timestep,shot):
-                x = []
-                use_signals = self.loader.conf['paths']['use_signals']
-                for sig in use_signals:
-                        x += [self.extract_features(timestep,shot,sig)]
-                        # x = sig[timestep:timestep+timesteps,:]
-                x = np.concatenate(x,axis=0)
-                y = np.round(shot.ttd[timestep+self.timesteps-1,0]).astype(np.int)
-                return x,y
+    def extract_features(self,timestep,shot,signal):
+        raw_sig = shot.signals_dict[signal][timestep:timestep+self.timesteps]
+        num_positional_features = self.num_positional_features if signal.num_channels > 1 else 1
+        output_arr = np.empty((self.timesteps,num_positional_features))
+        final_output_arr = np.empty((num_positional_features*self.num_temporal_features))
+        for t in range(self.timesteps):
+            output_arr[t,:] = self.extract_positional_features(raw_sig[t,:])
+        for i in range(num_positional_features):
+            idx = i*self.num_temporal_features
+            final_output_arr[idx:idx+self.num_temporal_features] = self.extract_temporal_features(output_arr[:,i])
+        return final_output_arr
 
+    def extract_positional_features(self,arr):
+        num_channels = len(arr)
+        if num_channels > 1:
+            ret_arr = np.empty(self.num_positional_features)
+            coefficients = np.polynomial.polynomial.polyfit(np.linspace(0,1,num_channels),arr,self.positional_fit_order)
+            mu = np.mean(arr)
+            std = np.std(arr)
+            max_val = np.max(arr)
+            ret_arr[:self.positional_fit_order+1] = coefficients
+            ret_arr[self.positional_fit_order+1] = mu
+            ret_arr[self.positional_fit_order+2] = std
+            ret_arr[self.positional_fit_order+3] = max_val
+            return ret_arr
+        else:
+            return arr
 
-        def extract_features(self,timestep,shot,signal):
-                raw_sig = shot.signals_dict[signal][timestep:timestep+self.timesteps]
-                num_positional_features = self.num_positional_features if signal.num_channels > 1 else 1
-                output_arr = np.empty((self.timesteps,num_positional_features))
-                final_output_arr = np.empty((num_positional_features*self.num_temporal_features))
-                for t in range(self.timesteps):
-                        output_arr[t,:] = self.extract_positional_features(raw_sig[t,:])
-                for i in range(num_positional_features):
-                        idx = i*self.num_temporal_features
-                        final_output_arr[idx:idx+self.num_temporal_features] = self.extract_temporal_features(output_arr[:,i])
-                return final_output_arr
+    def extract_temporal_features(self,arr):
+        ret_arr = np.empty(self.num_temporal_features)
+        coefficients = np.polynomial.polynomial.polyfit(np.linspace(0,1,self.timesteps),arr,self.temporal_fit_order)
+        mu = np.mean(arr)
+        std = np.std(arr)
+        max_val = np.max(arr)
+        ret_arr[:self.temporal_fit_order+1] = coefficients
+        ret_arr[self.temporal_fit_order+1] = mu
+        ret_arr[self.temporal_fit_order+2] = std
+        ret_arr[self.temporal_fit_order+3] = max_val
+        return ret_arr
 
-        def extract_positional_features(self,arr):
-                num_channels = len(arr)
-                if num_channels > 1:
-                        ret_arr = np.empty(self.num_positional_features)
-                        coefficients = np.polynomial.polynomial.polyfit(np.linspace(0,1,num_channels),arr,self.positional_fit_order)
-                        mu = np.mean(arr)
-                        std = np.std(arr)
-                        max_val = np.max(arr)
-                        ret_arr[:self.positional_fit_order+1] = coefficients
-                        ret_arr[self.positional_fit_order+1] = mu
-                        ret_arr[self.positional_fit_order+2] = std
-                        ret_arr[self.positional_fit_order+3] = max_val
-                        return ret_arr
-                else:
-                        return arr
-
-        def extract_temporal_features(self,arr):
-                ret_arr = np.empty(self.num_temporal_features)
-                coefficients = np.polynomial.polynomial.polyfit(np.linspace(0,1,self.timesteps),arr,self.temporal_fit_order)
-                mu = np.mean(arr)
-                std = np.std(arr)
-                max_val = np.max(arr)
-                ret_arr[:self.temporal_fit_order+1] = coefficients
-                ret_arr[self.temporal_fit_order+1] = mu
-                ret_arr[self.temporal_fit_order+2] = std
-                ret_arr[self.temporal_fit_order+3] = max_val
-                return ret_arr
-
-        def prepend_timesteps(self,arr):
-                prepend = arr[0]*np.ones(self.timesteps-1)
-                return np.concatenate((prepend,arr))
+    def prepend_timesteps(self,arr):
+        prepend = arr[0]*np.ones(self.timesteps-1)
+        return np.concatenate((prepend,arr))
 
 from sklearn import svm
 from sklearn.ensemble import RandomForestClassifier
@@ -220,17 +239,16 @@ def train(conf,shot_list_train,shot_list_validate,loader):
     print('validate: {} shots, {} disruptive'.format(len(shot_list_validate),shot_list_validate.num_disruptive()))
     print('training: {} shots, {} disruptive'.format(len(shot_list_train),shot_list_train.num_disruptive()))
 
-    sample_prob = conf['data']['shallow_sample_prob']
+    num_samples = conf['data']['shallow_num_samples']
     feature_extractor = FeatureExtractor(loader)
     shot_list_train = shot_list_train.random_sublist(debug_use_shots)
-    X,Y,_ = feature_extractor.load_shots(shot_list_train,sample_prob = sample_prob)
-    Xv,Yv,_ = feature_extractor.load_shots(shot_list_validate,sample_prob = sample_prob)
+    X,Y,_ = feature_extractor.load_shots(shot_list_train,num_samples = num_samples)
+    Xv,Yv,_ = feature_extractor.load_shots(shot_list_validate,num_samples = num_samples)
     X = np.concatenate(X,axis=0)
     Y = np.concatenate(Y,axis=0)
     Xv = np.concatenate(Xv,axis=0)
     Yv = np.concatenate(Yv,axis=0)
 
-    print("Total data: {} samples, {} positive".format(1.0/sample_prob*len(X),1.0/sample_prob*np.sum(Y > 0)))
     #max_samples = 100000
     #num_samples = min(max_samples,len(Y))
     #indices = np.random.choice(np.array(range(len(Y))),num_samples,replace=False)
@@ -308,11 +326,11 @@ def make_predictions(conf,shot_list,loader):
     print('predicting in parallel on {} processes'.format(pool._processes))
     #for (y_p,y,disr) in map(fn,shot_list):
     for (y_p,y,disr) in pool.imap(fn,shot_list):
-            #y_p,y,disr = predict_single_shot(model,feature_extractor,shot)
-            y_prime += [np.expand_dims(y_p,axis=1)]
-            y_gold += [np.expand_dims(y,axis=1)]
-            disruptive += [disr]
-            pbar.add(1.0)
+        #y_p,y,disr = predict_single_shot(model,feature_extractor,shot)
+        y_prime += [np.expand_dims(y_p,axis=1)]
+        y_gold += [np.expand_dims(y,axis=1)]
+        disruptive += [disr]
+        pbar.add(1.0)
 
     pool.close()
     pool.join()

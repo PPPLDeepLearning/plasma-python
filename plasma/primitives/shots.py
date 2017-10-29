@@ -162,11 +162,40 @@ class ShotList(object):
         for (i,w) in enumerate(weights):
             self.shots[i].weight = w
 
-    def sample_weighted(self):
-        p = np.array([shot.weight for shot in self.shots])
+    def sample_weighted_given_arr(self,p):
         p = p/np.sum(p)
         idx = np.random.choice(range(len(self.shots)),p=p)
         return self.shots[idx]
+
+    def sample_weighted(self):
+        p = np.array([shot.weight for shot in self.shots])
+        return self.sample_weighted_given_arr(p)
+
+    def sample_equal_classes(self):
+        weights_d,weights_nd = self.get_weights_d_nd()
+        p = np.array([weights_d for shot in self.shots if shot.is_disruptive_shot() else weights_nd])
+        return self.sample_weighted_given_arr(p)
+
+    def get_weights_d_nd(self):
+        num_total = len(self)
+        num_d = self.num_disruptive()
+        num_nd = num_total - num_d
+        if num_nd == 0 or num_d == 0:
+            weights_d = 1.0
+            weights_nd = 1.0
+        else:
+            weights_d = num_nd
+            weights_nd = num_d
+        max_weight = np.maximum(weights_d,weights_nd)
+        return weights_d/max_weight,weights_nd/max_weight
+
+    def num_timesteps(self):
+        ls = [shot.num_timesteps() for shot in self.shots]
+        timesteps_total = sum(ls)
+        timesteps_d = sum([ts for (i,ts) in enumerate(ls) if self.shots[i].is_disruptive_shot()])
+        timesteps_nd = timesteps_total-timesteps_d
+        return timesteps_total,timesteps_d,timesteps_nd
+
 
     def num_disruptive(self):
         return len([shot for shot in self.shots if shot.is_disruptive_shot()])
@@ -288,6 +317,12 @@ class Shot(object):
         string += 't_disrupt: {}\n'.format(self.t_disrupt)
         return string
      
+
+    def num_timesteps(self):
+        self.restore()
+        ts = len(self.ttd.shape[0])
+        self.make_light()
+        return ts
 
     def get_number(self):
         return self.number
