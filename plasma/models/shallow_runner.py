@@ -42,16 +42,16 @@ class FeatureExtractor(object):
     def get_sample_probs(self,shot_list,num_samples):
         print("Calculating number of timesteps")
         timesteps_total,timesteps_d,timesteps_nd = shot_list.num_timesteps(self.loader.conf['paths']['processed_prepath'])
-        print("Total data: {} time samples, {} disruptive".format(timesteps_total,timesteps_d/timesteps_total))
+        print("Total data: {} time samples, {} disruptive".format(timesteps_total,1.0*timesteps_d/timesteps_total))
         if self.loader.conf['data']['equalize_classes']:
-            sample_prob_d = np.minimum(1.0,timesteps_nd/timesteps_d)
-            sample_prob_nd = np.minimum(1.0,timesteps_d/timesteps_nd)
-            timesteps_total = sample_prob_d*timesteps_d+sample_prob_nd*timesteps_nd 
-            sample_prob = np.minimum(1.0,num_samples/timesteps_total)
+            sample_prob_d = np.minimum(1.0,1.0*timesteps_nd/timesteps_d)
+            sample_prob_nd = np.minimum(1.0,1.0*timesteps_d/timesteps_nd)
+            timesteps_total = 1.0*sample_prob_d*timesteps_d+sample_prob_nd*timesteps_nd 
+            sample_prob = np.minimum(1.0,1.0*num_samples/timesteps_total)
             sample_prob_d *= sample_prob
             sample_prob_nd *= sample_prob
         else:
-            sample_prob_d = np.minimum(1.0,num_samples/timesteps_total)
+            sample_prob_d = np.minimum(1.0,1.0*num_samples/timesteps_total)
             sample_prob_nd = sample_prob_d
         return sample_prob_d,sample_prob_nd
 
