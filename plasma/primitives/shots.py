@@ -189,8 +189,8 @@ class ShotList(object):
         max_weight = np.maximum(weights_d,weights_nd)
         return weights_d/max_weight,weights_nd/max_weight
 
-    def num_timesteps(self):
-        ls = [shot.num_timesteps() for shot in self.shots]
+    def num_timesteps(self,prepath):
+        ls = [shot.num_timesteps(prepath) for shot in self.shots]
         timesteps_total = sum(ls)
         timesteps_d = sum([ts for (i,ts) in enumerate(ls) if self.shots[i].is_disruptive_shot()])
         timesteps_nd = timesteps_total-timesteps_d
@@ -318,8 +318,8 @@ class Shot(object):
         return string
      
 
-    def num_timesteps(self):
-        self.restore()
+    def num_timesteps(self,prepath):
+        self.restore(prepath)
         ts = len(self.ttd.shape[0])
         self.make_light()
         return ts
