@@ -337,7 +337,7 @@ def make_predictions(conf,shot_list,loader):
     return y_prime,y_gold,disruptive
 
 def predict_single_shot(shot,model,feature_extractor):
-    X,y,disr = feature_extractor.load_shot(shot,sample_prob=1.0)
+    X,y,disr = feature_extractor.load_shot(shot)
     y_p = model.predict_proba(X)[:,1]
     #print(y)
     #print(y_p)

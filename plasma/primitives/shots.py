@@ -320,7 +320,7 @@ class Shot(object):
 
     def num_timesteps(self,prepath):
         self.restore(prepath)
-        ts = len(self.ttd.shape[0])
+        ts = self.ttd.shape[0]
         self.make_light()
         return ts
 
