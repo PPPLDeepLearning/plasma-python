@@ -53,6 +53,9 @@ class FeatureExtractor(object):
         else:
             sample_prob_d = np.minimum(1.0,1.0*num_samples/timesteps_total)
             sample_prob_nd = sample_prob_d
+        if sample_prob_nd <= 0.0 or sample_prob_d <= 0.0:
+            val = np.minimum(1.0,num_samples/timesteps_total)
+            return val,val
         return sample_prob_d,sample_prob_nd
 
     def load_shots(self,shot_list,as_list=False,num_samples=np.Inf):

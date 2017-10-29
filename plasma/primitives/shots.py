@@ -184,8 +184,8 @@ class ShotList(object):
             weights_d = 1.0
             weights_nd = 1.0
         else:
-            weights_d = num_nd
-            weights_nd = num_d
+            weights_d = 1.0*num_nd
+            weights_nd = 1.0*num_d
         max_weight = np.maximum(weights_d,weights_nd)
         return weights_d/max_weight,weights_nd/max_weight
 
