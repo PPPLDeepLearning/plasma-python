@@ -161,7 +161,10 @@ class Loader(object):
             shot_list.shuffle() 
             for i in range(len(shot_list)):
                 if self.conf['training']['ranking_difficulty_fac'] == 1.0:
-                    shot = shot_list.shots[i]
+                    if self.conf['data']['equalize_classes']:
+                        shot = shot_list.sample_equal_classes()
+                    else:
+                        shot = shot_list.shots[i]
                 else: #draw the shot weighted
                     shot = shot_list.sample_weighted()
                 while not np.any(end_indices == 0):
