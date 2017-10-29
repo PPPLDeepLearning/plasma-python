@@ -173,7 +173,7 @@ class ShotList(object):
 
     def sample_equal_classes(self):
         weights_d,weights_nd = self.get_weights_d_nd()
-        p = np.array([weights_d for shot in self.shots if shot.is_disruptive_shot() else weights_nd])
+        p = np.array([weights_d if shot.is_disruptive_shot() else weights_nd for shot in self.shots ])
         return self.sample_weighted_given_arr(p)
 
     def get_weights_d_nd(self):
