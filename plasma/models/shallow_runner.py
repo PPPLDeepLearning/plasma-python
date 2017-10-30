@@ -4,7 +4,9 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 import numpy as np
-from itertools import imap
+import sys
+if sys.version_info[0] < 3:
+    from itertools import imap
 
 #leading to import errors:
 #from hyperopt import hp, STATUS_OK
@@ -12,7 +14,6 @@ from itertools import imap
 
 import time
 import datetime
-import sys
 import os
 from functools import partial
 import pathos.multiprocessing as mp

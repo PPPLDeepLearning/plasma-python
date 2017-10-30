@@ -3,4 +3,4 @@ pandas
 h5py
 pyparsing
 pyyaml
-tensorflow-gpu=1.3
+tensorflow-gpu>=1.3
