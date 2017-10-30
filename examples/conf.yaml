@@ -55,9 +55,12 @@ model:
         num_samples: 10000
         type: "svm" #"random_forest"
         n_estimators: 50 #for random forest
-        max_depth: 20 #for random forest
+        max_depth: 20 #for random forest and xgboost
         C: 1.0 #for svm
         kernel: "rbf" #rbf, sigmoid, linear, poly, for svm
+        max_depth: 3 #xgboost
+        learning_rate: 0.1 #xgboost
+        scale_pos_weight: 1.0 #xgboost
         skip_train: False #should a finished model be loaded if available
     #length of LSTM memory
     pred_length: 200
