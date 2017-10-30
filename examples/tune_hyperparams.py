@@ -34,8 +34,8 @@ fac = CategoricalHyperparam(['data','positive_example_penalty'],[1.0,2.0,4.0,8.0
 run_directory = "/tigress/{}/hyperparams/".format(getpass.getuser())
 template_path = os.environ['PWD'] #"/home/{}/plasma-python/examples/".format(getpass.getuser())
 conf_name = "conf.yaml"
-num_nodes = 10
-num_trials = 1
+num_nodes = 1
+num_trials = 10
 
 def generate_conf_file(tunables,template_path = "../",save_path = "./",conf_name="conf.yaml"):
     assert(template_path != save_path)
@@ -55,7 +55,7 @@ def generate_working_dirname(run_directory):
     s += "_{}".format(uuid.uuid4())
     return run_directory + s
 
-def get_executable_name()
+def get_executable_name():
     from plasma.conf import conf
     if conf['model']['shallow']:
         return conf['paths']['shallow_executable']
