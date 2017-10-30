@@ -53,12 +53,16 @@ def generate_working_dirname(run_directory):
     s += "_{}".format(uuid.uuid4())
     return run_directory + s
 
+def get_executable_name()
+    from plasma.conf import conf
+    if conf['model']['shallow']:
+        return conf['paths']['shallow_executable']
+    else:
+        return conf['paths']['executable']
+
 
 def start_slurm_job(subdir,num_nodes,i,conf):
-    if conf['model']['shallow']:
-        executable_name = conf['paths']['shallow_executable']
-    else:
-        executable_name = conf['paths']['executable']
+    executable_name = get_executable_name()
     os.system(" ".join(["cp -p",executable_name,subdir]))
     script = create_slurm_script(subdir,num_nodes,i,executable_name)
     sp.Popen("sbatch "+script,shell=True)
@@ -100,7 +104,7 @@ working_directory = generate_working_dirname(run_directory)
 os.makedirs(working_directory)
 
 os.system(" ".join(["cp -p",os.path.join(template_path,conf_name),working_directory]))
-os.system(" ".join(["cp -p",os.path.join(template_path,executable_name),working_directory]))
+os.system(" ".join(["cp -p",os.path.join(template_path,get_executable_name()),working_directory]))
 
 os.chdir(working_directory)
 print("Going into {}".format(working_directory))
