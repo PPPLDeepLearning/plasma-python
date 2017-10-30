@@ -16,6 +16,7 @@ import sys
 import os
 from functools import partial
 import pathos.multiprocessing as mp
+from xgboost import XGBClassifier
 
 from plasma.conf import conf
 from plasma.models.loader import Loader, ProcessGenerator
@@ -280,6 +281,8 @@ def train(conf,shot_list_train,shot_list_validate,loader):
         elif model_conf['type'] == "random_forest":
             model = RandomForestClassifier(n_estimators=model_conf["n_estimators"],
                 max_depth=model_conf["max_depth"],n_jobs=-1)
+        elif model_conf['type'] == "xgboost":
+            model = XGBClassifier()
         else:
             print("Unkown model type, exiting.")
             exit(1)
