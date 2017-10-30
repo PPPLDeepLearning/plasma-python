@@ -1,4 +1,4 @@
-from plasma.primitives.hyperparameters import CategoricalHyperparam,ContinuousHyperparam,LogContinuousHyperparam
+from plasma.primitives.hyperparameters import CategoricalHyperparam,ContinuousHyperparam,LogContinuousHyperparam,IntegerHyperparam
 from pprint import pprint
 import yaml
 import datetime
@@ -8,6 +8,17 @@ import subprocess as sp
 
 tunables = []
 
+#for shallow
+shallow_model = CategoricalHyperparam(['model','shallow_model','type'],["svm","random_forest","xgboost"])
+n_estimators = CategoricalHyperparam(['model','shallow_model','n_estimators'],[5,20,50,100,300,1000])
+max_depth = CategoricalHyperparam(['model','shallow_model','max_depth'],[0,3,6,10,30,100])
+C = LogContinuousHyperparam(['model','shallow_model','C'],1e-3,1e3)
+kernel = CategoricalHyperparam(['model','shallow_model','kernel'],["rbf","sigmoid","linear","poly"])
+xg_learning_rate = ContinuousHyperparam(['model','shallow_model','learning_rate'],0,1)
+scale_pos_weight = CategoricalHyperparam(['model','shallow_model','scale_pos_weight'],[1,10.0,100.0])
+tunables = [shallow_model,n_estimators,max_depth,C,kernel,xg_learning_rate,scale_pos_weight] #target
+
+#for DL
 lr = LogContinuousHyperparam(['model','lr'],5e-6,4e-3)
 lr_decay = CategoricalHyperparam(['model','lr_decay'],[0.97,0.985,1.0])
 #t_warn = CategoricalHyperparam(['data','T_warning'],[1.024])
@@ -15,8 +26,8 @@ fac = CategoricalHyperparam(['data','positive_example_penalty'],[1.0,2.0,4.0,8.0
 #target = CategoricalHyperparam(['target'],['maxhinge','hinge'])
 #batch_size = CategoricalHyperparam(['training','batch_size'],[256,128,32,64])
 #dropout_prob = CategoricalHyperparam(['model','dropout_prob'],[0.1,0.3,0.5])
+# tunables = [lr,lr_decay,fac] #target
 
-tunables = [lr,lr_decay,fac] #target
 
 run_directory = "/tigress/{}/hyperparams/".format(getpass.getuser())
 template_path = os.environ['PWD'] #"/home/{}/plasma-python/examples/".format(getpass.getuser())
