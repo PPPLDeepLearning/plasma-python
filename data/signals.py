@@ -180,11 +180,14 @@ all_signals = {'q95':q95,'li':li,'ip':ip,
 'pin':pin,'torquein':torquein,
 'tmamp1':tmamp1,'tmamp2':tmamp2,'tmfreq1':tmfreq1,'tmfreq2':tmfreq2,
 'pechin':pechin,'energydt':energydt,
-'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr,
-'etemp_profile':etemp_profile,'edens_profile':edens_profile,
-'etemp_profile_spatial':etemp_profile_spatial,'edens_profile_spatial':edens_profile_spatial,
-'etemp':etemp
+'etemp_profile':etemp_profile,'edens_profile':edens_profile
+# 'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr,
+# 'etemp_profile_spatial':etemp_profile_spatial,'edens_profile_spatial':edens_profile_spatial,
+# 'etemp':etemp
 }
+#new signals are not downloaded yet
+
+
 
 #for actual data analysis
 #all_signals_restricted = [q95,li,ip,energy,lm,dens,pradcore,pradtot,pin,etemp_profile,edens_profile]
