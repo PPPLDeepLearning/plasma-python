@@ -58,32 +58,28 @@ def generate_working_dirname(run_directory):
 def get_executable_name():
     from plasma.conf import conf
     if conf['model']['shallow']:
-        return conf['paths']['shallow_executable']
+        executable_name = conf['paths']['shallow_executable']
+        use_mpi = False
     else:
-        return conf['paths']['executable']
+        executable_name = conf['paths']['executable']
+        use_mpi = True
+    return executable_name,use_mpi
 
 
 def start_slurm_job(subdir,num_nodes,i,conf):
-    executable_name = get_executable_name()
+    executable_name,use_mpi = get_executable_name()
     os.system(" ".join(["cp -p",executable_name,subdir]))
-    script = create_slurm_script(subdir,num_nodes,i,executable_name)
+    script = create_slurm_script(subdir,num_nodes,i,executable_name,use_mpi)
     sp.Popen("sbatch "+script,shell=True)
 
-def create_slurm_script(subdir,num_nodes,idx,executable_name):
+def create_slurm_script(subdir,num_nodes,idx,executable_name,use_mpi):
     filename = "run_{}_nodes.cmd".format(num_nodes)
     filepath = subdir+filename
     user = getpass.getuser()
+    sbatch_header = create_sbatch_header(num_nodes,use_mpi,idx)
     with open(filepath,"w") as f:
-        f.write('#!/bin/bash\n')
-        f.write('#SBATCH -t 01:00:00\n')
-        f.write('#SBATCH -N '+str(num_nodes)+'\n')
-        f.write('#SBATCH --ntasks-per-node=4\n')
-        f.write('#SBATCH --ntasks-per-socket=2\n')
-        f.write('#SBATCH --gres=gpu:4\n')
-        f.write('#SBATCH -c 4\n')
-        f.write('#SBATCH --mem-per-cpu=0\n')
-        f.write('#SBATCH -o {}.out\n'.format(idx))
-        f.write('\n\n')
+        for line in sbatch_header:
+            f.write(line)
         f.write('module load anaconda\n')
         f.write('source activate frnn\n')
         f.write('module load cudatoolkit/8.0 cudnn/cuda-8.0/6.0 openmpi/cuda-8.0/intel-17.0/2.1.0/64 intel/17.0/64/17.0.4.196 intel-mkl/2017.3/4/64\n')
@@ -95,6 +91,26 @@ def create_slurm_script(subdir,num_nodes,idx,executable_name):
 
     return filepath
 
+def create_sbatch_header(num_nodes,use_mpi,idx):
+    if not use_mpi:
+        assert(num_nodes == 1)
+    lines = []
+    lines.append('#!/bin/bash\n')
+    lines.append('#SBATCH -t 01:00:00\n')
+    lines.append('#SBATCH -N '+str(num_nodes)+'\n')
+    if use_mpi:
+        lines.append('#SBATCH --ntasks-per-node=4\n')
+        lines.append('#SBATCH --ntasks-per-socket=2\n')
+    else:
+        lines.append('#SBATCH --ntasks-per-node=1\n')
+        lines.append('#SBATCH --ntasks-per-socket=1\n')
+    lines.append('#SBATCH --gres=gpu:4\n')
+    lines.append('#SBATCH -c 4\n')
+    lines.append('#SBATCH --mem-per-cpu=0\n')
+    lines.append('#SBATCH -o {}.out\n'.format(idx))
+    lines.append('\n\n')
+    return lines
+
 def copy_files_to_environment(subdir):
     from plasma.conf import conf
     normalization_dir = os.path.dirname(conf['paths']['normalizer_path'])
@@ -105,8 +121,9 @@ def copy_files_to_environment(subdir):
 working_directory = generate_working_dirname(run_directory)
 os.makedirs(working_directory)
 
+executable_name,_ = get_executable_name()
 os.system(" ".join(["cp -p",os.path.join(template_path,conf_name),working_directory]))
-os.system(" ".join(["cp -p",os.path.join(template_path,get_executable_name()),working_directory]))
+os.system(" ".join(["cp -p",os.path.join(template_path,executable_name),working_directory]))
 
 os.chdir(working_directory)
 print("Going into {}".format(working_directory))
