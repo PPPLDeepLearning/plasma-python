@@ -5,6 +5,7 @@ import datetime
 import uuid
 import sys,os,getpass
 import subprocess as sp
+import numpy as np
 
 tunables = []
 
@@ -16,7 +17,8 @@ C = LogContinuousHyperparam(['model','shallow_model','C'],1e-3,1e3)
 kernel = CategoricalHyperparam(['model','shallow_model','kernel'],["rbf","sigmoid","linear","poly"])
 xg_learning_rate = ContinuousHyperparam(['model','shallow_model','learning_rate'],0,1)
 scale_pos_weight = CategoricalHyperparam(['model','shallow_model','scale_pos_weight'],[1,10.0,100.0])
-tunables = [shallow_model,n_estimators,max_depth,C,kernel,xg_learning_rate,scale_pos_weight] #target
+num_samples = CategoricalHyperparam(['model','shallow_model','num_samples'],[10000,100000,1000000,1e10])
+tunables = [shallow_model,n_estimators,max_depth,C,kernel,xg_learning_rate,scale_pos_weight,num_samples] #target
 
 #for DL
 lr = LogContinuousHyperparam(['model','lr'],5e-6,4e-3)
@@ -32,8 +34,8 @@ fac = CategoricalHyperparam(['data','positive_example_penalty'],[1.0,2.0,4.0,8.0
 run_directory = "/tigress/{}/hyperparams/".format(getpass.getuser())
 template_path = os.environ['PWD'] #"/home/{}/plasma-python/examples/".format(getpass.getuser())
 conf_name = "conf.yaml"
-num_nodes = 2
-num_trials = 2
+num_nodes = 10
+num_trials = 1
 
 def generate_conf_file(tunables,template_path = "../",save_path = "./",conf_name="conf.yaml"):
     assert(template_path != save_path)
