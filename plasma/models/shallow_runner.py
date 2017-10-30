@@ -299,13 +299,13 @@ def train(conf,shot_list_train,shot_list_validate,loader):
     print(classification_report(Yv,Y_predv))
     #print(confusion_matrix(Y,Y_pred))
     _,_,_,roc_area,loss = make_predictions_and_evaluate_gpu(conf,shot_list_validate,loader)
-    _,_,_,roc_area_train,loss_train = make_predictions_and_evaluate_gpu(conf,shot_list_train,loader)   
+    # _,_,_,roc_area_train,loss_train = make_predictions_and_evaluate_gpu(conf,shot_list_train,loader)   
 
     epoch_logs = {}
     epoch_logs['val_roc'] = roc_area 
     epoch_logs['val_loss'] = loss
-    epoch_logs['train_roc'] = roc_area_train
-    epoch_logs['train_loss'] = loss_train 
+    # epoch_logs['train_roc'] = roc_area_train
+    # epoch_logs['train_loss'] = loss_train 
     callbacks.on_epoch_end(0, epoch_logs)
 
 
