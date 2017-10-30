@@ -44,16 +44,16 @@ data:
     window_size: 10
     #TODO optimize
     normalizer: 'var'
-    equalize_classes: False
+    equalize_classes: True
     # shallow_sample_prob: 0.01 #the fraction of samples with which to train the shallow model
     shallow_num_samples: 10000 #the number of samples to use for training
     floatx: 'float32'
 
 model:
-    shallow: True
+    shallow: False
     shallow_model: 
         num_samples: 10000
-        type: "svm" #"random_forest"
+        type: "svm" #"random_forest" "xgboost"
         n_estimators: 50 #for random forest
         max_depth: 20 #for random forest
         C: 1.0 #for svm
