@@ -9,7 +9,7 @@ _EPSILON = K.epsilon()
 def _loss_tensor(y_true, y_pred):
     max_val = K.max(y_pred,axis=-2) #temporal axis!
     max_val = K.repeat(max_val,K.shape(y_pred)[-2])
-    print K.eval(max_val)
+    print(K.eval(max_val))
     mask = K.cast(K.equal(max_val,y_pred),K.floatx())
     y_pred = mask * y_pred + (1-mask) * y_true
     return squared_hinge(y_true,y_pred)
@@ -49,16 +49,16 @@ def check_loss(_shape):
 
     assert out1.shape == out2.shape
     assert out1.shape == shape[:-1]
-    print np.linalg.norm(out1)
-    print np.linalg.norm(out2)
-    print np.linalg.norm(out1-out2)
+    print(np.linalg.norm(out1))
+    print(np.linalg.norm(out2))
+    print(np.linalg.norm(out1-out2))
 
 
 def test_loss():
     shape_list = ['3d']#, '3d', '4d', '5d']
     for _shape in shape_list:
         check_loss(_shape)
-        print '======================'
+        print('======================')
 
 if __name__ == '__main__':
     test_loss()
