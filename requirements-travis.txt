@@ -2,4 +2,4 @@ scipy
 h5py
 pyparsing
 pyyaml
-tensorflow-gpu
+tensorflow-gpu=1.3
