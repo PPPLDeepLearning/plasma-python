@@ -16,6 +16,7 @@ paths:
     shallow_executable: "learn.py"
 
 data:
+    bleed_in: 0 #how many shots from the test sit to use in training?
     signal_to_augment: None #'plasma current' #or None
     augmentation_mode: 'noise'
     augment_during_training: True
