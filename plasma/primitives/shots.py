@@ -171,6 +171,16 @@ class ShotList(object):
         p = np.array([shot.weight for shot in self.shots])
         return self.sample_weighted_given_arr(p)
 
+    def sample_single_class(self,disruptive):
+        weights_d = 0.0
+        weights_nd = 1.0
+        if disruptive:
+            weights_d = 1.0
+            weights_nd = 0.0
+        p = np.array([weights_d if shot.is_disruptive_shot() else weights_nd for shot in self.shots ])
+        return self.sample_weighted_given_arr(p)
+
+
     def sample_equal_classes(self):
         weights_d,weights_nd = self.get_weights_d_nd()
         p = np.array([weights_d if shot.is_disruptive_shot() else weights_nd for shot in self.shots ])

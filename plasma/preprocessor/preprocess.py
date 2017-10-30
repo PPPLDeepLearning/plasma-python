@@ -139,6 +139,32 @@ class Preprocessor(object):
         np.savez(path,shot_list_train=shot_list_train,shot_list_validate=shot_list_validate,shot_list_test=shot_list_test)
 
 
+
+def apply_bleed_in(conf,shot_list_train,shot_list_validate,shot_list_test):
+    np.random.seed(1)
+    num = conf['data']['bleed_in']
+    new_shots = []
+    if num > 0:
+        print('applying bleed in with {} shots\n'.format(num))
+        num_total = len(shot_list_test)
+        num_d = shot_list_test.num_disruptive()
+        num_nd = num_total - num_d
+        if num_d > 0:
+            for i in range(num):
+                shot_list_train.append(shot_list_test.sample_single_class(True))
+        else:
+            print('No disruptive shots in test set, omitting bleed in')
+        if num_nd > 0:
+            for i in range(num):
+                shot_list_train.append(shot_list_test.sample_single_class(False))
+        else:
+            print('No nondisruptive shots in test set, omitting bleed in')
+    return shot_list_train,shot_list_validate,shot_list_test
+
+
+
+
+
 def guarantee_preprocessed(conf):
     pp = Preprocessor(conf)
     if pp.all_are_preprocessed():
@@ -157,6 +183,7 @@ def guarantee_preprocessed(conf):
             validation_frac = 0.05
         shot_list_train,shot_list_validate = shot_list_train.split_direct(1.0-validation_frac,do_shuffle=True)
         pp.save_shotlists(shot_list_train,shot_list_validate,shot_list_test)
+    shot_list_train,shot_list_validate,shot_list_test = apply_bleed_in(conf,shot_list_train,shot_list_validate,shot_list_test)
     print('validate: {} shots, {} disruptive'.format(len(shot_list_validate),shot_list_validate.num_disruptive()))
     print('training: {} shots, {} disruptive'.format(len(shot_list_train),shot_list_train.num_disruptive()))
     print('testing: {} shots, {} disruptive'.format(len(shot_list_test),shot_list_test.num_disruptive()))
