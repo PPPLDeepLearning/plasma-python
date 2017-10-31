@@ -83,7 +83,10 @@ class FeatureExtractor(object):
     def get_save_prepath(self):
         prepath = self.loader.conf['paths']['processed_prepath']
         use_signals = self.loader.conf['paths']['use_signals']
-        save_prepath = prepath + "shallow/use_signals_{}/".format(hash(tuple(sorted(use_signals))))
+        cut_ends = self.loader.conf['data']['cut_shot_ends'] 
+        T_min_warn = self.loader.conf['data']['T_min_warn'] 
+        identifying_tuple = tuple(sorted(use_signals)) + (T_min_warn,cut_ends)
+        save_prepath = prepath + "shallow/use_signals_{}/".format(hash(identifying_tuple))
         return save_prepath
 
     def load_shot(self,shot,sample_prob_d=1.0,sample_prob_nd=1.0):
