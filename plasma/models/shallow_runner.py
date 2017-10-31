@@ -244,7 +244,7 @@ def train(conf,shot_list_train,shot_list_validate,loader):
     print('validate: {} shots, {} disruptive'.format(len(shot_list_validate),shot_list_validate.num_disruptive()))
     print('training: {} shots, {} disruptive'.format(len(shot_list_train),shot_list_train.num_disruptive()))
 
-    num_samples = conf['data']['shallow_num_samples']
+    num_samples = conf['model']['shallow_model']['num_samples']
     feature_extractor = FeatureExtractor(loader)
     shot_list_train = shot_list_train.random_sublist(debug_use_shots)
     X,Y,_ = feature_extractor.load_shots(shot_list_train,num_samples = num_samples)
