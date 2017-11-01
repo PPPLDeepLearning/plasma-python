@@ -17,7 +17,7 @@ C = LogContinuousHyperparam(['model','shallow_model','C'],1e-3,1e3)
 kernel = CategoricalHyperparam(['model','shallow_model','kernel'],["rbf","sigmoid","linear","poly"])
 xg_learning_rate = ContinuousHyperparam(['model','shallow_model','learning_rate'],0,1)
 scale_pos_weight = CategoricalHyperparam(['model','shallow_model','scale_pos_weight'],[1,10.0,100.0])
-num_samples = CategoricalHyperparam(['model','shallow_model','num_samples'],[10000,100000,1000000,1e10])
+num_samples = CategoricalHyperparam(['model','shallow_model','num_samples'],[10000,100000,1000000,1e7])
 tunables = [shallow_model,n_estimators,max_depth,C,kernel,xg_learning_rate,scale_pos_weight,num_samples] #target
 
 #for DL
@@ -28,14 +28,14 @@ fac = CategoricalHyperparam(['data','positive_example_penalty'],[1.0,2.0,4.0,8.0
 #target = CategoricalHyperparam(['target'],['maxhinge','hinge'])
 #batch_size = CategoricalHyperparam(['training','batch_size'],[256,128,32,64])
 #dropout_prob = CategoricalHyperparam(['model','dropout_prob'],[0.1,0.3,0.5])
-# tunables = [lr,lr_decay,fac] #target
+#tunables = [lr,lr_decay,fac] #target
 
 
 run_directory = "/tigress/{}/hyperparams/".format(getpass.getuser())
 template_path = os.environ['PWD'] #"/home/{}/plasma-python/examples/".format(getpass.getuser())
 conf_name = "conf.yaml"
 num_nodes = 1
-num_trials = 10
+num_trials = 100
 
 def generate_conf_file(tunables,template_path = "../",save_path = "./",conf_name="conf.yaml"):
     assert(template_path != save_path)
