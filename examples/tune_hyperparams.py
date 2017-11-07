@@ -40,7 +40,7 @@ run_directory = "/tigress/{}/hyperparams/".format(getpass.getuser())
 template_path = os.environ['PWD'] #"/home/{}/plasma-python/examples/".format(getpass.getuser())
 conf_name = "conf.yaml"
 
-def generate_conf_file(tunables,template_path = "../",save_path = "./",conf_name="conf.yaml"):
+def generate_conf_file(tunables,shallow,template_path = "../",save_path = "./",conf_name="conf.yaml"):
     assert(template_path != save_path)
     with open(os.path.join(template_path,conf_name), 'r') as yaml_file:
         conf = yaml.load(yaml_file)
@@ -48,6 +48,7 @@ def generate_conf_file(tunables,template_path = "../",save_path = "./",conf_name
         tunable.assign_to_conf(conf,save_path)
     conf['training']['num_epochs'] = 1000 #rely on early stopping to terminate training
     conf['training']['hyperparam_tuning'] = True #rely on early stopping to terminate training
+    conf['model']['shallow'] = shallow
     with open(os.path.join(save_path,conf_name), 'w') as outfile:
         yaml.dump(conf, outfile, default_flow_style=False)
     return conf
@@ -58,9 +59,9 @@ def generate_working_dirname(run_directory):
     s += "_{}".format(uuid.uuid4())
     return run_directory + s
 
-def get_executable_name():
+def get_executable_name(shallow):
     from plasma.conf import conf
-    if conf['model']['shallow']:
+    if shallow:
         executable_name = conf['paths']['shallow_executable']
         use_mpi = False
     else:
@@ -69,8 +70,8 @@ def get_executable_name():
     return executable_name,use_mpi
 
 
-def start_slurm_job(subdir,num_nodes,i,conf):
-    executable_name,use_mpi = get_executable_name()
+def start_slurm_job(subdir,num_nodes,i,conf,shallow):
+    executable_name,use_mpi = get_executable_name(shallow)
     os.system(" ".join(["cp -p",executable_name,subdir]))
     script = create_slurm_script(subdir,num_nodes,i,executable_name,use_mpi)
     sp.Popen("sbatch "+script,shell=True)
@@ -124,7 +125,7 @@ def copy_files_to_environment(subdir):
 working_directory = generate_working_dirname(run_directory)
 os.makedirs(working_directory)
 
-executable_name,_ = get_executable_name()
+executable_name,_ = get_executable_name(shallow)
 os.system(" ".join(["cp -p",os.path.join(template_path,conf_name),working_directory]))
 os.system(" ".join(["cp -p",os.path.join(template_path,executable_name),working_directory]))
 
@@ -136,8 +137,8 @@ for i in range(num_trials):
     os.makedirs(subdir)
     copy_files_to_environment(subdir)
     print("Making modified conf")
-    conf = generate_conf_file(tunables,working_directory,subdir,conf_name)
+    conf = generate_conf_file(tunables,shallow,working_directory,subdir,conf_name)
     print("Starting job")
-    start_slurm_job(subdir,num_nodes,i,conf)
+    start_slurm_job(subdir,num_nodes,i,conf,shallow)
 
 print("submitted {} jobs.".format(num_trials))
