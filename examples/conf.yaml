@@ -17,6 +17,7 @@ paths:
 
 data:
     bleed_in: 100 #how many shots from the test sit to use in training?
+    bleed_in_remove_from_test: True
     signal_to_augment: None #'plasma current' #or None
     augmentation_mode: 'none'
     augment_during_training: False

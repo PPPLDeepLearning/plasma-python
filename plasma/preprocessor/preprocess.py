@@ -151,12 +151,18 @@ def apply_bleed_in(conf,shot_list_train,shot_list_validate,shot_list_test):
         num_nd = num_total - num_d
         if num_d > 0:
             for i in range(num):
-                shot_list_train.append(shot_list_test.sample_single_class(True))
+                s = shot_list_test.sample_single_class(True)
+                shot_list_train.append(s)
+                if conf['data']['bleed_in_remove_from_test']:
+                    shot_list_test.remove(s)
         else:
             print('No disruptive shots in test set, omitting bleed in')
         if num_nd > 0:
             for i in range(num):
-                shot_list_train.append(shot_list_test.sample_single_class(False))
+                s = shot_list_test.sample_single_class(False)
+                shot_list_train.append(s)
+                if conf['data']['bleed_in_remove_from_test']:
+                    shot_list_test.remove(s)
         else:
             print('No nondisruptive shots in test set, omitting bleed in')
     return shot_list_train,shot_list_validate,shot_list_test

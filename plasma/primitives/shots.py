@@ -257,6 +257,11 @@ class ShotList(object):
         assert(isinstance(shot,Shot))
         self.shots.append(shot)
 
+    def remove(self,shot):
+        assert(shot in self.shots)
+        self.shots.remove(shot)
+        assert(shot not in self.shots)
+
     def make_light(self):
         for shot in self.shots:
             shot.make_light()
