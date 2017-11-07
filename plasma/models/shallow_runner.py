@@ -311,6 +311,8 @@ def train(conf,shot_list_train,shot_list_validate,loader):
     _,_,_,roc_area,loss = make_predictions_and_evaluate_gpu(conf,shot_list_validate,loader)
     # _,_,_,roc_area_train,loss_train = make_predictions_and_evaluate_gpu(conf,shot_list_train,loader)   
 
+    print('Validation Loss: {:.3e}'.format(loss))
+    print('Validation ROC: {:.4f}'.format(roc_area))
     epoch_logs = {}
     epoch_logs['val_roc'] = roc_area 
     epoch_logs['val_loss'] = loss
