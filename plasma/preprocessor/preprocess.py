@@ -153,6 +153,7 @@ def apply_bleed_in(conf,shot_list_train,shot_list_validate,shot_list_test):
             for i in range(num):
                 s = shot_list_test.sample_single_class(True)
                 shot_list_train.append(s)
+                shot_list_validate.append(s)
                 if conf['data']['bleed_in_remove_from_test']:
                     shot_list_test.remove(s)
         else:
@@ -161,6 +162,7 @@ def apply_bleed_in(conf,shot_list_train,shot_list_validate,shot_list_test):
             for i in range(num):
                 s = shot_list_test.sample_single_class(False)
                 shot_list_train.append(s)
+                shot_list_validate.append(s)
                 if conf['data']['bleed_in_remove_from_test']:
                     shot_list_test.remove(s)
         else:
