@@ -22,17 +22,18 @@ def parameters(input_file):
         params['paths']['shot_list_dir'] = base_path + params['paths']['shot_list_dir']
         params['paths']['output_path'] = output_path
         params['paths']['processed_prepath'] = output_path +'/processed_shots/'
-        params['paths']['results_prepath'] = output_path + '/results/'
         if params['training']['hyperparam_tuning']:
             params['paths']['saved_shotlist_path'] = './normalization/shot_lists.npz'
             params['paths']['normalizer_path'] = './normalization/normalization.npz'
             params['paths']['model_save_path'] = './model_checkpoints/'
             params['paths']['csvlog_save_path'] = './csv_logs/'
+            params['paths']['results_prepath'] = './results/'
         else:
             params['paths']['saved_shotlist_path'] = output_path +'/normalization/shot_lists.npz'
             params['paths']['normalizer_path'] = output_path + '/normalization/normalization.npz'
             params['paths']['model_save_path'] = output_path + '/model_checkpoints/'
             params['paths']['csvlog_save_path'] = output_path + '/csv_logs/'
+            params['paths']['results_prepath'] = output_path + '/results/'
         params['paths']['tensorboard_save_path'] = output_path + params['paths']['tensorboard_save_path']
 
         if params['target'] == 'hinge':
