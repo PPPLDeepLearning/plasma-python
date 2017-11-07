@@ -87,7 +87,7 @@ def create_slurm_script(subdir,num_nodes,idx,executable_name,use_mpi):
         f.write('module load anaconda\n')
         f.write('source activate frnn\n')
         f.write('module load cudatoolkit/8.0 cudnn/cuda-8.0/6.0 openmpi/cuda-8.0/intel-17.0/2.1.0/64 intel/17.0/64/17.0.4.196 intel-mkl/2017.3/4/64\n')
-        f.write('rm -f /tigress/{}/model_checkpoints/*.h5\n'.format(user))
+        # f.write('rm -f /tigress/{}/model_checkpoints/*.h5\n'.format(user))
         f.write('cd {}\n'.format(subdir))
         f.write('export OMPI_MCA_btl=\"tcp,self,sm\"\n')
         f.write('srun python {}\n'.format(executable_name))
