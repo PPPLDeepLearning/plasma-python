@@ -281,15 +281,25 @@ def train(conf,shot_list_train,shot_list_validate,loader):
     if not model_conf['skip_train'] or not os.path.isfile(model_path):
         
         start_time = time.time()
+        if model_conf["scale_pos_weight"] != 1:
+            scale_pos_weight_dict = {np.min(Y) : 1, np.max(Y):model_conf["scale_pos_weight"]}
+        else:
+            scale_pos_weight_dict = None
         if model_conf['type'] == "svm":
             model = svm.SVC(probability=True,
                 C=model_conf["C"],
-                kernel=model_conf["kernel"])
+                kernel=model_conf["kernel"],
+                class_weight=scale_pos_weight_dict)
         elif model_conf['type'] == "random_forest":
             model = RandomForestClassifier(n_estimators=model_conf["n_estimators"],
-                max_depth=model_conf["max_depth"],n_jobs=-1)
+                max_depth=model_conf["max_depth"],
+                class_weight=scale_pos_weight_dict,
+                n_jobs=-1)
         elif model_conf['type'] == "xgboost":
-            model = XGBClassifier()
+            model = XGBClassifier(max_depth=model_conf["max_depth"],
+                learning_rate=model_conf['learning_rate'],
+                n_estimators=model_conf["n_estimators"],
+                scale_pos_weight=model_conf["scale_pos_weight"])
         else:
             print("Unkown model type, exiting.")
             exit(1)
