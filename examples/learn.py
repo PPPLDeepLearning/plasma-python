@@ -131,7 +131,10 @@ shot_list_test.make_light()
 shot_list_train.make_light()
 
 save_str = 'results_' + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-np.savez(conf['paths']['results_prepath']+save_str,
+result_base_path = conf['paths']['results_prepath']
+if not os.path.exists(result_base_path):
+    os.makedirs(result_base_path)
+np.savez(result_base_path+save_str,
     y_gold=y_gold,y_gold_train=y_gold_train,y_gold_test=y_gold_test,
     y_prime=y_prime,y_prime_train=y_prime_train,y_prime_test=y_prime_test,
     disruptive=disruptive,disruptive_train=disruptive_train,disruptive_test=disruptive_test,
