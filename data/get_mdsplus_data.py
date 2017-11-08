@@ -1,6 +1,6 @@
 from plasma.utils.downloading import download_all_shot_numbers
 from data.signals import *
-import plasma.conf
+import from plasma import conf
 
 
 prepath = '/p/datad2/' #'/cscratch/share/frnn/'#'/p/datad2/'
