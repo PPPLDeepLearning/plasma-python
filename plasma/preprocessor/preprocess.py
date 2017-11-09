@@ -96,10 +96,13 @@ class Preprocessor(object):
         print('Finished Preprocessing {} files in {} seconds'.format(len(shot_list_picked),time.time()-start_time))
         print('Omitted {} shots of {} total.'.format(len(shot_list_picked) - len(used_shots),len(shot_list_picked)))
         print('{}/{} disruptive shots'.format(used_shots.num_disruptive(),len(used_shots)))
+        if len(use_shots) == 0:
+            print("WARNING: All shots were omitted, please ensure raw data is complete and available at {}.".format(conf['paths']['signal_prepath']))
         return used_shots 
 
     def preprocess_single_file(self,shot):
-        processed_prepath = self.conf['paths']['processed_prepath']
+        h = self.get_unique_signal_hash()
+        processed_prepath = self.conf['paths']['processed_prepath'] + 'signal_group_{}/'.format(h)
         recompute = self.conf['data']['recompute']
         # print('({}/{}): '.format(num_processed,use_shots))
         if recompute or not shot.previously_saved(processed_prepath):
@@ -121,8 +124,13 @@ class Preprocessor(object):
     def get_individual_channel_dirs(self):
         signals_dirs = self.conf['paths']['signals_dirs']
 
+    def get_unique_signal_hash(self):
+        use_signals = self.loader.conf['paths']['all_signals']
+        return hash(tuple(sorted(use_signals)))
+
     def get_shot_list_path(self):
-        return self.conf['paths']['base_path'] + '/processed_shotlists/' + self.conf['paths']['data'] + '/shot_lists.npz'
+        h = self.get_unique_signal_hash()
+        return self.conf['paths']['base_path'] + '/processed_shotlists/' + self.conf['paths']['data'] + '/shot_lists_signal_group_{}.npz'.format(h)
 
     def load_shotlists(self):
         path = self.get_shot_list_path()

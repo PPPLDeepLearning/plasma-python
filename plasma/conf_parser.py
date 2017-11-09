@@ -119,7 +119,7 @@ def parameters(input_file):
             params['paths']['use_signals'] = list(params['paths']['use_signals_dict'].values())
             params['paths']['all_signals'] = list(params['paths']['all_signals_dict'].values())
 
-        print("Selected signals {}".format(params['paths']['use_signals']))
+        print("Selected signals (determines which signals training is run on):\n{}".format(params['paths']['use_signals']))
 
         params['paths']['shot_files_all'] = params['paths']['shot_files']+params['paths']['shot_files_test']
         params['paths']['all_machines'] = list(set([file.machine for file in params['paths']['shot_files_all']]))
