@@ -122,7 +122,9 @@ class Preprocessor(object):
         signals_dirs = self.conf['paths']['signals_dirs']
 
     def get_shot_list_path(self):
-        return self.conf['paths']['base_path'] + '/processed_shotlists/' + self.conf['paths']['data'] + '/shot_lists.npz'
+        use_signals = self.loader.conf['paths']['all_signals']
+        identifying_tuple = tuple(sorted(use_signals))
+        return self.conf['paths']['base_path'] + '/processed_shotlists/' + self.conf['paths']['data'] + '/shot_lists.npz_signals_{}.npz'.format(hash(identifying_tuple))
 
     def load_shotlists(self):
         path = self.get_shot_list_path()

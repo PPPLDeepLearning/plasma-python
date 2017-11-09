@@ -173,7 +173,8 @@ tmfreq1 = Signal("Tearing Mode frequency (rotating 2/1)", ['d3d/nssfrqn1l'],[d3d
 tmfreq2 = Signal("Tearing Mode frequency (rotating 3/2)", ['d3d/nssfrqn2l'],[d3d])
 ipdirect = Signal("plasma current direction",["d3d/iptdirect"],[d3d])
 
-#for downloading
+#for downloading #modify this to preprocess shots with only a subset of signals. This may produce more shots
+#since only those shots that contain all_signals contained here are used.
 all_signals = {'q95':q95,'li':li,'ip':ip,
 'betan':betan,'energy':energy,'lm':lm,'dens':dens,
 'pradcore':pradcore,'pradedge':pradedge,'pradtot':pradtot,
@@ -194,7 +195,7 @@ all_signals = {'q95':q95,'li':li,'ip':ip,
 
 all_signals_restricted = all_signals
 
-print('all signals:')
+print('all signals (determines which signals are downloaded and preprocessed):')
 print(all_signals.values())
 
 fully_defined_signals = {sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if sig.is_defined_on_machines(all_machines)}
