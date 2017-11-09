@@ -125,7 +125,7 @@ class Preprocessor(object):
         signals_dirs = self.conf['paths']['signals_dirs']
 
     def get_unique_signal_hash(self):
-        use_signals = self.loader.conf['paths']['all_signals']
+        use_signals = self.conf['paths']['all_signals']
         return hash(tuple(sorted(use_signals)))
 
     def get_shot_list_path(self):
