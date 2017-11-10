@@ -96,7 +96,7 @@ class Preprocessor(object):
         print('Finished Preprocessing {} files in {} seconds'.format(len(shot_list_picked),time.time()-start_time))
         print('Omitted {} shots of {} total.'.format(len(shot_list_picked) - len(used_shots),len(shot_list_picked)))
         print('{}/{} disruptive shots'.format(used_shots.num_disruptive(),len(used_shots)))
-        if len(use_shots) == 0:
+        if len(used_shots) == 0:
             print("WARNING: All shots were omitted, please ensure raw data is complete and available at {}.".format(conf['paths']['signal_prepath']))
         return used_shots 
 

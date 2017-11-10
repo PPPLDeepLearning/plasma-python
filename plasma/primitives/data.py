@@ -49,7 +49,8 @@ class Signal(object):
             return None,None,False
 
         if os.path.getsize(file_path) == 0:
-            print('Signal {}, shot {} was downloaded incorrectly (empty file)'.format(self.description,shot.number))
+            print('Signal {}, shot {} was downloaded incorrectly (empty file). Removing.'.format(self.description,shot.number))
+            os.remove(file_path)
             return None,None,False
         try:
             data = np.loadtxt(file_path,dtype=dtype)
