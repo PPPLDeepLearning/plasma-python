@@ -62,8 +62,6 @@ def save_shot(shot_num_queue,c,signals,save_prepath,machine,sentinel=-1):
 			save_path_full = signal.get_file_path(save_prepath,machine,shot_num)
 			success = False
 			mapping = None
-			if os.path.getsize(file_path) == 0:
-            return None,None,False
 			if os.path.isfile(save_path_full)
 				if os.path.getsize(file_path) > 0:
 					print('-',end='')
