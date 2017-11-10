@@ -80,6 +80,10 @@ def parameters(input_file):
             params['paths']['shot_files'] = [jet_carbon_wall]
             params['paths']['shot_files_test'] = []
             params['paths']['use_signals_dict'] = jet_signals
+        elif params['paths']['data'] == 'jet_mixed_data':
+            params['paths']['shot_files'] = [jet_full]
+            params['paths']['shot_files_test'] = []
+            params['paths']['use_signals_dict'] = jet_signals
         elif params['paths']['data'] == 'd3d_data':
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = [] 

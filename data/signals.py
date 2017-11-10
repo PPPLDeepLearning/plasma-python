@@ -112,9 +112,9 @@ def fetch_jet_data(signal_path,shot_num,c):
 			time = c.get('_sig=dim_of(jet("{}/",{}))'.format(signal_path,shot_num)).data()
 		found = True
 	except Exception as e:
-		#print(e)
-		#sys.stdout.flush()
-		pass
+		print(e)
+		sys.stdout.flush()
+		#pass
 	return time,data,ydata,found
 
 def fetch_nstx_data(signal_path,shot_num,c):
@@ -140,9 +140,9 @@ etemp_profile = ProfileSignal("Electron temperature profile",["ZIPFIT01/PROFILES
 edens_profile = ProfileSignal("Electron density profile",["ZIPFIT01/PROFILES.EDENSFIT"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels)
 
 # epress_profile_spatial = ProfileSignal("Electron pressure profile",["ppf/hrts/pe/"],[jet],causal_shifts=[25],mapping_range=(2,4),num_channels=profile_num_channels)
-etemp_profile_spatial = ProfileSignal("Electron temperature profile",["ppf/hrts/te/"],[jet],causal_shifts=[25],mapping_range=(2,4),num_channels=profile_num_channels)
-edens_profile_spatial = ProfileSignal("Electron density profile",["ppf/hrts/ne/"],[jet],causal_shifts=[25],mapping_range=(2,4),num_channels=profile_num_channels)
-etemp = Signal("electron temperature",["ppf/hrtx/te0/"],[jet],causal_shifts=[25])
+etemp_profile_spatial = ProfileSignal("Electron temperature profile",["ppf/hrts/te"],[jet],causal_shifts=[25],mapping_range=(2,4),num_channels=profile_num_channels)
+edens_profile_spatial = ProfileSignal("Electron density profile",["ppf/hrts/ne"],[jet],causal_shifts=[25],mapping_range=(2,4),num_channels=profile_num_channels)
+etemp = Signal("electron temperature",["ppf/hrtx/te0"],[jet],causal_shifts=[25])
 # epress = Signal("electron pressure",["ppf/hrtx/pe0/"],[jet],causal_shifts=[25])
 
 q95 = Signal("q95 safety factor",['ppf/efit/q95',"EFIT01/RESULTS.AEQDSK.Q95"],[jet,d3d],causal_shifts=[15,10],normalize=False)
@@ -175,17 +175,30 @@ ipdirect = Signal("plasma current direction",["d3d/iptdirect"],[d3d])
 
 #for downloading #modify this to preprocess shots with only a subset of signals. This may produce more shots
 #since only those shots that contain all_signals contained here are used.
+#all_signals = {'q95':q95,'li':li,'ip':ip,
+#'betan':betan,'energy':energy,'lm':lm,'dens':dens,
+#'pradcore':pradcore,'pradedge':pradedge,'pradtot':pradtot,
+#'pin':pin,'torquein':torquein,
+#'tmamp1':tmamp1,'tmamp2':tmamp2,'tmfreq1':tmfreq1,'tmfreq2':tmfreq2,
+#'pechin':pechin,'energydt':energydt,
+#'etemp_profile':etemp_profile,'edens_profile':edens_profile,
+# 'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr,
+# 'etemp_profile_spatial':etemp_profile_spatial,'edens_profile_spatial':edens_profile_spatial,
+# 'etemp':etemp
+#}
+
+#Restricted subset to those signals that are present for most shots. The idea is to remove signals that cause many shots to be dropped from the dataset.
 all_signals = {'q95':q95,'li':li,'ip':ip,
 'betan':betan,'energy':energy,'lm':lm,'dens':dens,
 'pradcore':pradcore,'pradedge':pradedge,'pradtot':pradtot,
 'pin':pin,'torquein':torquein,
-'tmamp1':tmamp1,'tmamp2':tmamp2,'tmfreq1':tmfreq1,'tmfreq2':tmfreq2,
-'pechin':pechin,'energydt':energydt,
-'etemp_profile':etemp_profile,'edens_profile':edens_profile
-# 'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr,
-# 'etemp_profile_spatial':etemp_profile_spatial,'edens_profile_spatial':edens_profile_spatial,
-# 'etemp':etemp
+'energydt':energydt,
+'etemp_profile':etemp_profile,'edens_profile':edens_profile,
+ 'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr
+#'tmamp1':tmamp1,'tmamp2':tmamp2,'tmfreq1':tmfreq1,'tmfreq2':tmfreq2,'pechin':pechin,
+# 'etemp_profile_spatial':etemp_profile_spatial,'edens_profile_spatial':edens_profile_spatial,'etemp':etemp
 }
+
 #new signals are not downloaded yet
 
 
