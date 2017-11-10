@@ -25,7 +25,7 @@ from plasma.utils.state_reset import reset_states
 backend = conf['model']['backend']
 
 def train(conf,shot_list_train,shot_list_validate,loader):
-
+    loader.set_inference_mode(False)
     np.random.seed(1)
 
     validation_losses = []
@@ -296,6 +296,7 @@ def plot_losses(conf,losses_list,specific_builder,name=''):
 
 
 def make_predictions(conf,shot_list,loader):
+    loader.set_inference_mode(True)
 
     use_cores = max(1,mp.cpu_count()-2)
 
@@ -338,10 +339,12 @@ def make_predictions(conf,shot_list,loader):
     pool.close()
     pool.join()
     print('Finished Predictions in {} seconds'.format(time.time()-start_time))
+    loader.set_inference_mode(False)
     return y_prime,y_gold,disruptive
 
 
 def make_single_prediction(shot,specific_builder,loader,model_save_path):
+    loader.set_inference_mode(True)
     model = specific_builder.build_model(True)
     model.compile(optimizer=optimizer_class(),loss=conf['data']['target'].loss)
 
@@ -359,10 +362,12 @@ def make_single_prediction(shot,specific_builder,loader,model_save_path):
     y = np.reshape(y,(shot_length,answer_dims))
     is_disruptive = shot.is_disruptive_shot()
     model.reset_states()
+    loader.set_inference_mode(False)
     return y_p,y,is_disruptive
 
 
 def make_predictions_gpu(conf,shot_list,loader):
+    loader.set_inference_mode(True)
 
     if backend == 'tf' or backend == 'tensorflow':
         first_time = "tensorflow" not in sys.modules
@@ -412,6 +417,7 @@ def make_predictions_gpu(conf,shot_list,loader):
     y_prime = y_prime[:len(shot_list)]
     y_gold = y_gold[:len(shot_list)]
     disruptive = disruptive[:len(shot_list)]
+    loader.set_inference_mode(False)
     return y_prime,y_gold,disruptive
 
 
@@ -425,6 +431,7 @@ def make_predictions_and_evaluate_gpu(conf,shot_list,loader):
     return y_prime,y_gold,disruptive,roc_area,loss
 
 def make_evaluations_gpu(conf,shot_list,loader):
+    loader.set_inference_mode(True)
 
     if backend == 'tf' or backend == 'tensorflow':
         first_time = "tensorflow" not in sys.modules
@@ -473,4 +480,5 @@ def make_evaluations_gpu(conf,shot_list,loader):
         print('evaluations all: {}'.format(all_metrics))
     loss = np.average(all_metrics,weights = all_weights)
     print('Evaluation Loss: {}'.format(loss))
+    loader.set_inference_mode(False)
     return loss 

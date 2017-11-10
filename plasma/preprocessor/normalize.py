@@ -42,6 +42,7 @@ class Normalizer(object):
         self.path = conf['paths']['normalizer_path']
         self.remapper = conf['data']['target'].remapper
         self.machines = set()
+        self.inference_mode = False
 
     @abc.abstractmethod
     def __str__(self):
@@ -66,6 +67,9 @@ class Normalizer(object):
     @abc.abstractmethod
     def load_stats(self):
         pass
+
+    def set_inference_mode(self,val):
+        self.inference_mode = val
 
     def ensure_machine(self,machine):
         if machine not in self.means:
@@ -124,7 +128,7 @@ class Normalizer(object):
 
     def cut_end_of_shot(self,shot):
         cut_shot_ends = self.conf['data']['cut_shot_ends']
-        if cut_shot_ends:
+        if not self.inference_mode and cut_shot_ends: #only cut shots during training
             T_min_warn = self.conf['data']['T_min_warn']
             for key in shot.signals_dict:
                 shot.signals_dict[key] = shot.signals_dict[key][:-T_min_warn,:]

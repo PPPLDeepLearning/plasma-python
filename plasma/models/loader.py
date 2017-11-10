@@ -35,6 +35,9 @@ class Loader(object):
         self.normalizer = normalizer
         self.verbose = True
 
+    def set_inference_mode(self,val):
+        self.normalizer.set_inference_mode(val)
+
     def training_batch_generator(self,shot_list):
         """
         The method implements a training batch generator as a Python generator with a while-loop.

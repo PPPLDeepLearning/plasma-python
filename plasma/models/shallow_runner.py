@@ -60,7 +60,7 @@ class FeatureExtractor(object):
             return val,val
         return sample_prob_d,sample_prob_nd
 
-    def load_shots(self,shot_list,as_list=False,num_samples=np.Inf):
+    def load_shots(self,shot_list,is_inference=False,as_list=False,num_samples=np.Inf):
         X = []
         Y = []
         Disr = []
@@ -68,7 +68,7 @@ class FeatureExtractor(object):
         pbar =  Progbar(len(shot_list))
         
         sample_prob_d,sample_prob_nd = self.get_sample_probs(shot_list,num_samples)
-        fn = partial(self.load_shot,sample_prob_d=sample_prob_d,sample_prob_nd=sample_prob_nd)
+        fn = partial(self.load_shot,is_inference=is_inference,sample_prob_d=sample_prob_d,sample_prob_nd=sample_prob_nd)
         pool = mp.Pool()
         print('loading data in parallel on {} processes'.format(pool._processes))
         for x,y,disr in pool.imap(fn,shot_list):
@@ -92,7 +92,7 @@ class FeatureExtractor(object):
         save_prepath = prepath + "shallow/use_signals_{}/".format(hash(identifying_tuple))
         return save_prepath
 
-    def load_shot(self,shot,sample_prob_d=1.0,sample_prob_nd=1.0):
+    def load_shot(self,shot,is_inference=False,sample_prob_d=1.0,sample_prob_nd=1.0):
         save_prepath = self.get_save_prepath()
         save_path = shot.get_save_path(save_prepath)
         if os.path.isfile(save_path):
@@ -103,10 +103,12 @@ class FeatureExtractor(object):
             prepath = self.loader.conf['paths']['processed_prepath']
             assert(shot.valid)
             shot.restore(prepath)
+            self.loader.set_inference_mode(True)#make sure shots aren't cut
             if self.loader.normalizer is not None:
                 self.loader.normalizer.apply(shot)
             else:
                 print('Warning, no normalization. Training data may be poorly conditioned')
+            self.loader.set_inference_mode(False)
             # sig,res = self.get_signal_result_from_shot(shot)
             disr = 1 if shot.is_disruptive else 0
             sig_sample = shot.signals_dict[use_signals[0]] 
@@ -137,6 +139,13 @@ class FeatureExtractor(object):
                 os.makedirs(save_prepath)
             np.savez(save_path,X=X,Y=Y,disr=disr)
             #print(X.shape,Y.shape)
+
+        #cut shot ends if we are supposed to
+        if self.conf['data']['cut_shot_ends'] and not is_inference: 
+            T_min_warn = self.conf['data']['T_min_warn']
+            X = X[:-T_min_warn]
+            Y = Y[:-T_min_warn]
+
         sample_prob = sample_prob_nd
         if disr:
             sample_prob = sample_prob_d
@@ -362,7 +371,7 @@ def make_predictions(conf,shot_list,loader):
     return y_prime,y_gold,disruptive
 
 def predict_single_shot(shot,model,feature_extractor):
-    X,y,disr = feature_extractor.load_shot(shot)
+    X,y,disr = feature_extractor.load_shot(shot,is_inference=True)
     y_p = model.predict_proba(X)[:,1]
     #print(y)
     #print(y_p)

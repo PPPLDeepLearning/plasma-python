@@ -553,6 +553,7 @@ def load_shotlists(conf):
 #shot_list_train,shot_list_validate,shot_list_test = load_shotlists(conf)
 
 def mpi_make_predictions(conf,shot_list,loader,custom_path=None):
+    loader.set_inference_mode(True)
     np.random.seed(task_index)
     shot_list.sort()#make sure all replicas have the same list
     specific_builder = builder.ModelBuilder(conf) 
@@ -624,6 +625,7 @@ def mpi_make_predictions(conf,shot_list,loader,custom_path=None):
     y_prime_global = y_prime_global[:len(shot_list)]
     y_gold_global = y_gold_global[:len(shot_list)]
     disruptive_global = disruptive_global[:len(shot_list)]
+    loader.set_inference_mode(False)
 
     return y_prime_global,y_gold_global,disruptive_global
 
@@ -638,6 +640,7 @@ def mpi_make_predictions_and_evaluate(conf,shot_list,loader,custom_path=None):
 
 
 def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=None):   
+    loader.set_inference_mode(False)
     conf['num_workers'] = comm.Get_size()
 
     specific_builder = builder.ModelBuilder(conf)
