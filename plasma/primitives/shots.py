@@ -440,7 +440,13 @@ class Shot(object):
 
     def save(self,prepath):
         if not os.path.exists(prepath):
-            os.makedirs(prepath)
+            try: #can lead to race condition
+                os.makedirs(prepath)
+            except OSError as e:
+                if e.errno == errno.EEXIST:# File exists, and it's a directory, another process beat us to creating this dir, that's OK.
+                    pass
+                else:# Our target dir exists as a file, or different error, reraise the error!
+                    raise
         save_path = self.get_save_path(prepath)
         np.savez(save_path,valid=self.valid,is_disruptive=self.is_disruptive,
             signals_dict=self.signals_dict,ttd=self.ttd)
