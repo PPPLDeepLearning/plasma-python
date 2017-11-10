@@ -9,20 +9,21 @@ file_num = 0
 save_figure = True
 pred_ttd = False
 
-cut_shot_ends = conf['data']['cut_shot_ends']
-dt = conf['data']['dt']
-T_max_warn = int(round(conf['data']['T_warning']/dt))
-T_min_warn = conf['data']['T_min_warn']#int(round(conf['data']['T_min_warn']/dt))
-if cut_shot_ends:
-	T_max_warn = T_max_warn-T_min_warn
-	T_min_warn = 0
+# cut_shot_ends = conf['data']['cut_shot_ends']
+# dt = conf['data']['dt']
+# T_max_warn = int(round(conf['data']['T_warning']/dt))
+# T_min_warn = conf['data']['T_min_warn']#int(round(conf['data']['T_min_warn']/dt))
+# if cut_shot_ends:
+# 	T_max_warn = T_max_warn-T_min_warn
+# 	T_min_warn = 0
+T_min_warn = None #take value from conf #30
 
 verbose=False
 results_dir = conf['paths']['results_prepath']
 shots_dir = conf['paths']['processed_prepath']
 
-analyzer = PerformanceAnalyzer(results_dir=results_dir,shots_dir=shots_dir,i = file_num,
-T_min_warn = T_min_warn,T_max_warn = T_max_warn, verbose = verbose, pred_ttd=pred_ttd) 
+analyzer = PerformanceAnalyzer(conf=conf,results_dir=results_dir,shots_dir=shots_dir,i = file_num,
+T_min_warn = T_min_warn, verbose = verbose, pred_ttd=pred_ttd) 
 
 analyzer.load_ith_file()
 

@@ -90,6 +90,7 @@ if not only_predict:
     mpi_train(conf,shot_list_train,shot_list_validate,loader)
 
 #load last model for testing
+loader.set_inference_mode(True)
 print('saving results')
 y_prime = []
 y_gold = []
