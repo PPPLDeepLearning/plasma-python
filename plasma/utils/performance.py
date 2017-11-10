@@ -21,7 +21,7 @@ class PerformanceAnalyzer():
         if T_max_warn == None:
             self.T_max_warn = T_max_warn_def
         if cut_shot_ends:
-            self.T_max_warn = self.T_max_warn-self.T_min
+            self.T_max_warn = self.T_max_warn-self.T_min_warn
             self.T_min_warn = 0
         self.verbose = verbose
         self.results_dir = results_dir

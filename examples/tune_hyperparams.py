@@ -8,9 +8,9 @@ import subprocess as sp
 import numpy as np
 
 tunables = []
-shallow = True
+shallow = False
 num_nodes = 2
-num_trials = 50
+num_trials = 10
 
 #for shallow
 if shallow:
@@ -33,7 +33,12 @@ else:
     target = CategoricalHyperparam(['target'],['maxhinge','hinge'])
     batch_size = CategoricalHyperparam(['training','batch_size'],[1024,256,64])
     dropout_prob = CategoricalHyperparam(['model','dropout_prob'],[0.1,0.3,0.5])
+    conv_filters = CategoricalHyperparam(['model','num_conv_filters'],[5,10])
+    conv_layers = IntegerHyperparam(['model','num_conv_layers'],1,3)
+    rnn_layers = IntegerHyperparam(['model','rnn_layers'],1,4)
+    rnn_size = CategoricalHyperparam(['model','rnn_size'],[100,200,300])
     tunables = [lr,lr_decay,t_warn,fac,target,batch_size,dropout_prob] #target
+    tunables += [conv_filters,conv_layers] #,rnn_layers,rnn_size]
 
 
 run_directory = "/tigress/{}/hyperparams/".format(getpass.getuser())
