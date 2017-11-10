@@ -87,10 +87,10 @@ p = old_mp.Process(target = train,args=(conf,shot_list_train,shot_list_validate,
 p.start()
 p.join()
 
-
 #####################################################
 ####################PREDICTING#######################
 #####################################################
+loader.set_inference_mode(True)
 
 #load last model for testing
 print('saving results')
