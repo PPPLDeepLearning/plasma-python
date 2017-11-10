@@ -6,6 +6,7 @@ import getpass
 import uuid
 import yaml
 
+
 def parameters(input_file):
     """Parse yaml file of configuration parameters."""
 
@@ -21,20 +22,22 @@ def parameters(input_file):
         params['paths']['signal_prepath'] = base_path + params['paths']['signal_prepath']
         params['paths']['shot_list_dir'] = base_path + params['paths']['shot_list_dir']
         params['paths']['output_path'] = output_path
-        params['paths']['processed_prepath'] = output_path +'/processed_shots/'
         if params['training']['hyperparam_tuning']:
-            params['paths']['saved_shotlist_path'] = './normalization/shot_lists.npz'
+            # params['paths']['saved_shotlist_path'] = './normalization/shot_lists.npz'
             params['paths']['normalizer_path'] = './normalization/normalization.npz'
             params['paths']['model_save_path'] = './model_checkpoints/'
             params['paths']['csvlog_save_path'] = './csv_logs/'
             params['paths']['results_prepath'] = './results/'
         else:
-            params['paths']['saved_shotlist_path'] = output_path +'/normalization/shot_lists.npz'
+            # params['paths']['saved_shotlist_path'] = output_path +'/normalization/shot_lists.npz'
             params['paths']['normalizer_path'] = output_path + '/normalization/normalization.npz'
             params['paths']['model_save_path'] = output_path + '/model_checkpoints/'
             params['paths']['csvlog_save_path'] = output_path + '/csv_logs/'
             params['paths']['results_prepath'] = output_path + '/results/'
         params['paths']['tensorboard_save_path'] = output_path + params['paths']['tensorboard_save_path']
+        signal_hash = get_unique_signal_hash(all_signals)
+        params['paths']['saved_shotlist_path'] = params['paths']['base_path'] + '/processed_shotlists/' + params['paths']['data'] + '/shot_lists_signal_group_{}.npz'.format(h)
+        params['paths']['processed_prepath'] = output_path +'/processed_shots/' + 'signal_group_{}/'.format(h)
 
         if params['target'] == 'hinge':
             params['data']['target'] = t.HingeTarget
@@ -129,3 +132,7 @@ def parameters(input_file):
         assert type(params['data']['augment_during_training']) == bool
 
     return params
+
+def get_unique_signal_hash(signals):
+    return hash(tuple(sorted(signals)))
+

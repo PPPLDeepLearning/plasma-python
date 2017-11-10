@@ -101,8 +101,7 @@ class Preprocessor(object):
         return used_shots 
 
     def preprocess_single_file(self,shot):
-        h = self.get_unique_signal_hash()
-        processed_prepath = self.conf['paths']['processed_prepath'] + 'signal_group_{}/'.format(h)
+        processed_prepath = self.conf['paths']['processed_prepath']
         recompute = self.conf['data']['recompute']
         # print('({}/{}): '.format(num_processed,use_shots))
         if recompute or not shot.previously_saved(processed_prepath):
@@ -124,13 +123,8 @@ class Preprocessor(object):
     def get_individual_channel_dirs(self):
         signals_dirs = self.conf['paths']['signals_dirs']
 
-    def get_unique_signal_hash(self):
-        use_signals = self.conf['paths']['all_signals']
-        return hash(tuple(sorted(use_signals)))
-
     def get_shot_list_path(self):
-        h = self.get_unique_signal_hash()
-        return self.conf['paths']['base_path'] + '/processed_shotlists/' + self.conf['paths']['data'] + '/shot_lists_signal_group_{}.npz'.format(h)
+        return self.conf['paths']['saved_shotlist_path']
 
     def load_shotlists(self):
         path = self.get_shot_list_path()
