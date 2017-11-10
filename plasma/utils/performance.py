@@ -610,6 +610,7 @@ class PerformanceAnalyzer():
             nn = Normalizer(self.conf)
             nn.train()
             self.normalizer = nn
+            self.normalizer.set_inference_mode(True)
 
         if(shot.previously_saved(self.shots_dir)):
             shot.restore(self.shots_dir)
