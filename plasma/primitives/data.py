@@ -43,11 +43,14 @@ class Signal(object):
         return os.path.isfile(file_path)
 
     def load_data(self,prepath,shot,dtype='float32'):
+        file_path = self.get_file_path(prepath,shot.machine,shot.number)
         if not self.is_saved(prepath,shot):
             print('Signal {}, shot {} was never downloaded'.format(self.description,shot.number))
             return None,None,False
 
-        file_path = self.get_file_path(prepath,shot.machine,shot.number)
+        if os.path.getsize(file_path) == 0:
+            print('Signal {}, shot {} was downloaded incorrectly (empty file)'.format(self.description,shot.number))
+            return None,None,False
         try:
             data = np.loadtxt(file_path,dtype=dtype)
         except:
