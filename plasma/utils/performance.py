@@ -358,7 +358,7 @@ class PerformanceAnalyzer():
         print("Same Shape!")
    
     def print_conf(self):
-        pprint(self.conf) 
+        pprint(self.saved_conf) 
 
     def get_num_shots(self,mode):
         if mode == 'test':
@@ -605,9 +605,8 @@ class PerformanceAnalyzer():
     def plot_shot(self,shot,save_fig=True,normalize=True,truth=None,prediction=None,P_thresh_opt=None,prediction_type=''):
         if self.normalizer is None and normalize:
             if self.conf is not None:
-                nn = Normalizer(self.conf)
-            else:
-                nn = Normalizer(self.saved_conf)
+                self.saved_conf['paths'] = self.conf['paths']
+            nn = Normalizer(self.saved_conf)
             nn.train()
             self.normalizer = nn
             self.normalizer.set_inference_mode(True)
