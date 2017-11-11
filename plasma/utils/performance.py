@@ -39,6 +39,7 @@ class PerformanceAnalyzer():
         self.p_thresh_range = None
 
         self.normalizer = None
+        self.saved_conf = None
 
 
 
@@ -142,7 +143,7 @@ class PerformanceAnalyzer():
         #rank shots by difficulty. rank 1 is assigned to lowest value, should be highest difficulty
         d_ranks = stats.rankdata(d_thresholds,method='min')#difficulty is highest when threshold is low, can't detect disruption
         nd_ranks = stats.rankdata(-nd_thresholds,method='min')#difficulty is highest when threshold is high, can't avoid false positive 
-        ranking_fac = self.conf['training']['ranking_difficulty_fac']
+        ranking_fac = self.saved_conf['training']['ranking_difficulty_fac']
         facs_d = np.linspace(ranking_fac,1,len(d_ranks))[d_ranks-1]
         facs_nd = np.linspace(ranking_fac,1,len(nd_ranks))[nd_ranks-1]
         ret_facs = np.ones(len(disruptives))
@@ -267,7 +268,7 @@ class PerformanceAnalyzer():
         return TP,FP,FN,TN,early,late
 
     def get_ignore_indices(self):
-        return conf['model']['ignore_timesteps']
+        return self.saved_conf['model']['ignore_timesteps']
 
 
     def get_positives(self,predictions):
@@ -337,7 +338,7 @@ class PerformanceAnalyzer():
         self.disruptive_test = dat['disruptive_test']
         self.shot_list_test = dat['shot_list_test'][()]
         self.shot_list_train = dat['shot_list_train'][()]
-        self.conf = dat['conf'][()]
+        self.saved_conf = dat['conf'][()]
         for mode in ['test','train']:
             print('{}: loaded {} shot ({}) disruptive'.format(mode,self.get_num_shots(mode),self.get_num_disruptive_shots(mode)))
         self.print_conf()
@@ -603,7 +604,10 @@ class PerformanceAnalyzer():
 
     def plot_shot(self,shot,save_fig=True,normalize=True,truth=None,prediction=None,P_thresh_opt=None,prediction_type=''):
         if self.normalizer is None and normalize:
-            nn = Normalizer(self.conf)
+            if self.conf is not None:
+                nn = Normalizer(self.conf)
+            else:
+                nn = Normalizer(self.saved_conf)
             nn.train()
             self.normalizer = nn
             self.normalizer.set_inference_mode(True)
@@ -615,7 +619,7 @@ class PerformanceAnalyzer():
             if normalize:
                 self.normalizer.apply(shot)
 
-            use_signals = self.conf['paths']['use_signals']
+            use_signals = self.saved_conf['paths']['use_signals']
             f,axarr = plt.subplots(len(use_signals)+1,1,sharex=True,figsize=(13,13))#, squeeze=False)
             plt.title(prediction_type)
             assert(np.all(shot.ttd.flatten() == truth.flatten()))
