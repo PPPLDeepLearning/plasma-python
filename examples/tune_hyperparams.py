@@ -10,8 +10,9 @@ import numpy as np
 tunables = []
 shallow = False
 num_nodes = 2
-num_trials = 10
+num_trials = 50
 
+cut_ends = CategoricalHyperparam(['data','cut_shot_ends'],[False,True])
 #for shallow
 if shallow:
     num_nodes = 1
@@ -23,7 +24,7 @@ if shallow:
     xg_learning_rate = ContinuousHyperparam(['model','shallow_model','learning_rate'],0,1)
     scale_pos_weight = CategoricalHyperparam(['model','shallow_model','scale_pos_weight'],[1,10.0,100.0])
     num_samples = CategoricalHyperparam(['model','shallow_model','num_samples'],[10000,100000,1000000,1e7])
-    tunables = [shallow_model,n_estimators,max_depth,C,kernel,xg_learning_rate,scale_pos_weight,num_samples] #target
+    tunables = [shallow_model,n_estimators,max_depth,C,kernel,xg_learning_rate,scale_pos_weight,num_samples,cut_ends] #target
 else:
     #for DL
     lr = LogContinuousHyperparam(['model','lr'],5e-6,4e-4)
@@ -37,7 +38,7 @@ else:
     conv_layers = IntegerHyperparam(['model','num_conv_layers'],1,3)
     rnn_layers = IntegerHyperparam(['model','rnn_layers'],1,4)
     rnn_size = CategoricalHyperparam(['model','rnn_size'],[100,200,300])
-    tunables = [lr,lr_decay,t_warn,fac,target,batch_size,dropout_prob] #target
+    tunables = [lr,lr_decay,t_warn,fac,target,batch_size,dropout_prob,cut_ends] #target
     tunables += [conv_filters,conv_layers] #,rnn_layers,rnn_size]
 
 
