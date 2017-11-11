@@ -108,8 +108,11 @@ class Normalizer(object):
         recompute = conf['data']['recompute_normalization']
         if recompute:
             machines_to_compute = all_machines
+            previously_saved = False
 
         if not previously_saved or len(machines_to_compute) > 0:
+            if previously_saved:
+                self.load_stats()
             print('computing normalization for machines {}'.format(machines_to_compute))
             use_cores = max(1,mp.cpu_count()-2)
             pool = mp.Pool(use_cores)
@@ -258,7 +261,7 @@ class MeanVarNormalizer(Normalizer):
         print('saved normalization data from {} shots ( {} disruptive )'.format(self.num_processed,self.num_disruptive))
 
     def load_stats(self):
-        assert self.previously_saved_stats(), "stats not saved before"
+        assert self.previously_saved_stats()[0], "stats not saved before"
         dat = np.load(self.path,encoding="latin1")
         self.means = dat['means'][()]
         self.stds = dat['stds'][()]
@@ -386,7 +389,7 @@ class MinMaxNormalizer(Normalizer):
         print('saved normalization data from {} shots ( {} disruptive )'.format(self.num_processed,self.num_disruptive))
 
     def load_stats(self):
-        assert(self.previously_saved_stats())
+        assert(self.previously_saved_stats()[0])
         dat = np.load(self.path,encoding="latin1")
         self.minimums = dat['minimums'][()]
         self.maximums = dat['maximums'][()]
