@@ -198,7 +198,8 @@ class MeanVarNormalizer(Normalizer):
             list_of_signals = shot.get_individual_signal_arrays()
             num_signals = len(list_of_signals)
             stats.means = np.reshape(np.array([np.mean(sig) for sig in list_of_signals]),(1,num_signals))
-            stats.stds = np.reshape(np.array([np.std(sig) for sig in list_of_signals]),(1,num_signals))
+            stats.stds = np.reshape(np.array([np.std(sig,dtype=np.float64) for sig in list_of_signals]),(1,num_signals))
+                
             stats.is_disruptive = shot.is_disruptive
         else:
             print('Warning: shot {} not valid, omitting'.format(shot.number))

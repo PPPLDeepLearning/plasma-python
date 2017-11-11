@@ -12,7 +12,6 @@ from plasma.conf import conf
 
 class PerformanceAnalyzer():
     def __init__(self,results_dir=None,shots_dir=None,i = 0,T_min_warn = None,T_max_warn = None, verbose = False,pred_ttd=False,conf=None):
-        cut_shot_ends = conf['data']['cut_shot_ends']
         dt = conf['data']['dt']
         T_max_warn_def = int(round(conf['data']['T_warning']/dt))
         T_min_warn_def = conf['data']['T_min_warn']#int(round(conf['data']['T_min_warn']/dt))
@@ -20,9 +19,6 @@ class PerformanceAnalyzer():
             self.T_min_warn = T_min_warn_def
         if T_max_warn == None:
             self.T_max_warn = T_max_warn_def
-        if cut_shot_ends:
-            self.T_max_warn = self.T_max_warn-self.T_min_warn
-            self.T_min_warn = 0
         self.verbose = verbose
         self.results_dir = results_dir
         self.shots_dir = shots_dir
