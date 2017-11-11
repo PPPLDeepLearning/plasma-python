@@ -93,19 +93,24 @@ class Normalizer(object):
 
         # shot_list_dir = conf['paths']['shot_list_dir']
         use_shots = max(400,conf['data']['use_shots'])
-        return self.train_on_files(shot_files_use,use_shots)
+        return self.train_on_files(shot_files_use,use_shots,all_machines)
 
 
-    def train_on_files(self,shot_files,use_shots):
+    def train_on_files(self,shot_files,use_shots,all_machines):
         conf = self.conf
         all_signals = conf['paths']['all_signals'] 
         shot_list = ShotList()
         shot_list.load_from_shot_list_files_objects(shot_files,all_signals)
         shot_list_picked = shot_list.random_sublist(use_shots) 
 
+        previously_saved,machines_saved = self.previously_saved_stats()
+        machines_to_compute = all_machines - machines_saved
         recompute = conf['data']['recompute_normalization']
+        if recompute:
+            machines_to_compute = all_machines
 
-        if recompute or not self.previously_saved_stats():
+        if not previously_saved or len(machines_to_compute) > 0:
+            print('computing normalization for machines {}'.format(machines_to_compute))
             use_cores = max(1,mp.cpu_count()-2)
             pool = mp.Pool(use_cores)
             print('running in parallel on {} processes'.format(pool._processes))
@@ -113,8 +118,9 @@ class Normalizer(object):
 
             for (i,stats) in enumerate(pool.imap_unordered(self.train_on_single_shot,shot_list_picked)):
             #for (i,stats) in enumerate(map(self.train_on_single_shot,shot_list_picked)):
-                self.incorporate_stats(stats)
-                self.machines.add(stats.machine)
+                if stats.machine in machines_to_compute:
+                    self.incorporate_stats(stats)
+                    self.machines.add(stats.machine)
                 sys.stdout.write('\r' + '{}/{}'.format(i,len(shot_list_picked)))
 
             pool.close()
@@ -160,7 +166,7 @@ class Normalizer(object):
 
     def previously_saved_stats(self):
         if not os.path.isfile(self.path):
-            return False
+            return False,set([])
         else:
             dat = np.load(self.path,encoding="latin1")
             machines = dat['machines'][()]
@@ -169,7 +175,7 @@ class Normalizer(object):
                 print(machines)
                 print(self.conf['paths']['all_machines'])
                 print('Not all machines present. Recomputing normalizer.')
-            return ret
+            return ret,set(machines)
 
     # def get_indices_list(self):
     #     return get_signal_slices(self.conf['paths']['signals_dirs'])
