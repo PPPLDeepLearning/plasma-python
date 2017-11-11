@@ -178,7 +178,7 @@ class Normalizer(object):
                 print(machines)
                 print(self.conf['paths']['all_machines'])
                 print('Not all machines present. Recomputing normalizer.')
-            return ret,set(machines)
+            return True,set(machines)
 
     # def get_indices_list(self):
     #     return get_signal_slices(self.conf['paths']['signals_dirs'])
