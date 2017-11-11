@@ -91,8 +91,9 @@ def parameters(input_file):
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = [] 
             #make sure all 1D signals appear last!
-            params['paths']['use_signals_dict'] = {'q95':q95,'li':li,'ip':ip,'lm':lm,'betan':betan,'energy':energy,'dens':dens,'pradcore':pradcore,
-'pradedge':pradedge,'pin':pin,'torquein':torquein,'ipdirect':ipdirect} #'etemp_profile':etemp_profile,'edens_profile'}
+            params['paths']['use_signals_dict'] = d3d_signals
+            #params['paths']['use_signals_dict'] = {'q95':q95,'li':li,'ip':ip,'lm':lm,'betan':betan,'energy':energy,'dens':dens,'pradcore':pradcore,
+#'pradedge':pradedge,'pin':pin,'torquein':torquein,'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr, 'etemp_profile':etemp_profile ,'edens_profile':edens_profile}
             #[q95,li,ip,lm,betan,energy,dens,pradcore,pradedge,pin,pechin,torquein,ipdirect,etemp_profile,edens_profile][:-2]
 
         elif params['paths']['data'] == 'jet_to_d3d_data':
