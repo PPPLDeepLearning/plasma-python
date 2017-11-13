@@ -68,8 +68,12 @@ class Signal(object):
 
         if self.is_ip: #restrict shot to current threshold
             region = np.where(np.abs(sig) >= shot.machine.current_threshold)[0]
-            t = t[region]
-            sig = sig[region,:]
+            first_idx = region[0]
+            last_idx = region[-1]
+            last_time = t[last_idx]+5e-2 #add 50 ms to cover possible disruption event
+            last_idx = np.where(t > last_time)[0][0]
+            t = t[fist_idx:last_idx]
+            sig = sig[fist_idx:last_idx,:]
 
         #make sure shot is not garbage data
         if len(t) <= 1 or (np.max(sig) == 0.0 and np.min(sig) == 0.0):
