@@ -71,7 +71,11 @@ class Signal(object):
             first_idx = region[0]
             last_idx = region[-1]
             last_time = t[last_idx]+5e-2 #add 50 ms to cover possible disruption event
-            last_idx = np.where(t > last_time)[0][0]
+            last_indices = np.where(t > last_time)[0]
+            if len(last_indices) == 0
+                last_idx = -1
+            else:
+                last_idx = last_indices[0]
             t = t[fist_idx:last_idx]
             sig = sig[fist_idx:last_idx,:]
 
