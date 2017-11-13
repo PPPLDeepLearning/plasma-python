@@ -48,6 +48,8 @@ def parameters(input_file):
             params['data']['target'] = t.BinaryTarget
         elif params['target'] == 'ttd':
             params['data']['target'] = t.TTDTarget
+        elif params['target'] == 'ttdinv':
+            params['data']['target'] = t.TTDInvTarget
         elif params['target'] == 'ttdlinear':
             params['data']['target'] = t.TTDLinearTarget
         else:

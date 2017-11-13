@@ -64,6 +64,28 @@ class TTDTarget(Target):
         return np.linspace(-np.log10(T_warning),6,100)
 
 
+class TTDInvTarget(Target):
+    activation = 'linear'
+    loss = 'mse'
+
+    @staticmethod
+    def loss_np(y_true,y_pred):
+        return mse_np(y_true,y_pred)
+
+    @staticmethod
+    def remapper(ttd,T_warning):
+        eps = 1e-4
+        ttd = 10**(ttd)
+        mask = ttd < T_warning
+        ttd[~mask] = 0#T_warning
+        ttd[mask] = 30.0/(ttd[mask]+eps_)#T_warning
+        return ttd
+
+    @staticmethod
+    def threshold_range(T_warning):
+        return np.logspace(-6,np.log10(T_warning),100)
+
+    
 
 class TTDLinearTarget(Target):
     activation = 'linear'
