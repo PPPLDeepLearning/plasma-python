@@ -400,14 +400,18 @@ class Shot(object):
         assert(t_max > t_min or not valid)
         #make sure the shot is long enough.
         dt = conf['data']['dt']
-        if (t_max - t_min)/dt <= (conf['model']['length']+conf['data']['T_min_warn']):
-            print('Shot {} contains insufficient data'.format(self.number))
+        if (t_max - t_min)/dt <= (2*conf['model']['length']+conf['data']['T_min_warn']):
+            print('Shot {} contains insufficient data, omitting.'.format(self.number))
             valid = False
+
+        if self.is_disruptive and self.t_disrupt > t_max:
+            print('Shot {}: disruption event is not contained in valid time region, omitting.'.format(self.number))
+            valid = False 
                 
         
         if self.is_disruptive:
-            t_max = self.t_disrupt
             assert(self.t_disrupt <= t_max or not valid)
+            t_max = self.t_disrupt
 
         return time_arrays,signal_arrays,t_min,t_max,valid
 

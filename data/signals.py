@@ -129,7 +129,7 @@ def fetch_nstx_data(signal_path,shot_num,c):
 
 
 
-d3d = Machine("d3d","atlas.gat.com",fetch_d3d_data,max_cores=32,current_threshold=1e-1)
+d3d = Machine("d3d","atlas.gat.com",fetch_d3d_data,max_cores=32,current_threshold=2e-1)
 jet = Machine("jet","mdsplus.jet.efda.org",fetch_jet_data,max_cores=8,current_threshold=1e5)
 nstx = Machine("nstx","skylark.pppl.gov:8501::",fetch_nstx_data,max_cores=8)
 
