@@ -140,6 +140,8 @@ class ModelBuilder(object):
                 pre_rnn_1D = Convolution1D(num_conv_filters,size_conv_filters,padding='valid',activation='relu') (pre_rnn_1D)
                 pre_rnn_1D = MaxPooling1D(pool_size) (pre_rnn_1D)
             pre_rnn_1D = Flatten() (pre_rnn_1D)
+            pre_rnn_1D = Dense(num_conv_filters*4,activation='relu',kernel_regularizer=l2(dense_regularization),bias_regularizer=l2(dense_regularization),activity_regularizer=l2(dense_regularization)) (pre_rnn_1D)
+            pre_rnn_1D = Dense(num_conv_filters,activation='relu',kernel_regularizer=l2(dense_regularization),bias_regularizer=l2(dense_regularization),activity_regularizer=l2(dense_regularization)) (pre_rnn_1D)
             pre_rnn = Concatenate() ([pre_rnn_0D,pre_rnn_1D])
         else:
             pre_rnn = pre_rnn_input        
