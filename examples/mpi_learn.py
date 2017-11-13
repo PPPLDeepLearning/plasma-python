@@ -54,7 +54,7 @@ from mpi4py import MPI
 comm = MPI.COMM_WORLD
 task_index = comm.Get_rank()
 num_workers = comm.Get_size()
-NUM_GPUS = 4
+NUM_GPUS = conf['num_gpus']
 MY_GPU = task_index % NUM_GPUS
 
 from plasma.models.mpi_runner import *
