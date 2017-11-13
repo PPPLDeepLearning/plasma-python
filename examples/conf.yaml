@@ -3,7 +3,7 @@
 #will do stuff in fs_path / [username] / signal_data | shot_lists | processed shots, etc.
 
 fs_path: '/tigress'
-target: 'hinge' #'maxhinge' #'binary' #'hinge' 
+target: 'ttdinv' #'maxhinge' #'maxhinge' #'binary' #'hinge' 
 num_gpus: 4
 
 paths:
@@ -37,7 +37,7 @@ data:
     #maximum TTD considered
     T_max: 1000.0
     #The shortest works best so far: less overfitting. log TTd prediction also works well. 0.5 better than 0.2
-    T_warning: 1.024 #1.024 #1.024 #0.512 #0.25 #1.0 #1.0 #warning time in seconds
+    T_warning: 10.024 #1.024 #1.024 #0.512 #0.25 #1.0 #1.0 #warning time in seconds
     current_thresh: 750000
     current_end_thresh: 10000
     #the characteristic decay length of the decaying moving average window
@@ -53,9 +53,9 @@ data:
 model:
     shallow: False
     shallow_model: 
-        num_samples: 10000 #1000000 #the number of samples to use for training
-        type: "svm" #"xgboost" #"random_forest" "xgboost"
-        n_estimators: 500 #for random forest
+        num_samples: 1000000 #1000000 #the number of samples to use for training
+        type: "xgboost" #"xgboost" #"random_forest" "xgboost"
+        n_estimators: 100 #for random forest
         max_depth: 3 #for random forest and xgboost (def = 3)
         C: 1.0 #for svm
         kernel: "rbf" #rbf, sigmoid, linear, poly, for svm
@@ -77,7 +77,7 @@ model:
     rnn_layers: 2
     num_conv_filters: 10
     size_conv_filters: 3
-    num_conv_layers: 2
+    num_conv_layers: 3
     pool_size: 2
     dense_size: 200
     #have not found a difference yet
@@ -87,7 +87,7 @@ model:
     dense_regularization: 0.01
     #1e-4 is too high, 5e-7 is too low. 5e-5 seems best at 256 batch size, full dataset and ~10 epochs, and lr decay of 0.90. 1e-4 also works well if we decay a lot (i.e ~0.7 or more)
     lr: 0.00001 #0.00001 #0.0005 #for adam plots 0.0000001 #0.00005 #0.00005 #0.00005
-    lr_decay: 0.985 #0.98 #0.9
+    lr_decay: 0.97 #0.98 #0.9
     stateful: True
     return_sequences: True
     dropout_prob: 0.1
@@ -100,7 +100,7 @@ training:
     shuffle_training: True
     train_frac: 0.75
     validation_frac: 0.33
-    batch_size: 1024 #256
+    batch_size: 128 #256
     #THIS WAS THE CULPRIT FOR NO TRAINING! Lower than 1000 performs very poorly
     max_patch_length: 100000
     #How many shots are we loading at once?
@@ -110,7 +110,7 @@ training:
     data_parallel: False
     hyperparam_tuning: False
     batch_generator_warmup_steps: 0
-    num_batches_minimum: 100 #minimum number of batches per epoch
+    num_batches_minimum: 200 #minimum number of batches per epoch
     ranking_difficulty_fac: 1.0 #how much to upweight incorrectly classified shots during training
 callbacks:
     list: ['earlystop']

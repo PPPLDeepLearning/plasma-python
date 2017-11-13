@@ -27,15 +27,15 @@ if shallow:
     tunables = [shallow_model,n_estimators,max_depth,C,kernel,xg_learning_rate,scale_pos_weight,num_samples,cut_ends] #target
 else:
     #for DL
-    lr = LogContinuousHyperparam(['model','lr'],5e-6,4e-4)
+    lr = LogContinuousHyperparam(['model','lr'],1e-7,1e-4)
     lr_decay = CategoricalHyperparam(['model','lr_decay'],[0.97,0.985,1.0])
-    t_warn = CategoricalHyperparam(['data','T_warning'],[0.256,1.024,4.096])
+    t_warn = CategoricalHyperparam(['data','T_warning'],[0.256,1.024,10.024])
     fac = CategoricalHyperparam(['data','positive_example_penalty'],[1.0,4.0,16.0])
-    target = CategoricalHyperparam(['target'],['maxhinge','hinge'])
-    batch_size = CategoricalHyperparam(['training','batch_size'],[1024,256,64])
+    target = CategoricalHyperparam(['target'],['maxhinge','hinge','ttdinv','ttd'])
+    batch_size = CategoricalHyperparam(['training','batch_size'],[128,64])
     dropout_prob = CategoricalHyperparam(['model','dropout_prob'],[0.1,0.3,0.5])
     conv_filters = CategoricalHyperparam(['model','num_conv_filters'],[5,10])
-    conv_layers = IntegerHyperparam(['model','num_conv_layers'],1,3)
+    conv_layers = IntegerHyperparam(['model','num_conv_layers'],2,4)
     rnn_layers = IntegerHyperparam(['model','rnn_layers'],1,4)
     rnn_size = CategoricalHyperparam(['model','rnn_size'],[100,200,300])
     tunables = [lr,lr_decay,t_warn,fac,target,batch_size,dropout_prob,cut_ends] #target

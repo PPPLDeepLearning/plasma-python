@@ -94,9 +94,11 @@ def parameters(input_file):
             params['paths']['shot_files_test'] = [] 
             #make sure all 1D signals appear last!
             #params['paths']['use_signals_dict'] = d3d_signals
-            params['paths']['use_signals_dict'] = {'q95':q95,'li':li,'lm':lm,'betan':betan,'energy':energy,'dens':dens,'pradcore':pradcore,'pradedge':pradedge,'pin':pin,'torquein':torquein,'ip':ip,'iptarget':iptarget,'iperr':iperr}
+            #params['paths']['use_signals_dict'] = {'q95':q95,'li':li,'lm':lm,'betan':betan,'energy':energy,'dens':dens,'pradcore':pradcore,'pradedge':pradedge,'pin':pin,'torquein':torquein,'ip':ip,'iptarget':iptarget,'iperr':iperr}
  
-            #params['paths']['use_signals_dict'] = {'ipdirect':ipdirect,'etemp_profile':etemp_profile ,'edens_profile':edens_profile}
+            params['paths']['use_signals_dict'] = {'q95':q95,'li':li,'ip':ip,'lm':lm,'betan':betan,'energy':energy,'dens':dens,'pradcore':pradcore,
+'pradedge':pradedge,'pin':pin,'torquein':torquein,'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr,
+'etemp_profile':etemp_profile ,'edens_profile':edens_profile}
  
             
             #{'ipdirect':ipdirect,'etemp_profile':etemp_profile ,'edens_profile':edens_profile}
