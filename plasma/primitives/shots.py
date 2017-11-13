@@ -400,7 +400,7 @@ class Shot(object):
         assert(t_max > t_min or not valid)
         #make sure the shot is long enough.
         dt = conf['data']['dt']
-        if (t_max - t_min)/dt <= (conf['model']['length']+conf['data']['T_min_warn']):
+        if (t_max - t_min)/dt <= (2*conf['model']['length']+conf['data']['T_min_warn']):
             print('Shot {} contains insufficient data, omitting.'.format(self.number))
             valid = False
 
