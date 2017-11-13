@@ -137,8 +137,8 @@ class Signal(object):
         return self.description
 
 class ProfileSignal(Signal):
-    def __init__(self,description,paths,machines,tex_label=None,causal_shifts=None,mapping_range=(0,1),num_channels=32):
-        super(ProfileSignal, self).__init__(description,paths,machines,tex_label,causal_shifts,is_ip=False)
+    def __init__(self,description,paths,machines,tex_label=None,causal_shifts=None,mapping_range=(0,1),num_channels=32,data_avail_tolerance=0):
+        super(ProfileSignal, self).__init__(description,paths,machines,tex_label,causal_shifts,is_ip=False,data_avail_tolerance=data_avail_tolerance)
         self.mapping_range = mapping_range
         self.num_channels = num_channels
 
