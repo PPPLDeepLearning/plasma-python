@@ -394,9 +394,17 @@ class Shot(object):
                 assert(len(t.shape) == 1)
                 assert(len(t) > 1)
                 t_min = max(t_min,np.min(t))
-                t_max = min(t_max,np.max(t))
                 signal_arrays.append(sig)
                 time_arrays.append(t)
+                if self.is_disruptive and self.t_disrupt > np.max(t):
+                    if self.t_disrupt > np.max(t) + signal.data_avail_tolerance:
+                        print('Shot {}: disruption event is not contained in valid time region of signal {} by {}s, omitting.'.format(self.number,signal,self.t_disrupt - np.max(t)))
+                        valid = False 
+                    else:
+                        t_max = np.max(t) + signal.data_avail_tolerance
+                else:
+                    t_max = min(t_max,np.max(t))
+
         assert(t_max > t_min or not valid)
         #make sure the shot is long enough.
         dt = conf['data']['dt']
@@ -404,9 +412,9 @@ class Shot(object):
             print('Shot {} contains insufficient data, omitting.'.format(self.number))
             valid = False
 
-        if self.is_disruptive and self.t_disrupt > t_max:
-            print('Shot {}: disruption event is not contained in valid time region by {}s, omitting.'.format(self.number,self.t_disrupt - t_max))
-            valid = False 
+        # if self.is_disruptive and self.t_disrupt > t_max+conf['data']['data_avail_tolerance']:
+        #     print('Shot {}: disruption event is not contained in valid time region by {}s, omitting.'.format(self.number,self.t_disrupt - t_max))
+        #     valid = False 
                 
         
         if self.is_disruptive:

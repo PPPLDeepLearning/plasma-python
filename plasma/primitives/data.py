@@ -15,7 +15,7 @@ from plasma.utils.downloading import format_save_path
 #           self.signals.append(Signal(signal_descriptions[i],signal_paths[i]))
 
 class Signal(object):
-    def __init__(self,description,paths,machines,tex_label=None,causal_shifts=None,is_ip=False,normalize=True):
+    def __init__(self,description,paths,machines,tex_label=None,causal_shifts=None,is_ip=False,normalize=True,data_avail_tolerance=0):
         assert(len(paths) == len(machines))
         self.description = description
         self.paths = paths
@@ -26,6 +26,7 @@ class Signal(object):
         self.is_ip = is_ip
         self.num_channels = 1
         self.normalize = normalize
+        self.data_avail_tolerance = data_avail_tolerance
 
     def is_ip(self):
         return self.is_ip
