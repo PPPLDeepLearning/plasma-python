@@ -1,6 +1,9 @@
 from __future__ import print_function
 import matplotlib
 matplotlib.use('Agg')#for machines that don't have a display
+from matplotlib import rc
+rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
+rc('text', usetex=True)
 import matplotlib.pyplot as plt
 import os
 from pprint import pprint
@@ -12,6 +15,8 @@ from plasma.conf import conf
 
 class PerformanceAnalyzer():
     def __init__(self,results_dir=None,shots_dir=None,i = 0,T_min_warn = None,T_max_warn = None, verbose = False,pred_ttd=False,conf=None):
+        self.T_min_warn = T_min_warn
+        self.T_max_warn = T_max_warn
         dt = conf['data']['dt']
         T_max_warn_def = int(round(conf['data']['T_warning']/dt))
         T_min_warn_def = conf['data']['T_min_warn']#int(round(conf['data']['T_min_warn']/dt))
@@ -24,6 +29,7 @@ class PerformanceAnalyzer():
         self.shots_dir = shots_dir
         self.i = i
         self.pred_ttd = pred_ttd
+        self.saved_conf = conf
         self.conf = conf
 
         self.pred_train = None
@@ -39,7 +45,6 @@ class PerformanceAnalyzer():
         self.p_thresh_range = None
 
         self.normalizer = None
-        self.saved_conf = None
 
 
 
@@ -605,7 +610,7 @@ class PerformanceAnalyzer():
     def plot_shot(self,shot,save_fig=True,normalize=True,truth=None,prediction=None,P_thresh_opt=None,prediction_type=''):
         if self.normalizer is None and normalize:
             if self.conf is not None:
-                self.saved_conf['paths'] = self.conf['paths']
+                self.saved_conf['paths']['normalizer_path'] = self.conf['paths']['normalizer_path']
             nn = Normalizer(self.saved_conf)
             nn.train()
             self.normalizer = nn
@@ -631,44 +636,13 @@ class PerformanceAnalyzer():
                 else:
                     ax.imshow(sig_arr[:,:].T, aspect='auto', label = sig.description + " (profile)")
                     ax.set_ylim([0,num_channels])
-                ax.legend(loc='upper center',fontsize=8)
+                ax.legend(loc='best',fontsize=8)
                 plt.setp(ax.get_xticklabels(),visible=False)
                 plt.setp(ax.get_yticklabels(),fontsize=7)
                 f.subplots_adjust(hspace=0)
                 #print(sig)
                 #print('min: {}, max: {}'.format(np.min(sig_arr), np.max(sig_arr)))
-            #shot.signals is a 2D numpy array with the rows containing the unlabeled timeseries data
-            # signals = np.empty((len(shot.signals),0)) #None
-
-            # labels = []
-            # signals_index = 0
-            # signals_masks = conf['paths']['signals_masks']
-            # plot_masks = conf['plots']['plot_masks']
-            # group_labels = conf['plots']['group_labels']
-            # for i, group in enumerate(conf['paths']['signals_dirs']):
-            #     for j,signal_name in enumerate(group):
-            #         if signals_masks[i][j]: #signal was used in training/testing
-            #             if plot_masks[i][j]: #subset of signals to be plotted
-            #                 labels += group_labels[i] #original object was 2D by PPFvs.JPF x signal group
-            #                 signals = np.column_stack((signals,shot.signals.T[signals_index]))
-            #             signals_index += 1
-
-            # if is_disruptive:
-            #     print('disruptive')
-            # else:
-            #     print('non disruptive')
-
-            # f,axarr = subplots(len(signals.T)+1,1,sharex=True,figsize=(13,13))#, squeeze=False)
-            # title(prediction_type)
-            # for (i,sig) in enumerate(signals.T):
-            #     ax = axarr[i]
-            #     ax.plot(sig[::-1],label = labels[i])
-            #     ax.legend(loc='best',fontsize=8)
-            #     setp(ax.get_xticklabels(),visible=False)
-            #     setp(ax.get_yticklabels(),fontsize=7)
-            #     f.subplots_adjust(hspace=0)
-            #     print('min: {}, max: {}'.format(min(sig), max(sig)))
-            ax = axarr[-1] 
+                ax = axarr[-1] 
             if self.pred_ttd:
                 ax.semilogy((-truth+0.0001),label='ground truth')
                 ax.plot(-prediction+0.0001,'g',label='neural net prediction')
@@ -683,7 +657,7 @@ class PerformanceAnalyzer():
                 ax.axvline(len(truth)-self.T_max_warn,color='r',label='min warning time')
             ax.axvline(len(truth)-self.T_min_warn,color='r',label='max warning time')
             ax.set_xlabel('T [ms]')
-            ax.legend(loc = 'lower left',fontsize=10)
+            #ax.legend(loc = 'lower left',fontsize=10)
             plt.setp(ax.get_yticklabels(),fontsize=7)
             # ax.grid()           
             if save_fig:
@@ -707,7 +681,7 @@ class PerformanceAnalyzer():
         plt.legend(loc=(1.0,.6))
         plt.xlabel('Alarm threshold')
         plt.grid()
-        title_str = 'metrics{}'.format(plot_string)
+        title_str = 'metrics{}'.format(plot_string.replace('_',' '))
         plt.title(title_str)
         if save_figure:
             plt.savefig(title_str + '.png',bbox_inches='tight')

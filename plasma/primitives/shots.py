@@ -405,7 +405,7 @@ class Shot(object):
             valid = False
 
         if self.is_disruptive and self.t_disrupt > t_max:
-            print('Shot {}: disruption event is not contained in valid time region, omitting.'.format(self.number))
+            print('Shot {}: disruption event is not contained in valid time region by {}s, omitting.'.format(self.number,self.t_disrupt - t_max))
             valid = False 
                 
         

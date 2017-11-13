@@ -77,8 +77,8 @@ class TTDInvTarget(Target):
         eps = 1e-4
         ttd = 10**(ttd)
         mask = ttd < T_warning
-        ttd[~mask] = 0#T_warning
-        ttd[mask] = 30.0/(ttd[mask]+eps_)#T_warning
+        ttd[~mask] = T_warning
+        ttd = (1.0)/(ttd+eps)#T_warning
         return ttd
 
     @staticmethod
@@ -188,3 +188,4 @@ class HingeTarget(Target):
     @staticmethod
     def threshold_range(T_warning):
         return np.concatenate((np.linspace(-2,-1.06,100),np.linspace(-1.06,-0.96,100),np.linspace(-0.96,2,50)))
+

@@ -141,8 +141,8 @@ class FeatureExtractor(object):
             #print(X.shape,Y.shape)
 
         #cut shot ends if we are supposed to
-        if self.conf['data']['cut_shot_ends'] and not is_inference: 
-            T_min_warn = self.conf['data']['T_min_warn']
+        if self.loader.conf['data']['cut_shot_ends'] and not is_inference: 
+            T_min_warn = self.loader.conf['data']['T_min_warn']
             X = X[:-T_min_warn]
             Y = Y[:-T_min_warn]
 
