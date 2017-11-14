@@ -92,23 +92,24 @@ def parameters(input_file):
         elif params['paths']['data'] == 'd3d_data':
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = [] 
-            #make sure all 1D signals appear last!
-            #params['paths']['use_signals_dict'] = d3d_signals
-            #params['paths']['use_signals_dict'] = {'q95':q95,'li':li,'lm':lm,'betan':betan,'energy':energy,'dens':dens,'pradcore':pradcore,'pradedge':pradedge,'pin':pin,'torquein':torquein,'ip':ip,'iptarget':iptarget,'iperr':iperr}
- 
             params['paths']['use_signals_dict'] = {'q95':q95,'li':li,'ip':ip,'lm':lm,'betan':betan,'energy':energy,'dens':dens,'pradcore':pradcore,
-'pradedge':pradedge,'pin':pin,'torquein':torquein,'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr,
-'etemp_profile':etemp_profile ,'edens_profile':edens_profile}
- 
-            
-            #{'ipdirect':ipdirect,'etemp_profile':etemp_profile ,'edens_profile':edens_profile}
-            #{'ip':ip,'iperr':iperr,'li':li,'lm':lm,'pradcore':pradcore,'pradedge':pradedge,'betan':betan,'dens':dens,'energy':energy,'q95':q95}
-            
-#            {'q95':q95,'li':li,'ip':ip,'lm':lm,'betan':betan,'energy':energy,'dens':dens,'pradcore':pradcore,
-#'pradedge':pradedge,'pin':pin,'torquein':torquein,'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr,
-#'etemp_profile':etemp_profile ,'edens_profile':edens_profile}
-            #[q95,li,ip,lm,betan,energy,dens,pradcore,pradedge,pin,pechin,torquein,ipdirect,etemp_profile,edens_profile][:-2]
+            'pradedge':pradedge,'pin':pin,'torquein':torquein,'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr,
+            'etemp_profile':etemp_profile ,'edens_profile':edens_profile}
+        elif params['paths']['data'] == 'd3d_data_1D':
+            params['paths']['shot_files'] = [d3d_full]
+            params['paths']['shot_files_test'] = [] 
+            params['paths']['use_signals_dict'] = {'ipdirect':ipdirect,'etemp_profile':etemp_profile ,'edens_profile':edens_profile}
+        elif params['paths']['data'] == 'd3d_data_0D':
+            params['paths']['shot_files'] = [d3d_full]
+            params['paths']['shot_files_test'] = [] 
+            params['paths']['use_signals_dict'] = {'q95':q95,'li':li,'ip':ip,'lm':lm,'betan':betan,'energy':energy,'dens':dens,'pradcore':pradcore,
+            'pradedge':pradedge,'pin':pin,'torquein':torquein,'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr}
+        elif params['paths']['data'] == 'd3d_data_all':
+            params['paths']['shot_files'] = [d3d_full]
+            params['paths']['shot_files_test'] = [] 
+            params['paths']['use_signals_dict'] = d3d_signals
 
+        #cross-machine
         elif params['paths']['data'] == 'jet_to_d3d_data':
             params['paths']['shot_files'] = [jet_carbon_wall]
             params['paths']['shot_files_test'] = [d3d_full]
