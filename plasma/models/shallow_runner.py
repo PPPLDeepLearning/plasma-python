@@ -24,6 +24,7 @@ from plasma.models.loader import Loader, ProcessGenerator
 from plasma.utils.performance import PerformanceAnalyzer
 from plasma.utils.evaluation import *
 from plasma.utils.state_reset import reset_states
+from plasma.utils.downloading import makedirs_process_safe
 
 from keras.utils.generic_utils import Progbar 
 
@@ -87,53 +88,63 @@ class FeatureExtractor(object):
         save_prepath = prepath + "shallow/use_signals_{}/".format(hash(identifying_tuple))
         return save_prepath
 
+    def process(self,shot): 
+        use_signals = self.loader.conf['paths']['use_signals']
+        prepath = self.loader.conf['paths']['processed_prepath']
+        assert(shot.valid)
+        shot.restore(prepath)
+        self.loader.set_inference_mode(True)#make sure shots aren't cut
+        if self.loader.normalizer is not None:
+            self.loader.normalizer.apply(shot)
+        else:
+            print('Warning, no normalization. Training data may be poorly conditioned')
+        self.loader.set_inference_mode(False)
+        # sig,res = self.get_signal_result_from_shot(shot)
+        disr = 1 if shot.is_disruptive else 0
+        sig_sample = shot.signals_dict[use_signals[0]] 
+        if len(shot.ttd.shape) == 1:
+            shot.ttd = np.expand_dims(shot.ttd,axis=1)
+        ttd_sample = shot.ttd
+        timesteps = self.timesteps
+        length = sig_sample.shape[0]
+        if length < timesteps:
+            print(ttd,shot,shot.number)
+            print("Shot must be at least as long as the RNN length.")
+            exit(1)
+        assert(len(sig_sample.shape) == len(ttd_sample.shape) == 2)
+        assert(ttd_sample.shape[1] == 1)
+
+        X = []
+        Y = []
+        while(len(X) == 0):
+            for i in range(length-timesteps+1):
+                #if np.random.rand() < sample_prob:
+                x,y = self.get_x_y(i,shot)
+                X.append(x)
+                Y.append(y)
+        X = np.stack(X)
+        Y = np.stack(Y)
+        shot.make_light()
+
+        return X,Y,disr
+
     def load_shot(self,shot,is_inference=False,sample_prob_d=1.0,sample_prob_nd=1.0):
         save_prepath = self.get_save_prepath()
         save_path = shot.get_save_path(save_prepath)
-        if os.path.isfile(save_path):
-            dat = np.load(save_path)
-            X,Y,disr = dat["X"],dat["Y"],dat["disr"][()]
-        else:
-            use_signals = self.loader.conf['paths']['use_signals']
-            prepath = self.loader.conf['paths']['processed_prepath']
-            assert(shot.valid)
-            shot.restore(prepath)
-            self.loader.set_inference_mode(True)#make sure shots aren't cut
-            if self.loader.normalizer is not None:
-                self.loader.normalizer.apply(shot)
-            else:
-                print('Warning, no normalization. Training data may be poorly conditioned')
-            self.loader.set_inference_mode(False)
-            # sig,res = self.get_signal_result_from_shot(shot)
-            disr = 1 if shot.is_disruptive else 0
-            sig_sample = shot.signals_dict[use_signals[0]] 
-            if len(shot.ttd.shape) == 1:
-                shot.ttd = np.expand_dims(shot.ttd,axis=1)
-            ttd_sample = shot.ttd
-            timesteps = self.timesteps
-            length = sig_sample.shape[0]
-            if length < timesteps:
-                print(ttd,shot,shot.number)
-                print("Shot must be at least as long as the RNN length.")
-                exit(1)
-            assert(len(sig_sample.shape) == len(ttd_sample.shape) == 2)
-            assert(ttd_sample.shape[1] == 1)
+        if not os.path.exists(save_prepath):
+            makedirs_process_safe(save_prepath)
 
-            X = []
-            Y = []
-            while(len(X) == 0):
-                for i in range(length-timesteps+1):
-                    #if np.random.rand() < sample_prob:
-                    x,y = self.get_x_y(i,shot)
-                    X.append(x)
-                    Y.append(y)
-            X = np.stack(X)
-            Y = np.stack(Y)
-            shot.make_light()
-            if not os.path.exists(save_prepath):
-                os.makedirs(save_prepath)
+        if not os.path.isfile(save_path):
+            X,Y,disr = self.process(shot)
             np.savez(save_path,X=X,Y=Y,disr=disr)
             #print(X.shape,Y.shape)
+        else:
+            try:
+                dat = np.load(save_path)
+                X,Y,disr = dat["X"],dat["Y"],dat["disr"][()]
+            except: #data was there but corrupted, save it again
+                X,Y,disr = self.process(shot)
+                np.savez(save_path,X=X,Y=Y,disr=disr)
 
         #cut shot ends if we are supposed to
         if self.loader.conf['data']['cut_shot_ends'] and not is_inference: 
