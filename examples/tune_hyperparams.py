@@ -14,7 +14,7 @@ cut_ends = CategoricalHyperparam(['data','cut_shot_ends'],[False,True])
 #for shallow
 if shallow:
     num_nodes = 1
-    shallow_model = CategoricalHyperparam(['model','shallow_model','type'],["svm","random_forest","xgboost"])
+    shallow_model = CategoricalHyperparam(['model','shallow_model','type'],["svm","random_forest","xgboost","mlp"])
     n_estimators = CategoricalHyperparam(['model','shallow_model','n_estimators'],[5,20,50,100,300,1000])
     max_depth = CategoricalHyperparam(['model','shallow_model','max_depth'],[0,3,6,10,30,100])
     C = LogContinuousHyperparam(['model','shallow_model','C'],1e-3,1e3)
@@ -22,7 +22,10 @@ if shallow:
     xg_learning_rate = ContinuousHyperparam(['model','shallow_model','learning_rate'],0,1)
     scale_pos_weight = CategoricalHyperparam(['model','shallow_model','scale_pos_weight'],[1,10.0,100.0])
     num_samples = CategoricalHyperparam(['model','shallow_model','num_samples'],[10000,100000,1000000,1e7])
-    tunables = [shallow_model,n_estimators,max_depth,C,kernel,xg_learning_rate,scale_pos_weight,num_samples] #target
+    hidden_size = CategoricalHyperparam(['model','final_hidden_layer_size'],[5,10,20])
+    hidden_num = CategoricalHyperparam(['model','num_hidden_layers'],[2,4])
+    mlp_learning_rate = CategoricalHyperparam(['model','learning_rate_mlp'],[0.001,0.0001,0.00001])
+    tunables = [shallow_model,n_estimators,max_depth,C,kernel,xg_learning_rate,scale_pos_weight,num_samples,hidden_num,hidden_size,mlp_learning_rate] #target
 else:
     #for DL
     lr = LogContinuousHyperparam(['model','lr'],1e-7,1e-4)

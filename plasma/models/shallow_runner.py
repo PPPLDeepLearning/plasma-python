@@ -315,6 +315,10 @@ def train(conf,shot_list_train,shot_list_validate,loader):
                 learning_rate=model_conf['learning_rate'],
                 n_estimators=model_conf["n_estimators"],
                 scale_pos_weight=model_conf["scale_pos_weight"])
+        elif model_conf['type'] == 'mlp':
+            hidden_layer_sizes = tuple(reversed([model_conf['final_hidden_layer_size']*2**x for x in range(model_conf['num_hidden_layers'])]))
+            model = MLPClassifier(hidden_layer_sizes = hidden_layer_sizes,
+                learning_rate_init = model_conf['learning_rate_mlp'])
         else:
             print("Unkown model type, exiting.")
             exit(1)

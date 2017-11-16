@@ -61,6 +61,9 @@ model:
         kernel: "rbf" #rbf, sigmoid, linear, poly, for svm
         learning_rate: 0.1 #xgboost
         scale_pos_weight: 10.0 #xgboost
+        final_hidden_layer_size: 10 #final layers has this many neurons, every layer before twice as many
+        num_hidden_layers: 3 
+        learning_rate_mlp: 0.0001
         skip_train: False #should a finished model be loaded if available
     #length of LSTM memory
     pred_length: 200
