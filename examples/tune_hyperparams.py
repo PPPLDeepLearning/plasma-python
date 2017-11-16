@@ -7,7 +7,7 @@ import sys,os,getpass
 tunables = []
 shallow = True
 num_nodes = 2
-num_trials = 50
+num_trials = 1
 
 t_warn = CategoricalHyperparam(['data','T_warning'],[0.256,1.024,10.024])
 cut_ends = CategoricalHyperparam(['data','cut_shot_ends'],[False,True])
@@ -25,7 +25,8 @@ if shallow:
     hidden_size = CategoricalHyperparam(['model','final_hidden_layer_size'],[5,10,20])
     hidden_num = CategoricalHyperparam(['model','num_hidden_layers'],[2,4])
     mlp_learning_rate = CategoricalHyperparam(['model','learning_rate_mlp'],[0.001,0.0001,0.00001])
-    tunables = [shallow_model,n_estimators,max_depth,C,kernel,xg_learning_rate,scale_pos_weight,num_samples,hidden_num,hidden_size,mlp_learning_rate] #target
+    mlp_regularization = CategoricalHyperparam(['model','mlp_regularization'],[0.1,0.003,0.0001])
+    tunables = [shallow_model,n_estimators,max_depth,C,kernel,xg_learning_rate,scale_pos_weight,num_samples,hidden_num,hidden_size,mlp_learning_rate,mlp_regularization] #target
 else:
     #for DL
     lr = LogContinuousHyperparam(['model','lr'],1e-7,1e-4)

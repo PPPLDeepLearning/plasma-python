@@ -54,7 +54,7 @@ def create_sbatch_header(num_nodes,use_mpi,idx):
         assert(num_nodes == 1)
     lines = []
     lines.append('#!/bin/bash\n')
-    lines.append('#SBATCH -t 04:00:00\n')
+    lines.append('#SBATCH -t 06:00:00\n')
     lines.append('#SBATCH -N '+str(num_nodes)+'\n')
     if use_mpi:
         lines.append('#SBATCH --ntasks-per-node=4\n')

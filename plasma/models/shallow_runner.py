@@ -18,6 +18,7 @@ import os
 from functools import partial
 import pathos.multiprocessing as mp
 from xgboost import XGBClassifier
+from sklearn.neural_network import MLPClassifier
 
 from plasma.conf import conf
 from plasma.models.loader import Loader, ProcessGenerator
@@ -318,7 +319,8 @@ def train(conf,shot_list_train,shot_list_validate,loader):
         elif model_conf['type'] == 'mlp':
             hidden_layer_sizes = tuple(reversed([model_conf['final_hidden_layer_size']*2**x for x in range(model_conf['num_hidden_layers'])]))
             model = MLPClassifier(hidden_layer_sizes = hidden_layer_sizes,
-                learning_rate_init = model_conf['learning_rate_mlp'])
+                learning_rate_init = model_conf['learning_rate_mlp'],
+                alpha = model_conf['mlp_regularization'])
         else:
             print("Unkown model type, exiting.")
             exit(1)

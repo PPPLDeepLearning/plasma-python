@@ -10,7 +10,7 @@ paths:
     signal_prepath: '/signal_data/' #/signal_data/jet/
     shot_list_dir: '/shot_lists/'
     tensorboard_save_path: '/Graph/'
-    data: 'jet_to_d3d_data' #'jet_data' #'d3d_to_jet_data' #'d3d_to_jet_data' # 'jet_to_d3d_data' #jet_data
+    data: 'd3d_data_0D' #'jet_data' #'d3d_to_jet_data' #'d3d_to_jet_data' # 'jet_to_d3d_data' #jet_data
     specific_signals: [] #['q95','li','ip','betan','energy','lm','pradcore','pradedge','pradtot','pin','torquein','tmamp1','tmamp2','tmfreq1','tmfreq2','pechin','energydt','ipdirect','etemp_profile','edens_profile'] #if left empty will use all valid signals defined on a machine. Only use if need a custom set
     executable: "mpi_learn.py"
     shallow_executable: "learn.py"
@@ -54,7 +54,7 @@ model:
     shallow: True
     shallow_model: 
         num_samples: 1000000 #1000000 #the number of samples to use for training
-        type: "xgboost" #"xgboost" #"random_forest" "xgboost"
+        type: "mlp" #"xgboost" #"xgboost" #"random_forest" "xgboost"
         n_estimators: 100 #for random forest
         max_depth: 3 #for random forest and xgboost (def = 3)
         C: 1.0 #for svm
@@ -64,6 +64,7 @@ model:
         final_hidden_layer_size: 10 #final layers has this many neurons, every layer before twice as many
         num_hidden_layers: 3 
         learning_rate_mlp: 0.0001
+        mlp_regularization: 0.0001
         skip_train: False #should a finished model be loaded if available
     #length of LSTM memory
     pred_length: 200
