@@ -8,10 +8,11 @@ import subprocess as sp
 import numpy as np
 
 tunables = []
-shallow = False
+shallow = True
 num_nodes = 2
 num_trials = 50
 
+t_warn = CategoricalHyperparam(['data','T_warning'],[0.256,1.024,10.024])
 cut_ends = CategoricalHyperparam(['data','cut_shot_ends'],[False,True])
 #for shallow
 if shallow:
@@ -24,22 +25,22 @@ if shallow:
     xg_learning_rate = ContinuousHyperparam(['model','shallow_model','learning_rate'],0,1)
     scale_pos_weight = CategoricalHyperparam(['model','shallow_model','scale_pos_weight'],[1,10.0,100.0])
     num_samples = CategoricalHyperparam(['model','shallow_model','num_samples'],[10000,100000,1000000,1e7])
-    tunables = [shallow_model,n_estimators,max_depth,C,kernel,xg_learning_rate,scale_pos_weight,num_samples,cut_ends] #target
+    tunables = [shallow_model,n_estimators,max_depth,C,kernel,xg_learning_rate,scale_pos_weight,num_samples] #target
 else:
     #for DL
     lr = LogContinuousHyperparam(['model','lr'],1e-7,1e-4)
     lr_decay = CategoricalHyperparam(['model','lr_decay'],[0.97,0.985,1.0])
-    t_warn = CategoricalHyperparam(['data','T_warning'],[0.256,1.024,10.024])
     fac = CategoricalHyperparam(['data','positive_example_penalty'],[1.0,4.0,16.0])
     target = CategoricalHyperparam(['target'],['maxhinge','hinge','ttdinv','ttd'])
-    batch_size = CategoricalHyperparam(['training','batch_size'],[128,64])
+    batch_size = CategoricalHyperparam(['training','batch_size'],[64,256,1024])
     dropout_prob = CategoricalHyperparam(['model','dropout_prob'],[0.1,0.3,0.5])
     conv_filters = CategoricalHyperparam(['model','num_conv_filters'],[5,10])
     conv_layers = IntegerHyperparam(['model','num_conv_layers'],2,4)
     rnn_layers = IntegerHyperparam(['model','rnn_layers'],1,4)
     rnn_size = CategoricalHyperparam(['model','rnn_size'],[100,200,300])
-    tunables = [lr,lr_decay,t_warn,fac,target,batch_size,dropout_prob,cut_ends] #target
-    tunables += [conv_filters,conv_layers] #,rnn_layers,rnn_size]
+    tunables = [lr,lr_decay,fac,target,batch_size,dropout_prob]
+    tunables += [conv_filters,conv_layers,rnn_layers,rnn_size]
+tunables += [cut_ends,t_warn]
 
 
 run_directory = "/tigress/{}/hyperparams/".format(getpass.getuser())
