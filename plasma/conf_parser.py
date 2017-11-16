@@ -39,7 +39,8 @@ def parameters(input_file):
         params['paths']['saved_shotlist_path'] = params['paths']['base_path'] + '/processed_shotlists/' + params['paths']['data'] + '/shot_lists_signal_group_{}.npz'.format(h)
         params['paths']['processed_prepath'] = output_path +'/processed_shots/' + 'signal_group_{}/'.format(h)
 
-        if params['target'] == 'hinge':
+        #ensure shallow model has +1 -1 target.
+        if params['model']['shallow'] or params['target'] == 'hinge':
             params['data']['target'] = t.HingeTarget
         elif params['target'] == 'maxhinge':
             t.MaxHingeTarget.fac = params['data']['positive_example_penalty']

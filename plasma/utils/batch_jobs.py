@@ -25,7 +25,7 @@ def get_executable_name(conf):
 
 
 def start_slurm_job(subdir,num_nodes,i,conf,shallow):
-    executable_name,use_mpi = get_executable_name(shallow)
+    executable_name,use_mpi = get_executable_name(conf)
     os.system(" ".join(["cp -p",executable_name,subdir]))
     script = create_slurm_script(subdir,num_nodes,i,executable_name,use_mpi)
     sp.Popen("sbatch "+script,shell=True)

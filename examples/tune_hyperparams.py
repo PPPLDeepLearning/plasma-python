@@ -1,5 +1,5 @@
 from plasma.primitives.hyperparameters import CategoricalHyperparam,ContinuousHyperparam,LogContinuousHyperparam,IntegerHyperparam
-from plasma.primitives.batch_jobs import create_slurm_script,create_sbatch_header,start_slurm_job,generate_working_dirname,copy_files_to_environment
+from plasma.utils.batch_jobs import create_slurm_script,create_sbatch_header,start_slurm_job,generate_working_dirname,copy_files_to_environment
 from pprint import pprint
 import yaml
 import sys,os,getpass
@@ -58,7 +58,7 @@ def generate_conf_file(tunables,shallow,template_path = "../",save_path = "./",c
     return conf
 
 
-def get_executable_name(shallow):
+def get_executable_name_imposed_shallow(shallow):
     from plasma.conf import conf
     if shallow:
         executable_name = conf['paths']['shallow_executable']
@@ -73,7 +73,7 @@ def get_executable_name(shallow):
 working_directory = generate_working_dirname(run_directory)
 os.makedirs(working_directory)
 
-executable_name,_ = get_executable_name(shallow)
+executable_name,_ = get_executable_name_imposed_shallow(shallow)
 os.system(" ".join(["cp -p",os.path.join(template_path,conf_name),working_directory]))
 os.system(" ".join(["cp -p",os.path.join(template_path,executable_name),working_directory]))
 

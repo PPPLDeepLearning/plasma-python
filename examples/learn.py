@@ -16,7 +16,7 @@ This work was supported by the DOE CSGF program.
 
 from __future__ import print_function
 import datetime,time,random
-import sys
+import sys,os
 import dill
 from functools import partial
 

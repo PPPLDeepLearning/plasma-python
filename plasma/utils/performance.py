@@ -12,6 +12,7 @@ from scipy import stats
 
 from plasma.preprocessor.normalize import VarNormalizer as Normalizer 
 from plasma.conf import conf
+from plasma.primitives.shots import Shot
 
 class PerformanceAnalyzer():
     def __init__(self,results_dir=None,shots_dir=None,i = 0,T_min_warn = None,T_max_warn = None, verbose = False,pred_ttd=False,conf=None):
@@ -561,9 +562,36 @@ class PerformanceAnalyzer():
         elif late:
             return 'late'
 
+    def plot_individual_shot(self,P_thresh_opt,shot_num,normalize=True,plot_signals=True):
+        success = False
+        for mode in ['test','train']:
+            if mode == 'test':
+                pred = self.pred_test
+                truth = self.truth_test
+                is_disruptive = self.disruptive_test
+                shot_list = self.shot_list_test
+            else:
+                pred = self.pred_train
+                truth = self.truth_train
+                is_disruptive = self.disruptive_train
+                shot_list = self.shot_list_train
+            for i,shot in enumerate(shot_list):
+                if shot.number == shot_num:
+                    t = truth[i]
+                    p = pred[i]
+                    is_disr = is_disruptive[i]
+
+                    TP,FP,FN,TN,early,late =self.get_shot_prediction_stats(P_thresh_opt,p,t,is_disr)
+                    prediction_type = self.get_prediction_type(TP,FP,FN,TN,early,late)
+                    print(prediction_type)
+                    self.plot_shot(shot,True,normalize,t,p,P_thresh_opt,prediction_type,extra_filename = '_indiv')
+                    success = True
+        if not success:
+            print("Shot {} not found".format(shot_num))
+                
 
 
-    def example_plots(self,P_thresh_opt,mode='test',types_to_plot = ['FP'],max_plot = 5,normalize=True,plot_signals=True):
+    def example_plots(self,P_thresh_opt,mode='test',types_to_plot = ['FP'],max_plot = 5,normalize=True,plot_signals=True,extra_filename=''):
         if mode == 'test':
             pred = self.pred_test
             truth = self.truth_test
@@ -590,7 +618,7 @@ class PerformanceAnalyzer():
                 return
             if ('any' in types_to_plot or prediction_type in types_to_plot) and plotted < max_plot:
                 if plot_signals:
-                    self.plot_shot(shot,True,normalize,t,p,P_thresh_opt,prediction_type)
+                    self.plot_shot(shot,True,normalize,t,p,P_thresh_opt,prediction_type,extra_filename=extra_filename)
                 else:
                     plt.figure()
                     plt.semilogy((t+0.001)[::-1],label='ground truth')
@@ -607,7 +635,7 @@ class PerformanceAnalyzer():
 
 
 
-    def plot_shot(self,shot,save_fig=True,normalize=True,truth=None,prediction=None,P_thresh_opt=None,prediction_type=''):
+    def plot_shot(self,shot,save_fig=True,normalize=True,truth=None,prediction=None,P_thresh_opt=None,prediction_type='',extra_filename=''):
         if self.normalizer is None and normalize:
             if self.conf is not None:
                 self.saved_conf['paths']['normalizer_path'] = self.conf['paths']['normalizer_path']
@@ -661,7 +689,8 @@ class PerformanceAnalyzer():
             plt.setp(ax.get_yticklabels(),fontsize=7)
             # ax.grid()           
             if save_fig:
-                plt.savefig('sig_fig_{}.png'.format(shot.number),bbox_inches='tight')
+                plt.savefig('sig_fig_{}{}.png'.format(shot.number,extra_filename),bbox_inches='tight')
+                np.savez('sig_{}{}.npz'.format(shot.number,extra_filename),shot=shot,T_min_warn=self.T_min_warn,T_max_warn=self.T_max_warn,prediction=prediction,truth=truth,use_signals=use_signals,P_thresh=P_thresh_opt)
             plt.close()
         else:
             print("Shot hasn't been processed")
