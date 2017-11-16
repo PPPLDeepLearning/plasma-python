@@ -3,14 +3,14 @@
 #will do stuff in fs_path / [username] / signal_data | shot_lists | processed shots, etc.
 
 fs_path: '/tigress'
-target: 'ttdinv' #'maxhinge' #'maxhinge' #'binary' #'hinge' 
+target: 'hinge' #'maxhinge' #'maxhinge' #'binary' #'hinge' 
 num_gpus: 4
 
 paths:
     signal_prepath: '/signal_data/' #/signal_data/jet/
     shot_list_dir: '/shot_lists/'
     tensorboard_save_path: '/Graph/'
-    data: 'd3d_data' #'jet_data' #'d3d_to_jet_data' #'d3d_to_jet_data' # 'jet_to_d3d_data' #jet_data
+    data: 'jet_to_d3d_data' #'jet_data' #'d3d_to_jet_data' #'d3d_to_jet_data' # 'jet_to_d3d_data' #jet_data
     specific_signals: [] #['q95','li','ip','betan','energy','lm','pradcore','pradedge','pradtot','pin','torquein','tmamp1','tmamp2','tmfreq1','tmfreq2','pechin','energydt','ipdirect','etemp_profile','edens_profile'] #if left empty will use all valid signals defined on a machine. Only use if need a custom set
     executable: "mpi_learn.py"
     shallow_executable: "learn.py"
@@ -37,7 +37,7 @@ data:
     #maximum TTD considered
     T_max: 1000.0
     #The shortest works best so far: less overfitting. log TTd prediction also works well. 0.5 better than 0.2
-    T_warning: 10.024 #1.024 #1.024 #0.512 #0.25 #1.0 #1.0 #warning time in seconds
+    T_warning: 1.024 #1.024 #1.024 #0.512 #0.25 #1.0 #1.0 #warning time in seconds
     current_thresh: 750000
     current_end_thresh: 10000
     #the characteristic decay length of the decaying moving average window
@@ -51,7 +51,7 @@ data:
     floatx: 'float32'
 
 model:
-    shallow: False
+    shallow: True
     shallow_model: 
         num_samples: 1000000 #1000000 #the number of samples to use for training
         type: "xgboost" #"xgboost" #"random_forest" "xgboost"
