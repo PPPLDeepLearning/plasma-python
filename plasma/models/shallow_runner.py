@@ -90,7 +90,10 @@ class FeatureExtractor(object):
         return save_prepath
 
     def process(self,shot): 
-        use_signals = self.loader.conf['paths']['use_signals']
+        save_prepath = self.get_save_prepath()
+        save_path = shot.get_save_path(save_prepath)
+        if not os.path.exists(save_prepath):
+            makedirs_process_safe(save_prepath)
         prepath = self.loader.conf['paths']['processed_prepath']
         assert(shot.valid)
         shot.restore(prepath)
@@ -102,50 +105,60 @@ class FeatureExtractor(object):
         self.loader.set_inference_mode(False)
         # sig,res = self.get_signal_result_from_shot(shot)
         disr = 1 if shot.is_disruptive else 0
-        sig_sample = shot.signals_dict[use_signals[0]] 
-        if len(shot.ttd.shape) == 1:
-            shot.ttd = np.expand_dims(shot.ttd,axis=1)
-        ttd_sample = shot.ttd
-        timesteps = self.timesteps
-        length = sig_sample.shape[0]
-        if length < timesteps:
-            print(ttd,shot,shot.number)
-            print("Shot must be at least as long as the RNN length.")
-            exit(1)
-        assert(len(sig_sample.shape) == len(ttd_sample.shape) == 2)
-        assert(ttd_sample.shape[1] == 1)
 
-        X = []
-        Y = []
-        while(len(X) == 0):
-            for i in range(length-timesteps+1):
-                #if np.random.rand() < sample_prob:
-                x,y = self.get_x_y(i,shot)
-                X.append(x)
-                Y.append(y)
-        X = np.stack(X)
-        Y = np.stack(Y)
-        shot.make_light()
-
-        return X,Y,disr
-
-    def load_shot(self,shot,is_inference=False,sample_prob_d=1.0,sample_prob_nd=1.0):
-        save_prepath = self.get_save_prepath()
-        save_path = shot.get_save_path(save_prepath)
-        if not os.path.exists(save_prepath):
-            makedirs_process_safe(save_prepath)
 
         if not os.path.isfile(save_path):
-            X,Y,disr = self.process(shot)
-            np.savez(save_path,X=X,Y=Y,disr=disr)
+            X = self.get_X(shot)
+            np.savez(save_path,X=X)#,Y=Y,disr=disr
             #print(X.shape,Y.shape)
         else:
             try:
                 dat = np.load(save_path)
-                X,Y,disr = dat["X"],dat["Y"],dat["disr"][()]
+                # X,Y,disr = dat["X"],dat["Y"],dat["disr"][()]
+                X = dat["X"]
             except: #data was there but corrupted, save it again
-                X,Y,disr = self.process(shot)
-                np.savez(save_path,X=X,Y=Y,disr=disr)
+                X = self.get_X(shot)
+                np.savez(save_path,X=X)
+
+
+        Y = self.get_Y(shot)
+
+        shot.make_light()
+
+        return X,Y,disr
+
+    def get_X(self,shot):
+
+        use_signals = self.loader.conf['paths']['use_signals']
+        sig_sample = shot.signals_dict[use_signals[0]] 
+        if len(shot.ttd.shape) == 1:
+            shot.ttd = np.expand_dims(shot.ttd,axis=1)
+        length = sig_sample.shape[0]
+        if length < self.timesteps:
+            print(ttd,shot,shot.number)
+            print("Shot must be at least as long as the RNN length.")
+            exit(1)
+        assert(len(sig_sample.shape) == len(shot.ttd.shape) == 2)
+        assert(shot.ttd.shape[1] == 1)
+
+        X = []
+        while(len(X) == 0):
+            for i in range(length-self.timesteps+1):
+                #if np.random.rand() < sample_prob:
+                x = self.get_x(i,shot)
+                X.append(x)
+        X = np.stack(X)
+        return X
+
+    def get_Y(self,shot):
+        if len(shot.ttd.shape) == 1:
+            shot.ttd = np.expand_dims(shot.ttd,axis=1)
+        offset = self.timesteps - 1
+        return np.round(shot.ttd[offset:,0]).astype(np.int)
+
+    def load_shot(self,shot,is_inference=False,sample_prob_d=1.0,sample_prob_nd=1.0):
+
+        X,Y,disr = self.process(shot)
 
         #cut shot ends if we are supposed to
         if self.loader.conf['data']['cut_shot_ends'] and not is_inference: 
@@ -170,8 +183,18 @@ class FeatureExtractor(object):
             x += [self.extract_features(timestep,shot,sig)]
             # x = sig[timestep:timestep+timesteps,:]
         x = np.concatenate(x,axis=0)
-        y = np.round(shot.ttd[timestep+self.timesteps-1,0]).astype(np.int)
-        return x,y
+        return x
+
+
+    # def get_x_y(self,timestep,shot):
+    #     x = []
+    #     use_signals = self.loader.conf['paths']['use_signals']
+    #     for sig in use_signals:
+    #         x += [self.extract_features(timestep,shot,sig)]
+    #         # x = sig[timestep:timestep+timesteps,:]
+    #     x = np.concatenate(x,axis=0)
+    #     y = np.round(shot.ttd[timestep+self.timesteps-1,0]).astype(np.int)
+    #     return x,y
 
 
     def extract_features(self,timestep,shot,signal):
