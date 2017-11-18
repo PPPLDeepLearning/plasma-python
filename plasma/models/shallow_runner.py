@@ -315,7 +315,8 @@ def train(conf,shot_list_train,shot_list_validate,loader):
     callbacks.on_epoch_begin(0)
 
     save_prepath = feature_extractor.get_save_prepath()
-    model_path = conf['paths']['model_save_path'] #save_prepath + model_filename
+    model_path = conf['paths']['model_save_path'] + model_filename #save_prepath + model_filename
+    makedirs_process_safe(conf['paths']['model_save_path'])
     model_conf = conf['model']['shallow_model']
     if not model_conf['skip_train'] or not os.path.isfile(model_path):
         
@@ -381,7 +382,7 @@ def train(conf,shot_list_train,shot_list_validate,loader):
 def make_predictions(conf,shot_list,loader):
     feature_extractor = FeatureExtractor(loader)
     save_prepath = feature_extractor.get_save_prepath()
-    model_path = conf['paths']['model_save_path']#save_prepath + model_filename
+    model_path = conf['paths']['model_save_path'] + model_filename#save_prepath + model_filename
     model = joblib.load(model_path)
     #shot_list = shot_list.random_sublist(10)
 
