@@ -336,7 +336,10 @@ def train(conf,shot_list_train,shot_list_validate,loader):
                 class_weight=scale_pos_weight_dict,
                 n_jobs=-1)
         elif model_conf['type'] == "xgboost":
-            model = XGBClassifier(max_depth=model_conf["max_depth"],
+            max_depth = model_conf["max_depth"]
+            if max_depth == None:
+                max_depth = 0
+            model = XGBClassifier(max_depth=max_depth,
                 learning_rate=model_conf['learning_rate'],
                 n_estimators=model_conf["n_estimators"],
                 scale_pos_weight=model_conf["scale_pos_weight"])
