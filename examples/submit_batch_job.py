@@ -15,9 +15,15 @@ conf_name = "conf.yaml"
 
 def copy_conf_file(shallow,template_path = "../",save_path = "./",conf_name="conf.yaml"):
     assert(template_path != save_path)
+
     pathsrc = os.path.join(template_path,conf_name)
     pathdst = os.path.join(save_path,conf_name)
-    os.system(" ".join(["cp -p",pathsrc,pathdst]))
+
+    with open(pathsrc, 'r') as yaml_file:
+        conf = yaml.load(yaml_file)
+    conf['training']['hyperparam_tuning'] = True #make sure all files like checkpoints and normalization are done locally
+    with open(pathdst, 'w') as outfile:
+        yaml.dump(conf, outfile, default_flow_style=False)
 
 def get_conf(template_path,conf_name):
     with open(os.path.join(template_path,conf_name), 'r') as yaml_file:
