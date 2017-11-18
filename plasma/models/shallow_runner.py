@@ -176,7 +176,7 @@ class FeatureExtractor(object):
         return X,Y,disr
 
 
-    def get_x_y(self,timestep,shot):
+    def get_x(self,timestep,shot):
         x = []
         use_signals = self.loader.conf['paths']['use_signals']
         for sig in use_signals:
