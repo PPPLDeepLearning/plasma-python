@@ -24,7 +24,7 @@ import datetime
 import random
 import numpy as np
 
-os.environ["PYTHONHASHSEED"] = 0
+os.environ["PYTHONHASHSEED"] = "0"
 
 import matplotlib
 matplotlib.use('Agg')

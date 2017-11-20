@@ -11,7 +11,7 @@ from pprint import pprint
 pprint(conf)
 from plasma.preprocessor.preprocess import guarantee_preprocessed
 
-os.environ["PYTHONHASHSEED"] = 0
+os.environ["PYTHONHASHSEED"] = "0"
 
 #####################################################
 ####################PREPROCESSING####################
