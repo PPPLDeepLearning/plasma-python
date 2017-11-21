@@ -382,10 +382,13 @@ def train(conf,shot_list_train,shot_list_validate,loader):
     print('...done')
 
 
-def make_predictions(conf,shot_list,loader):
+def make_predictions(conf,shot_list,loader,custom_path=None):
     feature_extractor = FeatureExtractor(loader)
     save_prepath = feature_extractor.get_save_prepath()
-    model_path = conf['paths']['model_save_path'] + model_filename#save_prepath + model_filename
+    if custom_path == None:
+        model_path = conf['paths']['model_save_path'] + model_filename#save_prepath + model_filename
+    else:
+        model_path = custom_path
     model = joblib.load(model_path)
     #shot_list = shot_list.random_sublist(10)
 
@@ -420,8 +423,8 @@ def predict_single_shot(shot,model,feature_extractor):
 
 
 
-def make_predictions_and_evaluate_gpu(conf,shot_list,loader):
-    y_prime,y_gold,disruptive = make_predictions(conf,shot_list,loader)
+def make_predictions_and_evaluate_gpu(conf,shot_list,loader,custom_path = None):
+    y_prime,y_gold,disruptive = make_predictions(conf,shot_list,loader,custom_path)
     analyzer = PerformanceAnalyzer(conf=conf)
     roc_area = analyzer.get_roc_area(y_prime,y_gold,disruptive)
     loss = get_loss_from_list(y_prime,y_gold,conf['data']['target'])

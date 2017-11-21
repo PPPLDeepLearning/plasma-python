@@ -62,6 +62,13 @@ stateful = conf['model']['stateful']
 
 np.random.seed(0)
 random.seed(0)
+
+only_predict = len(sys.argv) > 1
+custom_path = None
+if only_predict:
+    custom_path = sys.argv[1]
+    print("predicting using path {}".format(custom_path))
+
 #####################################################
 ####################PREPROCESSING####################
 #####################################################
@@ -83,9 +90,10 @@ print('Training on {} shots, testing on {} shots'.format(len(shot_list_train),le
 ######################TRAINING#######################
 #####################################################
 #train(conf,shot_list_train,loader)
-p = old_mp.Process(target = train,args=(conf,shot_list_train,shot_list_validate,loader))
-p.start()
-p.join()
+if not only_predict:
+    p = old_mp.Process(target = train,args=(conf,shot_list_train,shot_list_validate,loader))
+    p.start()
+    p.join()
 
 #####################################################
 ####################PREDICTING#######################
@@ -109,8 +117,8 @@ disruptive_test= []
 # y_prime_train,y_gold_train,disruptive_train = make_predictions(conf,shot_list_train,loader)
 # y_prime_test,y_gold_test,disruptive_test = make_predictions(conf,shot_list_test,loader)
 
-y_prime_train,y_gold_train,disruptive_train,roc_train,loss_train = make_predictions_and_evaluate_gpu(conf,shot_list_train,loader)
-y_prime_test,y_gold_test,disruptive_test,roc_test,loss_test = make_predictions_and_evaluate_gpu(conf,shot_list_test,loader)
+y_prime_train,y_gold_train,disruptive_train,roc_train,loss_train = make_predictions_and_evaluate_gpu(conf,shot_list_train,loader,custom_path)
+y_prime_test,y_gold_test,disruptive_test,roc_test,loss_test = make_predictions_and_evaluate_gpu(conf,shot_list_test,loader,custom_path)
 print('=========Summary========')
 print('Train Loss: {:.3e}'.format(loss_train))
 print('Train ROC: {:.4f}'.format(roc_train))

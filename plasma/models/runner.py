@@ -366,7 +366,7 @@ def make_single_prediction(shot,specific_builder,loader,model_save_path):
     return y_p,y,is_disruptive
 
 
-def make_predictions_gpu(conf,shot_list,loader):
+def make_predictions_gpu(conf,shot_list,loader,custom_path=None):
     loader.set_inference_mode(True)
 
     if backend == 'tf' or backend == 'tensorflow':
@@ -392,7 +392,7 @@ def make_predictions_gpu(conf,shot_list,loader):
     model = specific_builder.build_model(True)
     model.compile(optimizer=optimizer_class(),loss=conf['data']['target'].loss)
 
-    specific_builder.load_model_weights(model)
+    specific_builder.load_model_weights(model,custom_path)
     model.reset_states()
 
     pbar =  Progbar(len(shot_list))
@@ -422,8 +422,8 @@ def make_predictions_gpu(conf,shot_list,loader):
 
 
 
-def make_predictions_and_evaluate_gpu(conf,shot_list,loader):
-    y_prime,y_gold,disruptive = make_predictions_gpu(conf,shot_list,loader)
+def make_predictions_and_evaluate_gpu(conf,shot_list,loader,custom_path=None):
+    y_prime,y_gold,disruptive = make_predictions_gpu(conf,shot_list,loader,custom_path)
     analyzer = PerformanceAnalyzer(conf=conf)
     roc_area = analyzer.get_roc_area(y_prime,y_gold,disruptive)
     shot_list.set_weights(analyzer.get_shot_difficulty(y_prime,y_gold,disruptive))
