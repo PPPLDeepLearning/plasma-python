@@ -44,7 +44,7 @@ else:
 tunables += [cut_ends,t_warn]
 
 
-run_directory = "/tigress/{}/hyperparams/".format(getpass.getuser())
+run_directory = "{}/{}/hyperparams/".format(conf['fs_path'],getpass.getuser())
 template_path = os.environ['PWD'] #"/home/{}/plasma-python/examples/".format(getpass.getuser())
 conf_name = "conf.yaml"
 

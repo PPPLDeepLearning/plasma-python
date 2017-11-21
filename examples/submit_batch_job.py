@@ -9,7 +9,7 @@ num_nodes = 2
 num_trials = 1
 
 
-run_directory = "/tigress/{}/batch_jobs/".format(getpass.getuser())
+run_directory = "{}/{}/batch_jobs/".format(conf['fs_path'],getpass.getuser())
 template_path = os.environ['PWD'] #"/home/{}/plasma-python/examples/".format(getpass.getuser())
 conf_name = "conf.yaml"
 
