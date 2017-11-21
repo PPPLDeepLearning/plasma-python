@@ -8,7 +8,7 @@ import plasma.conf
 tunables = []
 shallow = False
 num_nodes = 2
-num_trials = 2
+num_trials = 50
 
 t_warn = CategoricalHyperparam(['data','T_warning'],[0.256,1.024,10.024])
 cut_ends = CategoricalHyperparam(['data','cut_shot_ends'],[False,True])
@@ -17,16 +17,16 @@ if shallow:
     num_nodes = 1
     shallow_model = CategoricalHyperparam(['model','shallow_model','type'],["svm","random_forest","xgboost","mlp"])
     n_estimators = CategoricalHyperparam(['model','shallow_model','n_estimators'],[5,20,50,100,300,1000])
-    max_depth = CategoricalHyperparam(['model','shallow_model','max_depth'],[0,3,6,10,30,100])
+    max_depth = CategoricalHyperparam(['model','shallow_model','max_depth'],[None,3,6,10,30,100])
     C = LogContinuousHyperparam(['model','shallow_model','C'],1e-3,1e3)
     kernel = CategoricalHyperparam(['model','shallow_model','kernel'],["rbf","sigmoid","linear","poly"])
     xg_learning_rate = ContinuousHyperparam(['model','shallow_model','learning_rate'],0,1)
     scale_pos_weight = CategoricalHyperparam(['model','shallow_model','scale_pos_weight'],[1,10.0,100.0])
-    num_samples = CategoricalHyperparam(['model','shallow_model','num_samples'],[10000,100000,1000000,1e7])
-    hidden_size = CategoricalHyperparam(['model','final_hidden_layer_size'],[5,10,20])
-    hidden_num = CategoricalHyperparam(['model','num_hidden_layers'],[2,4])
-    mlp_learning_rate = CategoricalHyperparam(['model','learning_rate_mlp'],[0.001,0.0001,0.00001])
-    mlp_regularization = CategoricalHyperparam(['model','mlp_regularization'],[0.1,0.003,0.0001])
+    num_samples = CategoricalHyperparam(['model','shallow_model','num_samples'],[30000,100000,1000000,2000000])
+    hidden_size = CategoricalHyperparam(['model','shallow_model','final_hidden_layer_size'],[5,10,20])
+    hidden_num = CategoricalHyperparam(['model','shallow_model','num_hidden_layers'],[2,4])
+    mlp_learning_rate = CategoricalHyperparam(['model','shallow_model','learning_rate_mlp'],[0.001,0.0001,0.00001])
+    mlp_regularization = CategoricalHyperparam(['model','shallow_model','mlp_regularization'],[0.1,0.003,0.0001])
     tunables = [shallow_model,n_estimators,max_depth,C,kernel,xg_learning_rate,scale_pos_weight,num_samples,hidden_num,hidden_size,mlp_learning_rate,mlp_regularization] #target
 else:
     #for DL

@@ -345,6 +345,7 @@ class PerformanceAnalyzer():
         self.shot_list_test = dat['shot_list_test'][()]
         self.shot_list_train = dat['shot_list_train'][()]
         self.saved_conf = dat['conf'][()]
+        self.conf['data']['T_warning'] = self.saved_conf['data']['T_warning'] #all files must agree on T_warning due to output of truth vs. normalized shot ttd.
         for mode in ['test','train']:
             print('{}: loaded {} shot ({}) disruptive'.format(mode,self.get_num_shots(mode),self.get_num_disruptive_shots(mode)))
         self.print_conf()
@@ -737,6 +738,7 @@ def plot_shot1(shot,use_signals,save_fig=True,normalize=True,truth=None,predicti
             use_signals = self.saved_conf['paths']['use_signals']
             f,axarr = plt.subplots(len(use_signals)+1,1,sharex=True,figsize=(13,13))#, squeeze=False)
             plt.title(prediction_type)
+            #all files must agree on T_warning due to output of truth vs. normalized shot ttd.
             assert(np.all(shot.ttd.flatten() == truth.flatten()))
             for i,sig in enumerate(use_signals):
                 num_channels = sig.num_channels

@@ -16,7 +16,7 @@ pred_ttd = False
 # if cut_shot_ends:
 # 	T_max_warn = T_max_warn-T_min_warn
 # 	T_min_warn = 0
-T_min_warn = 30 #None #take value from conf #30
+T_min_warn = 10 #None #take value from conf #30
 
 verbose=False
 if len(sys.argv) > 1:
@@ -43,6 +43,7 @@ analyzer.example_plots(P_thresh_opt,'test',['FN'],extra_filename='test')
 analyzer.example_plots(P_thresh_opt,'test',['TP'],extra_filename='test')
 analyzer.example_plots(P_thresh_opt,'test',['late'],extra_filename='test')
 
+analyzer.example_plots(P_thresh_opt,'train',['TN'],extra_filename='train')
 analyzer.example_plots(P_thresh_opt,'train',['FP'],extra_filename='train')
 analyzer.example_plots(P_thresh_opt,'train',['FN'],extra_filename='train')
 analyzer.example_plots(P_thresh_opt,'train',['TP'],extra_filename='train')
