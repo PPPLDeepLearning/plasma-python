@@ -82,7 +82,7 @@ def create_slurm_header(num_nodes,use_mpi,idx):
         assert(num_nodes == 1)
     lines = []
     lines.append('#!/bin/bash\n')
-    lines.append('#SBATCH -t 06:00:00\n')
+    lines.append('#SBATCH -t 01:00:00\n')
     lines.append('#SBATCH -N '+str(num_nodes)+'\n')
     if use_mpi:
         lines.append('#SBATCH --ntasks-per-node=4\n')
@@ -113,7 +113,7 @@ def create_pbs_header(num_nodes,use_mpi,idx):
 
 def copy_files_to_environment(subdir):
     from plasma.conf import conf
-    normalization_dir = os.path.dirname(conf['paths']['normalizer_path'])
+    normalization_dir = os.path.dirname(conf['paths']['global_normalizer_path'])
     if os.path.isdir(normalization_dir):
         print("Copying normalization to")
         os.system(" ".join(["cp -rp",normalization_dir,os.path.join(subdir,os.path.basename(normalization_dir))]))
