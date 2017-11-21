@@ -1,5 +1,5 @@
 from plasma.primitives.hyperparameters import CategoricalHyperparam,ContinuousHyperparam,LogContinuousHyperparam,IntegerHyperparam
-from plasma.utils.batch_jobs import create_slurm_script,create_sbatch_header,start_slurm_job,generate_working_dirname,copy_files_to_environment
+from plasma.utils.batch_jobs import create_slurm_script,create_slurm_header,start_slurm_job,generate_working_dirname,copy_files_to_environment
 from pprint import pprint
 import yaml
 import sys,os,getpass
