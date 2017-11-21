@@ -2,6 +2,7 @@ from plasma.utils.batch_jobs import get_executable_name,generate_working_dirname
 from pprint import pprint
 import yaml
 import sys,os,getpass
+import plasma.conf
 
 # tunables = []
 # shallow = False
@@ -9,7 +10,7 @@ num_nodes = 2
 num_trials = 1
 
 
-run_directory = "/tigress/{}/batch_jobs/".format(getpass.getuser())
+run_directory = "{}/{}/batch_jobs/".format(plasma.conf.conf['fs_path'],getpass.getuser())
 template_path = os.environ['PWD'] #"/home/{}/plasma-python/examples/".format(getpass.getuser())
 conf_name = "conf.yaml"
 
@@ -52,6 +53,6 @@ for i in range(num_trials):
     print("Making modified conf")
     copy_conf_file(shallow,working_directory,subdir,conf_name)
     print("Starting job")
-    start_slurm_job(subdir,num_nodes,i,conf,shallow)
+    start_slurm_job(subdir,num_nodes,i,conf,shallow,conf['env']['name'],conf['env']['type'])
 
 print("submitted {} jobs.".format(num_trials))
