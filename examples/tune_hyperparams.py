@@ -1,13 +1,14 @@
 from plasma.primitives.hyperparameters import CategoricalHyperparam,ContinuousHyperparam,LogContinuousHyperparam,IntegerHyperparam
-from plasma.utils.batch_jobs import create_slurm_script,create_sbatch_header,start_slurm_job,generate_working_dirname,copy_files_to_environment
+from plasma.utils.batch_jobs import create_slurm_script,create_slurm_header,start_slurm_job,generate_working_dirname,copy_files_to_environment
 from pprint import pprint
 import yaml
 import sys,os,getpass
+import plasma.conf
 
 tunables = []
-shallow = True
+shallow = False
 num_nodes = 2
-num_trials = 1
+num_trials = 2
 
 t_warn = CategoricalHyperparam(['data','T_warning'],[0.256,1.024,10.024])
 cut_ends = CategoricalHyperparam(['data','cut_shot_ends'],[False,True])
@@ -44,7 +45,7 @@ else:
 tunables += [cut_ends,t_warn]
 
 
-run_directory = "/tigress/{}/hyperparams/".format(getpass.getuser())
+run_directory = "{}/{}/hyperparams/".format(plasma.conf.conf['fs_path'],getpass.getuser())
 template_path = os.environ['PWD'] #"/home/{}/plasma-python/examples/".format(getpass.getuser())
 conf_name = "conf.yaml"
 
@@ -91,6 +92,6 @@ for i in range(num_trials):
     print("Making modified conf")
     conf = generate_conf_file(tunables,shallow,working_directory,subdir,conf_name)
     print("Starting job")
-    start_slurm_job(subdir,num_nodes,i,conf,shallow)
+    start_slurm_job(subdir,num_nodes,i,conf,shallow,conf['env']['name'],conf['env']['type'])
 
 print("submitted {} jobs.".format(num_trials))
