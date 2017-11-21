@@ -3,6 +3,7 @@ from plasma.utils.batch_jobs import create_slurm_script,create_slurm_header,star
 from pprint import pprint
 import yaml
 import sys,os,getpass
+import plasma.conf
 
 tunables = []
 shallow = False
@@ -44,7 +45,7 @@ else:
 tunables += [cut_ends,t_warn]
 
 
-run_directory = "{}/{}/hyperparams/".format(conf['fs_path'],getpass.getuser())
+run_directory = "{}/{}/hyperparams/".format(plasma.conf.conf['fs_path'],getpass.getuser())
 template_path = os.environ['PWD'] #"/home/{}/plasma-python/examples/".format(getpass.getuser())
 conf_name = "conf.yaml"
 

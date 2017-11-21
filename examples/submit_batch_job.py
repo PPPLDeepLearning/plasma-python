@@ -2,6 +2,7 @@ from plasma.utils.batch_jobs import get_executable_name,generate_working_dirname
 from pprint import pprint
 import yaml
 import sys,os,getpass
+import plasma.conf
 
 # tunables = []
 # shallow = False
@@ -9,7 +10,7 @@ num_nodes = 2
 num_trials = 1
 
 
-run_directory = "{}/{}/batch_jobs/".format(conf['fs_path'],getpass.getuser())
+run_directory = "{}/{}/batch_jobs/".format(plasma.conf.conf['fs_path'],getpass.getuser())
 template_path = os.environ['PWD'] #"/home/{}/plasma-python/examples/".format(getpass.getuser())
 conf_name = "conf.yaml"
 
