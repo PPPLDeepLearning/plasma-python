@@ -44,7 +44,7 @@ def create_slurm_script(subdir,num_nodes,idx,executable_name,use_mpi,env_name="f
         # f.write('rm -f /tigress/{}/model_checkpoints/*.h5\n'.format(user))
         f.write('cd {}\n'.format(subdir))
         f.write('export OMPI_MCA_btl=\"tcp,self,sm\"\n')
-        f.write('srun python {}\n'.format(executable_name))
+        f.write('srun env PYTHONHASHSEED=0 python {}\n'.format(executable_name))
         f.write('echo "done."')
 
     return filepath
