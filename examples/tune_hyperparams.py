@@ -91,6 +91,6 @@ for i in range(num_trials):
     print("Making modified conf")
     conf = generate_conf_file(tunables,shallow,working_directory,subdir,conf_name)
     print("Starting job")
-    start_slurm_job(subdir,num_nodes,i,conf,shallow,conf['env']['name'])
+    start_slurm_job(subdir,num_nodes,i,conf,shallow,conf['env']['name'],conf['env']['type'])
 
 print("submitted {} jobs.".format(num_trials))

@@ -24,13 +24,13 @@ def get_executable_name(conf):
     return executable_name,use_mpi
 
 
-def start_slurm_job(subdir,num_nodes,i,conf,shallow,env_name="frnn"):
+def start_slurm_job(subdir,num_nodes,i,conf,shallow,env_name="frnn",env_type="anaconda"):
     executable_name,use_mpi = get_executable_name(conf)
     os.system(" ".join(["cp -p",executable_name,subdir]))
-    script = create_slurm_script(subdir,num_nodes,i,executable_name,use_mpi,env_name)
+    script = create_slurm_script(subdir,num_nodes,i,executable_name,use_mpi,env_name,env_type)
     sp.Popen("sbatch "+script,shell=True)
 
-def create_slurm_script(subdir,num_nodes,idx,executable_name,use_mpi,env_name="frnn"):
+def create_slurm_script(subdir,num_nodes,idx,executable_name,use_mpi,env_name="frnn",env_type="anaconda"):
     filename = "run_{}_nodes.cmd".format(num_nodes)
     filepath = subdir+filename
     user = getpass.getuser()
@@ -38,7 +38,7 @@ def create_slurm_script(subdir,num_nodes,idx,executable_name,use_mpi,env_name="f
     with open(filepath,"w") as f:
         for line in sbatch_header:
             f.write(line)
-        f.write('module load anaconda\n')
+        f.write('module load '+env_type+'\n')
         f.write('source activate '+env_name+'\n')
         f.write('module load cudatoolkit/8.0 cudnn/cuda-8.0/6.0 openmpi/cuda-8.0/intel-17.0/2.1.0/64 intel/17.0/64/17.0.4.196 intel-mkl/2017.3/4/64\n')
         # f.write('rm -f /tigress/{}/model_checkpoints/*.h5\n'.format(user))
