@@ -123,3 +123,5 @@ callbacks:
     monitor: 'val_roc'
     patience: 5
     write_grads: False
+env: 
+    name: 'frnn'
