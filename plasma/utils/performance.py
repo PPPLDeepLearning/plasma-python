@@ -2,7 +2,7 @@ from __future__ import print_function
 import matplotlib
 matplotlib.use('Agg')#for machines that don't have a display
 from matplotlib import rc
-rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
+rc('font',**{'family':'serif','sans-serif':['Times']})
 rc('text', usetex=True)
 import matplotlib.pyplot as plt
 import os
@@ -380,7 +380,8 @@ class PerformanceAnalyzer():
             return sum(self.disruptive_train)
 
 
-    def hist_alarms(self,alarms,title_str='alarms',save_figure=False):
+    def hist_alarms(self,alarms,title_str='alarms',save_figure=False,linestyle='-'):
+        fontsize=15
         T_min_warn = self.T_min_warn
         T_max_warn = self.T_max_warn
         if len(alarms) > 0:
@@ -394,21 +395,23 @@ class PerformanceAnalyzer():
             #bins=linspace(min(alarms),max(alarms),100)
             #        hist(alarms,bins=bins,alpha=1.0,histtype='step',normed=True,log=False,cumulative=-1)
             #
-            plt.step(np.concatenate((alarms[::-1], alarms[[0]])), 1.0*np.arange(alarms.size+1)/(alarms.size))
+            plt.step(np.concatenate((alarms[::-1], alarms[[0]])), 1.0*np.arange(alarms.size+1)/(alarms.size),linestyle=linestyle,linewidth=1.5)
 
             plt.gca().set_xscale('log')
-            plt.axvline(T_min_warn,color='r')
+            plt.axvline(T_min_warn,color='r',linewidth=0.5)
             if T_max_warn < np.max(alarms):
                 plt.axvline(T_max_warn,color='r')
-            plt.xlabel('TTD [s]')
-            plt.ylabel('Accumulated fraction of detected disruptions')
-            plt.xlim([1e-4,max(alarms)*10])
+            plt.xlabel('Time to disruption [s]',size=fontsize)
+            plt.ylabel('Fraction of detected disruptions',size=fontsize)
+            plt.xlim([1e-4,4e1])#max(alarms)*10])
             plt.ylim([0,1])
             plt.grid()
             plt.title(title_str)
+            plt.setp(plt.gca().get_yticklabels(),fontsize=fontsize)
+            plt.setp(plt.gca().get_xticklabels(),fontsize=fontsize)
             plt.show()
             if save_figure:
-                plt.savefig('accum_disruptions.png',bbox_inches='tight')
+                plt.savefig('accum_disruptions.png',dpi=200,bbox_inches='tight')
         else:
             print(title_str + ": No alarms!")
 
@@ -544,10 +547,10 @@ class PerformanceAnalyzer():
         return P_thresh_ret
 
 
-    def compute_tradeoffs_and_plot(self,mode,save_figure=True,plot_string=''):
+    def compute_tradeoffs_and_plot(self,mode,save_figure=True,plot_string='',linestyle="-"):
         correct_range, accuracy_range, fp_range,missed_range,early_alarm_range = self.get_metrics_vs_p_thresh(mode)
 
-        self.tradeoff_plot(accuracy_range,missed_range,fp_range,early_alarm_range,save_figure=save_figure,plot_string=plot_string)
+        self.tradeoff_plot(accuracy_range,missed_range,fp_range,early_alarm_range,save_figure=save_figure,plot_string=plot_string,linestyle=linestyle)
 
     def get_prediction_type(self,TP,FP,FN,TN,early,late):
         if TP:
@@ -698,42 +701,45 @@ class PerformanceAnalyzer():
             print("Shot hasn't been processed")
 
 
-    def tradeoff_plot(self,accuracy_range,missed_range,fp_range,early_alarm_range,save_figure=False,plot_string=''):
+    def tradeoff_plot(self,accuracy_range,missed_range,fp_range,early_alarm_range,save_figure=False,plot_string='',linestyle="-"):
+        fontsize=15
         plt.figure()
         P_thresh_range = self.get_p_thresh_range()
         # semilogx(P_thresh_range,accuracy_range,label="accuracy")
         if self.pred_ttd:
-            plt.semilogx(abs(P_thresh_range[::-1]),missed_range,'r',label="missed")
-            plt.plot(abs(P_thresh_range[::-1]),fp_range,'k',label="false positives")
+            plt.semilogx(abs(P_thresh_range[::-1]),missed_range,'r',label="missed",linestyle=linestyle)
+            plt.plot(abs(P_thresh_range[::-1]),fp_range,'k',label="false positives",linestyle=linestyle)
         else:
-            plt.plot(P_thresh_range,missed_range,'r',label="missed")
-            plt.plot(P_thresh_range,fp_range,'k',label="false positives")
+            plt.plot(P_thresh_range,missed_range,'r',label="missed",linestyle=linestyle)
+            plt.plot(P_thresh_range,fp_range,'k',label="false positives",linestyle=linestyle)
         # plot(P_thresh_range,early_alarm_range,'c',label="early alarms")
         plt.legend(loc=(1.0,.6))
-        plt.xlabel('Alarm threshold')
+        plt.xlabel('Alarm threshold',size=fontsize)
         plt.grid()
         title_str = 'metrics{}'.format(plot_string.replace('_',' '))
         plt.title(title_str)
         if save_figure:
             plt.savefig(title_str + '.png',bbox_inches='tight')
         plt.close('all')
-        plt.plot(fp_range,1-missed_range,'-b')
+        plt.plot(fp_range,1-missed_range,'-b',linestyle=linestyle)
         ax = plt.gca()
-        plt.xlabel('FP rate')
-        plt.ylabel('TP rate')
+        plt.xlabel('FP rate',size=fontsize)
+        plt.ylabel('TP rate',size=fontsize)
         major_ticks = np.arange(0,1.01,0.2)
         minor_ticks = np.arange(0,1.01,0.05)
         ax.set_xticks(major_ticks)
         ax.set_yticks(major_ticks)
         ax.set_xticks(minor_ticks,minor=True)
         ax.set_yticks(minor_ticks,minor=True)
+        plt.setp(plt.gca().get_yticklabels(),fontsize=fontsize)
+        plt.setp(plt.gca().get_xticklabels(),fontsize=fontsize)
         ax.grid(which='both')
         ax.grid(which='major',alpha=0.5)
         ax.grid(which='minor',alpha=0.3)
         plt.xlim([0,1])
         plt.ylim([0,1])
         if save_figure:
-            plt.savefig(title_str + '_roc.png',bbox_inches='tight')
+            plt.savefig(title_str + '_roc.png',bbox_inches='tight',dpi=200)
         print('ROC area ({}) is {}'.format(plot_string,self.roc_from_missed_fp(missed_range,fp_range)))
 
 
