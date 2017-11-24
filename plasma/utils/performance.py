@@ -591,6 +591,27 @@ class PerformanceAnalyzer():
             print("Shot {} not found".format(shot_num))
                 
 
+    def get_prediction_type_for_individual_shot(self,P_thresh,shot,mode='test'):
+        if mode == 'test':
+            pred = self.pred_test
+            truth = self.truth_test
+            is_disruptive = self.disruptive_test
+            shot_list = self.shot_list_test
+        else:
+            pred = self.pred_train
+            truth = self.truth_train
+            is_disruptive = self.disruptive_train
+            shot_list = self.shot_list_train
+        i = shot_list.index(shot)
+        t = truth[i]
+        p = pred[i]
+        is_disr = is_disruptive[i]
+        shot = shot_list.shots[i]
+
+        TP,FP,FN,TN,early,late =self.get_shot_prediction_stats(P_thresh_opt,p,t,is_disr)
+        prediction_type = self.get_prediction_type(TP,FP,FN,TN,early,late)
+        return prediction_type
+
 
     def example_plots(self,P_thresh_opt,mode='test',types_to_plot = ['FP'],max_plot = 5,normalize=True,plot_signals=True,extra_filename=''):
         if mode == 'test':
