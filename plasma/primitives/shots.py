@@ -225,6 +225,8 @@ class ShotList(object):
     def __add__(self,other_list):
         return ShotList(self.shots + other_list.shots)
 
+    def index(self,item):
+        return self.shots.index(item)
 
     def random_sublist(self,num):
         num = min(num,len(self))

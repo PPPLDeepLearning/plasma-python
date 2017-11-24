@@ -348,7 +348,8 @@ class PerformanceAnalyzer():
         self.conf['data']['T_warning'] = self.saved_conf['data']['T_warning'] #all files must agree on T_warning due to output of truth vs. normalized shot ttd.
         for mode in ['test','train']:
             print('{}: loaded {} shot ({}) disruptive'.format(mode,self.get_num_shots(mode),self.get_num_disruptive_shots(mode)))
-        self.print_conf()
+        if self.verbose:
+            self.print_conf()
         #self.assert_same_lists(self.shot_list_test,self.truth_test,self.disruptive_test)
         #self.assert_same_lists(self.shot_list_train,self.truth_train,self.disruptive_train)
 
@@ -595,23 +596,9 @@ class PerformanceAnalyzer():
                 
 
     def get_prediction_type_for_individual_shot(self,P_thresh,shot,mode='test'):
-        if mode == 'test':
-            pred = self.pred_test
-            truth = self.truth_test
-            is_disruptive = self.disruptive_test
-            shot_list = self.shot_list_test
-        else:
-            pred = self.pred_train
-            truth = self.truth_train
-            is_disruptive = self.disruptive_train
-            shot_list = self.shot_list_train
-        i = shot_list.index(shot)
-        t = truth[i]
-        p = pred[i]
-        is_disr = is_disruptive[i]
-        shot = shot_list.shots[i]
+        p,t,is_disr = self.get_pred_truth_disr_by_shot(shot)
 
-        TP,FP,FN,TN,early,late =self.get_shot_prediction_stats(P_thresh_opt,p,t,is_disr)
+        TP,FP,FN,TN,early,late =self.get_shot_prediction_stats(P_thresh,p,t,is_disr)
         prediction_type = self.get_prediction_type(TP,FP,FN,TN,early,late)
         return prediction_type
 
@@ -849,6 +836,63 @@ class PerformanceAnalyzer():
             plt.savefig(title_str + '_roc.png',bbox_inches='tight',dpi=200)
         print('ROC area ({}) is {}'.format(plot_string,self.roc_from_missed_fp(missed_range,fp_range)))
 
+    def get_pred_truth_disr_by_shot(self,shot):
+        if shot in self.shot_list_test:
+            mode = 'test'
+        elif shot in self.shot_list_train:
+            mode = 'train'
+        else:
+            print('Shot {} not found'.format(shot))
+            exit(1)
+        if mode == 'test':
+            pred = self.pred_test
+            truth = self.truth_test
+            is_disruptive = self.disruptive_test
+            shot_list = self.shot_list_test
+        else:
+            pred = self.pred_train
+            truth = self.truth_train
+            is_disruptive = self.disruptive_train
+            shot_list = self.shot_list_train
+        i = shot_list.index(shot)
+        t = truth[i]
+        p = pred[i]
+        is_disr = is_disruptive[i]
+        shot = shot_list.shots[i]
+        return p,t,is_disr
+
+    def save_shot(self,shot,P_thresh_opt = 0,extra_filename=''):
+        if self.normalizer is None:
+            if self.conf is not None:
+                self.saved_conf['paths']['normalizer_path'] = self.conf['paths']['normalizer_path']
+            nn = Normalizer(self.saved_conf)
+            nn.train()
+            self.normalizer = nn
+            self.normalizer.set_inference_mode(True)
+ 
+        shot.restore(self.shots_dir)
+        t_disrupt = shot.t_disrupt
+        is_disruptive =  shot.is_disruptive
+        self.normalizer.apply(shot)
+
+
+
+        pred,truth,is_disr = self.get_pred_truth_disr_by_shot(shot)
+        use_signals = self.saved_conf['paths']['use_signals']
+        np.savez('sig_{}{}.npz'.format(shot.number,extra_filename),shot=shot,T_min_warn=self.T_min_warn,T_max_warn=self.T_max_warn,prediction=pred,truth=truth,use_signals=use_signals,P_thresh=P_thresh_opt)
+
+    def get_roc_area_by_mode(self,mode='test'):
+        if mode == 'test':
+            pred = self.pred_test
+            truth = self.truth_test
+            is_disruptive = self.disruptive_test
+            shot_list = self.shot_list_test
+        else:
+            pred = self.pred_train
+            truth = self.truth_train
+            is_disruptive = self.disruptive_train
+            shot_list = self.shot_list_train
+        return self.get_roc_area(pred,truth,is_disruptive)
 
     def get_roc_area(self,all_preds,all_truths,all_disruptive):
         correct_range, accuracy_range, fp_range,missed_range,early_alarm_range = \
@@ -860,77 +904,5 @@ class PerformanceAnalyzer():
         #print(fp_range)
         #print(missed_range)
         return -np.trapz(1-missed_range,x=fp_range)
-
-
-
-
-
-# def cut_ttd(arr,length):
-#     return arr[length-1:]
-
-
-# def get_disruptive(is_disr_list):
-#     return array([1 if any(arr > 0.5) else 0 for arr in is_disr_list])
-
-  
-# def create_acceptable_regions(is_disrupt):
-#     end_indices = get_end_indices(is_disrupt) 
-#     acceptable = zeros_like(is_disrupt,dtype=bool)
-
-
-
-
-# def cut_ttd(arr,length):
-#     return arr[length-1:]
-
-
-# def get_disruptive(is_disr_list):
-#     return array([1 if any(arr > 0.5) else 0 for arr in is_disr_list])
-
-  
-# def create_acceptable_regions(is_disrupt):
-#     end_indices = get_end_indices(is_disrupt) 
-#     acceptable = zeros_like(is_disrupt,dtype=bool)
-#     for idx in end_indices:
-#         acceptable[idx - acceptable_timesteps:idx] = True
-#     return acceptable
-
-# def get_end_indices(is_disrupt):
-#     end_indices = where(np.logical_and(is_disrupt[:-1] > 0.5, is_disrupt[1:] < 0.5))[0]
-#     return end_indices
-
-# def get_accuracy_and_fp_rate(P_thresh,pred,is_disrupt,T_min_warn = 30,T_max_warn = 1000):
-#     predictions = pred > P_thresh
-#     predictions = reshape(predictions,(len(predictions),))
-    
-#     max_acceptable = create_acceptable_region(is_disrupt,T_max_warn)
-#     min_acceptable = create_acceptable_region(is_disrupt,T_min_warn)
-    
-#     tp = sum(np.logical_and(predictions,max_acceptable))
-#     fp = sum(np.logical_and(predictions,~max_acceptable))
-#     tn = sum(np.logical_and(~predictions,~min_acceptable))
-#     fn = sum(np.logical_and(~predictions,min_acceptable))
-   
-#     # print(1.0*tp/(tp + fp))
-#     # print(1.0*tn/(tn + fn))
-#     # print(1.0*(tp + tn)/(tp + fp + tn + fn))
-#     print('total: {}, tp: {} fp: {} fn: {} tn: {}'.format(len(predictions),tp,fp,fn,tn))
-    
-   
-#     return get_accuracy_and_fp_rate_from_stats(tp,fp,fn)
-
-
-# def get_thresholds(ttd_prime_by_shot,ttd_by_shot,disr,length, \
-#                            T_min_warn = 30,T_max_warn = 1000,verbose=False):
-    
-#     def fp_vs_thresh(P_thresh):
-#         correct,accuracy,fp_rate,missed,early_alarm_rate = summarize_shot_prediction_stats(P_thresh,ttd_prime_by_shot, \
-#                                 ttd_by_shot,disr,length,T_min_warn,T_max_warn,verbose=verbose)
-#         return fp_rate
-
-#     def missed_vs_thresh(P_thresh):
-#         correct,accuracy,fp_rate,missed,early_alarm_rate = summarize_shot_prediction_stats(P_thresh,ttd_prime_by_shot, \
-#                                 ttd_by_shot,disr,length,T_min_warn,T_max_warn,verbose=verbose)
-#         return fp_rate
 
 

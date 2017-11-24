@@ -16,7 +16,7 @@ pred_ttd = False
 # if cut_shot_ends:
 # 	T_max_warn = T_max_warn-T_min_warn
 # 	T_min_warn = 0
-T_min_warn = 10 #None #take value from conf #30
+T_min_warn = 30 #None #take value from conf #30
 
 verbose=False
 if len(sys.argv) > 1:
@@ -31,13 +31,15 @@ T_min_warn = T_min_warn, verbose = verbose, pred_ttd=pred_ttd)
 analyzer.load_ith_file()
 
 P_thresh_opt = analyzer.compute_tradeoffs_and_print_from_training()
+#P_thresh_opt = 0.566#0.566#0.92# analyzer.compute_tradeoffs_and_print_from_training()
+linestyle="-"
 
-analyzer.compute_tradeoffs_and_plot('test',save_figure=save_figure,plot_string='_test')
-analyzer.compute_tradeoffs_and_plot('train',save_figure=save_figure,plot_string='_train')
+analyzer.compute_tradeoffs_and_plot('test',save_figure=save_figure,plot_string='_test',linestyle=linestyle)
+analyzer.compute_tradeoffs_and_plot('train',save_figure=save_figure,plot_string='_train',linestyle=linestyle)
 
 analyzer.summarize_shot_prediction_stats_by_mode(P_thresh_opt,'test')
 
-#analyzer.example_plots(P_thresh_opt,'test','any')
+analyzer.example_plots(P_thresh_opt,'test','any')
 analyzer.example_plots(P_thresh_opt,'test',['FP'],extra_filename='test')
 analyzer.example_plots(P_thresh_opt,'test',['FN'],extra_filename='test')
 analyzer.example_plots(P_thresh_opt,'test',['TP'],extra_filename='test')
@@ -51,7 +53,7 @@ analyzer.example_plots(P_thresh_opt,'train',['late'],extra_filename='train')
 
 
 alarms,disr_alarms,nondisr_alarms = analyzer.gather_first_alarms(P_thresh_opt,'test')
-analyzer.hist_alarms(disr_alarms,'disruptive alarms, P thresh = {}'.format(P_thresh_opt),save_figure=save_figure)
+analyzer.hist_alarms(disr_alarms,'disruptive alarms, P thresh = {}'.format(P_thresh_opt),save_figure=save_figure,linestyle=linestyle)
 print('{} disruptive alarms'.format(len(disr_alarms)))
 print('{} seconds mean alarm time'.format(np.mean(disr_alarms[disr_alarms > 0])))
 print('{} seconds median alarm time'.format(np.median(disr_alarms[disr_alarms > 0])))
