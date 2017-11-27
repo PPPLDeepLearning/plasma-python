@@ -85,7 +85,7 @@ class Augmentator(AbstractAugmentator):
           - signal: augmented signal ... numpy array of numeric types?
         '''
         if self.conf['data']['augmentation_mode'] == "noise":
-            return signal + np.random.normal(0,strength,signal.shape) 
+            return np.random.normal(0,strength,signal.shape) 
         elif self.conf['data']['augmentation_mode'] == "zero":
             return signal*0.0 #if "set to zero" augmentation. Can control in conf.
         elif self.conf['data']['augmentation_mode'] == "none":
