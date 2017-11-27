@@ -41,7 +41,7 @@ def get_experiments(path,verbose=0):
 experiments = sorted(get_experiments(dir_path))
 best_experiments = np.argsort(np.array([e.get_maximum(False)[0] for e in experiments]))
 best = [] 
-for e in np.array(experiments)[best_experiments][-3:]:
+for e in np.array(experiments)[best_experiments][-5:]:
     best.append(e.get_number())
 
 bigdict = {}
@@ -61,17 +61,18 @@ for base in best:
 
 
 def make_comparison_plot(key,tunable,trial):
+    values,edges = tunable
+
     trial = list(map(lambda x: eval(x),trial))
-    values,edges = np.histogram(trial,bins=10)
+    trial_values,_ = np.histogram(trial,bins=edges)
     total = values.sum()
-    values_percentages =list(map(lambda x: x*100.0/total, values))
+    values_percentages =list(map(lambda x: x*100.0/total, trial_values))
 
     plt.bar(edges[:-1], values_percentages, width=np.diff(edges), ec="k", align="edge")
     plt.xlabel(key, fontsize=20)
-    plt.yscale('log')
+    #plt.yscale('log')
     plt.ylabel('Num. trials/bin', fontsize=20)
 
-    values,edges = tunable
     plt.bar(edges[:-1], values, width=np.diff(edges), ec="k", align="edge")
     plt.savefig(key+".png")
     #plt.show()
