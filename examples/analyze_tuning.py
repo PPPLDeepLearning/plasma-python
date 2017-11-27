@@ -65,13 +65,13 @@ def make_comparison_plot(key,tunable,trial):
 
     trial = list(map(lambda x: eval(x),trial))
     trial_values,_ = np.histogram(trial,bins=edges)
-    total = values.sum()
+    total = trial_values.sum()
     values_percentages =list(map(lambda x: x*100.0/total, trial_values))
 
     plt.bar(edges[:-1], values_percentages, width=np.diff(edges), ec="k", align="edge")
     plt.xlabel(key, fontsize=20)
     #plt.yscale('log')
-    plt.ylabel('Num. trials/bin', fontsize=20)
+    plt.ylabel('Fraction of trials [%]/bin', fontsize=20)
 
     plt.bar(edges[:-1], values, width=np.diff(edges), ec="k", align="edge")
     plt.savefig(key+".png")
