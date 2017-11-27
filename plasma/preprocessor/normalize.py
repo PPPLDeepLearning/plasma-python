@@ -223,6 +223,7 @@ class MeanVarNormalizer(Normalizer):
     def apply(self,shot):
         m = shot.machine
         assert self.means[m] is not None and self.stds[m] is not None, "self.means or self.stds not initialized"
+        apply_positivity(shot)
         means = np.median(self.means[m],axis=0)
         stds = np.median(self.stds[m],axis=0)
         for (i,sig) in enumerate(shot.signals):
@@ -265,6 +266,7 @@ class VarNormalizer(MeanVarNormalizer):
     def apply(self,shot):
         assert self.means is not None and self.stds is not None, "self.means or self.stds not initialized"
         m = shot.machine
+        apply_positivity(shot)
         stds = np.median(self.stds[m],axis=0)
         for (i,sig) in enumerate(shot.signals):
             if sig.normalize:
@@ -292,6 +294,7 @@ class AveragingVarNormalizer(VarNormalizer):
         window_size = self.conf['data']['window_size']
         window = exponential(window_size,0,window_decay,False)
         window /= np.sum(window)
+        apply_positivity(shot)
         for (i,sig) in enumerate(shot.signals):
             if sig.normalize:
                 shot.signals_dict[sig] = apply_along_axis(lambda m : correlate(m,window,'valid'),axis=0,arr=shot.signals_dict[sig])
@@ -354,6 +357,7 @@ class MinMaxNormalizer(Normalizer):
     def apply(self,shot):
         assert(self.minimums is not None and self.maximums is not None) 
         m = shot.machine
+        apply_positivity(shot)
         curr_range = (self.maximums[m] - self.minimums[m])
         if curr_range == 0.0:
                 curr_range = 1.0
@@ -389,3 +393,9 @@ class MinMaxNormalizer(Normalizer):
 
 def get_individual_shot_file(prepath,shot_num,ext='.txt'):
     return prepath + str(shot_num) + ext 
+
+def apply_positivity(shot):
+    for sig in shot.signals():
+        if sig.is_strictly_positive:
+            print ('Applying positivity constraint to {} signal'.format(sig.description))
+            shot.signals_dict[sig]=np.clip(shot.signals_dict[sig],0,np.inf)

@@ -71,6 +71,8 @@ def parameters(input_file):
         d3d_jb_full = ShotListFiles(d3d,params['paths']['shot_list_dir'],['shotlist_JaysonBarr_clear.txt','shotlist_JaysonBarr_disrupt.txt'],'d3d shots since 160000-170000')
 
         nstx_full = ShotListFiles(nstx,params['paths']['shot_list_dir'],['disrupt_nstx.txt'],'nstx shots (all are disruptive')
+
+        apply_positivity_test = ShotListFiles(jet,params['paths']['shot_list_dir'],['apply_positivity_test.txt'],'a couple of negative density test shots')
  
         if params['paths']['data'] == 'jet_data':
             params['paths']['shot_files'] = [jet_carbon_wall]
@@ -87,6 +89,11 @@ def parameters(input_file):
             params['paths']['use_signals_dict'] = {'q95':q95,'li':li,'ip':ip,'lm':lm,'betan':betan,'energy':energy,'dens':dens,'pradcore':pradcore,
 'pradedge':pradedge,'pin':pin,'pechin':pechin,'torquein':torquein,'ipdirect':ipdirect} #'etemp_profile':etemp_profile,'edens_profile'}
             #[q95,li,ip,lm,betan,energy,dens,pradcore,pradedge,pin,pechin,torquein,ipdirect,etemp_profile,edens_profile][:-2]
+
+        elif params['paths']['data'] == 'apply_positivity_test':
+            params['paths']['shot_files'] = [apply_positivity_test]
+            params['paths']['shot_files_test'] = []
+            params['paths']['use_signals_dict'] = jet_signals
 
         elif params['paths']['data'] == 'jet_to_d3d_data':
             params['paths']['shot_files'] = [jet_carbon_wall]

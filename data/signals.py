@@ -153,7 +153,7 @@ iperr = Signal("plasma current error",["d3d/ipeecoil"],[d3d])
 
 li = Signal("internal inductance",["jpf/gs/bl-li<s","d3d/efsli"],[jet,d3d])
 lm = Signal("Locked mode amplitude",['jpf/da/c2-loca','d3d/dusbradial'],[jet,d3d])
-dens = Signal("Plasma density",['jpf/df/g1r-lid:003','d3d/dssdenest'],[jet,d3d])
+dens = Signal("Plasma density",['jpf/df/g1r-lid:003','d3d/dssdenest'],[jet,d3d],is_strictly_positive=True)
 energy = Signal("stored energy",['jpf/gs/bl-wmhd<s','d3d/efswmhd'],[jet,d3d])
 pin = Signal("Input Power (beam for d3d)",['jpf/gs/bl-ptot<s','d3d/bmspinj'],[jet,d3d]) #Total Beam Power
 
