@@ -228,6 +228,9 @@ class ShotList(object):
     def index(self,item):
         return self.shots.index(item)
 
+    def __getitem__(self,key):
+        return self.shots[key]
+
     def random_sublist(self,num):
         num = min(num,len(self))
         shots_picked = np.random.choice(self.shots,size=num,replace=False)
