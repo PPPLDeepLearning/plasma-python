@@ -2,7 +2,7 @@ from __future__ import print_function
 import matplotlib
 matplotlib.use('Agg')#for machines that don't have a display
 from matplotlib import rc
-rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
+rc('font',**{'family':'serif','sans-serif':['Times']})
 rc('text', usetex=True)
 import matplotlib.pyplot as plt
 import os
@@ -348,7 +348,8 @@ class PerformanceAnalyzer():
         self.conf['data']['T_warning'] = self.saved_conf['data']['T_warning'] #all files must agree on T_warning due to output of truth vs. normalized shot ttd.
         for mode in ['test','train']:
             print('{}: loaded {} shot ({}) disruptive'.format(mode,self.get_num_shots(mode),self.get_num_disruptive_shots(mode)))
-        self.print_conf()
+        if self.verbose:
+            self.print_conf()
         #self.assert_same_lists(self.shot_list_test,self.truth_test,self.disruptive_test)
         #self.assert_same_lists(self.shot_list_train,self.truth_train,self.disruptive_train)
 
@@ -380,7 +381,8 @@ class PerformanceAnalyzer():
             return sum(self.disruptive_train)
 
 
-    def hist_alarms(self,alarms,title_str='alarms',save_figure=False):
+    def hist_alarms(self,alarms,title_str='alarms',save_figure=False,linestyle='-'):
+        fontsize=15
         T_min_warn = self.T_min_warn
         T_max_warn = self.T_max_warn
         if len(alarms) > 0:
@@ -394,21 +396,23 @@ class PerformanceAnalyzer():
             #bins=linspace(min(alarms),max(alarms),100)
             #        hist(alarms,bins=bins,alpha=1.0,histtype='step',normed=True,log=False,cumulative=-1)
             #
-            plt.step(np.concatenate((alarms[::-1], alarms[[0]])), 1.0*np.arange(alarms.size+1)/(alarms.size))
+            plt.step(np.concatenate((alarms[::-1], alarms[[0]])), 1.0*np.arange(alarms.size+1)/(alarms.size),linestyle=linestyle,linewidth=1.5)
 
             plt.gca().set_xscale('log')
-            plt.axvline(T_min_warn,color='r')
-            if T_max_warn < np.max(alarms):
-                plt.axvline(T_max_warn,color='r')
-            plt.xlabel('TTD [s]')
-            plt.ylabel('Accumulated fraction of detected disruptions')
-            plt.xlim([1e-4,max(alarms)*10])
+            plt.axvline(T_min_warn,color='r',linewidth=0.5)
+            #if T_max_warn < np.max(alarms):
+            #    plt.axvline(T_max_warn,color='r',linewidth=0.5)
+            plt.xlabel('Time to disruption [s]',size=fontsize)
+            plt.ylabel('Fraction of detected disruptions',size=fontsize)
+            plt.xlim([1e-4,4e1])#max(alarms)*10])
             plt.ylim([0,1])
             plt.grid()
             plt.title(title_str)
+            plt.setp(plt.gca().get_yticklabels(),fontsize=fontsize)
+            plt.setp(plt.gca().get_xticklabels(),fontsize=fontsize)
             plt.show()
             if save_figure:
-                plt.savefig('accum_disruptions.png',bbox_inches='tight')
+                plt.savefig('accum_disruptions.png',dpi=200,bbox_inches='tight')
         else:
             print(title_str + ": No alarms!")
 
@@ -544,10 +548,10 @@ class PerformanceAnalyzer():
         return P_thresh_ret
 
 
-    def compute_tradeoffs_and_plot(self,mode,save_figure=True,plot_string=''):
+    def compute_tradeoffs_and_plot(self,mode,save_figure=True,plot_string='',linestyle="-"):
         correct_range, accuracy_range, fp_range,missed_range,early_alarm_range = self.get_metrics_vs_p_thresh(mode)
 
-        self.tradeoff_plot(accuracy_range,missed_range,fp_range,early_alarm_range,save_figure=save_figure,plot_string=plot_string)
+        self.tradeoff_plot(accuracy_range,missed_range,fp_range,early_alarm_range,save_figure=save_figure,plot_string=plot_string,linestyle=linestyle)
 
     def get_prediction_type(self,TP,FP,FN,TN,early,late):
         if TP:
@@ -592,23 +596,9 @@ class PerformanceAnalyzer():
                 
 
     def get_prediction_type_for_individual_shot(self,P_thresh,shot,mode='test'):
-        if mode == 'test':
-            pred = self.pred_test
-            truth = self.truth_test
-            is_disruptive = self.disruptive_test
-            shot_list = self.shot_list_test
-        else:
-            pred = self.pred_train
-            truth = self.truth_train
-            is_disruptive = self.disruptive_train
-            shot_list = self.shot_list_train
-        i = shot_list.index(shot)
-        t = truth[i]
-        p = pred[i]
-        is_disr = is_disruptive[i]
-        shot = shot_list.shots[i]
+        p,t,is_disr = self.get_pred_truth_disr_by_shot(shot)
 
-        TP,FP,FN,TN,early,late =self.get_shot_prediction_stats(P_thresh_opt,p,t,is_disr)
+        TP,FP,FN,TN,early,late =self.get_shot_prediction_stats(P_thresh,p,t,is_disr)
         prediction_type = self.get_prediction_type(TP,FP,FN,TN,early,late)
         return prediction_type
 
@@ -655,92 +645,95 @@ class PerformanceAnalyzer():
                     plt.savefig('fig_{}.png'.format(shot.number),bbox_inches='tight')
                 plotted += 1
 
-def plot_shot1(shot,use_signals,save_fig=True,normalize=True,truth=None,prediction=None,P_thresh_opt=None,prediction_type='',
-              T_min_warn=T_min_warn,T_max_warn=T_max_warn):
-    if self.normalizer is None and normalize:
-        if self.conf is not None:
-            self.saved_conf['paths']['normalizer_path'] = self.conf['paths']['normalizer_path']
-        nn = Normalizer(self.saved_conf)
-        nn.train()
-        self.normalizer = nn
-        self.normalizer.set_inference_mode(True)
-
-    if(shot.previously_saved(self.shots_dir)):
-        shot.restore(self.shots_dir)
-        t_disrupt = shot.t_disrupt
-        is_disruptive =  shot.is_disruptive
-        if normalize:
-            self.normalizer.apply(shot)
-
-        use_signals = self.saved_conf['paths']['use_signals']
-        fontsize= 15
-        lower_lim = 0 #len(pred)
-        plt.close()
-        colors = ["b","k"]
-        lss = ["-","--"]
-        f,axarr = plt.subplots(len(use_signals)+1,1,sharex=True,figsize=(10,15))#, squeeze=False)
-        assert(np.all(shot.ttd.flatten() == truth.flatten()))
-        xx = range(len(pred)) #list(reversed(range(len(pred))))
-        for i,sig in enumerate(use_signals):
-            ax = axarr[i]
-            num_channels = sig.num_channels
-            sig_arr = shot.signals_dict[sig]
-            if num_channels == 1:
-    #             if j == 0:
-                ax.plot(xx,sig_arr[:,0],linewidth=2)#,linestyle=lss[j],color=colors[j])
-    #             else:
-    #                 ax.plot(xx,sig_arr[:,0],linewidth=2)#,linestyle=lss[j],color=colors[j],label = labels[sig])
-                ax.plot([],linestyle="none",label = sig.description)#labels[sig])
-                if np.min(sig_arr[:,0]) < 0:
-                    ax.set_ylim([-6,6])
-                    ax.set_yticks([-5,0,5])
-                else:
-                    ax.set_ylim([0,8])
-                    ax.set_yticks([0,5])
-    #             ax.set_ylabel(labels[sig],size=fontsize)
-            else:
-                ax.imshow(sig_arr[:,:].T, aspect='auto', label = sig.description,cmap="inferno" )
-                ax.set_ylim([0,num_channels])
-                ax.text(lower_lim+200, 45, sig.description, bbox={'facecolor': 'white', 'pad': 10},fontsize=fontsize-5)
-                ax.set_yticks([0,num_channels/2])
-                ax.set_yticklabels(["0","0.5"])
-                ax.set_ylabel("$\\rho$",size=fontsize)
-            ax.legend(loc="best",labelspacing=0.1,fontsize=fontsize,frameon=False)
-            ax.axvline(len(truth)-T_min_warn,color='r',linewidth=0.5)
-            plt.setp(ax.get_xticklabels(),visible=False)
-            plt.setp(ax.get_yticklabels(),fontsize=fontsize)
-            f.subplots_adjust(hspace=0)
-            #print(sig)
-            #print('min: {}, max: {}'.format(np.min(sig_arr), np.max(sig_arr)))
-        ax = axarr[-1] 
-        #         ax.semilogy((-truth+0.0001),label='ground truth')
-        #         ax.plot(-prediction+0.0001,'g',label='neural net prediction')
-        #         ax.axhline(-P_thresh_opt,color='k',label='trigger threshold')
-    #     nn = np.min(pred)
-        ax.plot(xx,truth,'g',label='target',linewidth=2)
-    #     ax.axhline(0.4,linestyle="--",color='k',label='threshold')
-        ax.plot(xx,prediction,'b',label='RNN output',linewidth=2)
-        ax.axhline(P_thresh_opt,linestyle="--",color='k',label='threshold')
-        ax.set_ylim([-2,2])
-        ax.set_yticks([-1,0,1])
-        # if len(truth)-T_max_warn >= 0:
-        #     ax.axvline(len(truth)-T_max_warn,color='r')#,label='max warning time')
-        ax.axvline(len(truth)-T_min_warn,color='r',linewidth=0.5)#,label='min warning time')
-        ax.set_xlabel('T [ms]',size=fontsize)
-        # ax.axvline(2400)
-        ax.legend(loc = (0.5,0.7),fontsize=fontsize-5,labelspacing=0.1,frameon=False)
-        plt.setp(ax.get_yticklabels(),fontsize=fontsize)
-        plt.setp(ax.get_xticklabels(),fontsize=fontsize)
-        # plt.xlim(0,200)
-        plt.xlim([lower_lim,len(truth)])
-    #     plt.savefig("{}.png".format(num),dpi=200,bbox_inches="tight")
-        plt.show()
-    else:
-        print("Shot hasn't been processed")
-
-
-
     def plot_shot(self,shot,save_fig=True,normalize=True,truth=None,prediction=None,P_thresh_opt=None,prediction_type='',extra_filename=''):
+        if self.normalizer is None and normalize:
+            if self.conf is not None:
+                self.saved_conf['paths']['normalizer_path'] = self.conf['paths']['normalizer_path']
+            nn = Normalizer(self.saved_conf)
+            nn.train()
+            self.normalizer = nn
+            self.normalizer.set_inference_mode(True)
+    
+        if(shot.previously_saved(self.shots_dir)):
+            shot.restore(self.shots_dir)
+            t_disrupt = shot.t_disrupt
+            is_disruptive =  shot.is_disruptive
+            if normalize:
+                self.normalizer.apply(shot)
+    
+            use_signals = self.saved_conf['paths']['use_signals']
+            fontsize= 15
+            lower_lim = 0 #len(pred)
+            plt.close()
+            colors = ["b","k"]
+            lss = ["-","--"]
+            f,axarr = plt.subplots(len(use_signals)+1,1,sharex=True,figsize=(10,15))#, squeeze=False)
+            plt.title(prediction_type)
+            assert(np.all(shot.ttd.flatten() == truth.flatten()))
+            xx = range(len(prediction)) #list(reversed(range(len(pred))))
+            for i,sig in enumerate(use_signals):
+                ax = axarr[i]
+                num_channels = sig.num_channels
+                sig_arr = shot.signals_dict[sig]
+                if num_channels == 1:
+        #             if j == 0:
+                    ax.plot(xx,sig_arr[:,0],linewidth=2)#,linestyle=lss[j],color=colors[j])
+        #             else:
+        #                 ax.plot(xx,sig_arr[:,0],linewidth=2)#,linestyle=lss[j],color=colors[j],label = labels[sig])
+                    ax.plot([],linestyle="none",label = sig.description)#labels[sig])
+                    if np.min(sig_arr[:,0]) < 0:
+                        ax.set_ylim([-6,6])
+                        ax.set_yticks([-5,0,5])
+                    else:
+                        ax.set_ylim([0,8])
+                        ax.set_yticks([0,5])
+        #             ax.set_ylabel(labels[sig],size=fontsize)
+                else:
+                    ax.imshow(sig_arr[:,:].T, aspect='auto', label = sig.description,cmap="inferno" )
+                    ax.set_ylim([0,num_channels])
+                    ax.text(lower_lim+200, 45, sig.description, bbox={'facecolor': 'white', 'pad': 10},fontsize=fontsize-5)
+                    ax.set_yticks([0,num_channels/2])
+                    ax.set_yticklabels(["0","0.5"])
+                    ax.set_ylabel("$\\rho$",size=fontsize)
+                ax.legend(loc="best",labelspacing=0.1,fontsize=fontsize,frameon=False)
+                ax.axvline(len(truth)-self.T_min_warn,color='r',linewidth=0.5)
+                plt.setp(ax.get_xticklabels(),visible=False)
+                plt.setp(ax.get_yticklabels(),fontsize=fontsize)
+                f.subplots_adjust(hspace=0)
+                #print(sig)
+                #print('min: {}, max: {}'.format(np.min(sig_arr), np.max(sig_arr)))
+            ax = axarr[-1] 
+            #         ax.semilogy((-truth+0.0001),label='ground truth')
+            #         ax.plot(-prediction+0.0001,'g',label='neural net prediction')
+            #         ax.axhline(-P_thresh_opt,color='k',label='trigger threshold')
+        #     nn = np.min(pred)
+            ax.plot(xx,truth,'g',label='target',linewidth=2)
+        #     ax.axhline(0.4,linestyle="--",color='k',label='threshold')
+            ax.plot(xx,prediction,'b',label='RNN output',linewidth=2)
+            ax.axhline(P_thresh_opt,linestyle="--",color='k',label='threshold')
+            ax.set_ylim([-2,2])
+            ax.set_yticks([-1,0,1])
+            # if len(truth)-T_max_warn >= 0:
+            #     ax.axvline(len(truth)-T_max_warn,color='r')#,label='max warning time')
+            ax.axvline(len(truth)-self.T_min_warn,color='r',linewidth=0.5)#,label='min warning time')
+            ax.set_xlabel('T [ms]',size=fontsize)
+            # ax.axvline(2400)
+            ax.legend(loc = (0.5,0.7),fontsize=fontsize-5,labelspacing=0.1,frameon=False)
+            plt.setp(ax.get_yticklabels(),fontsize=fontsize)
+            plt.setp(ax.get_xticklabels(),fontsize=fontsize)
+            # plt.xlim(0,200)
+            plt.xlim([lower_lim,len(truth)])
+        #     plt.savefig("{}.png".format(num),dpi=200,bbox_inches="tight")
+            if save_fig:
+                plt.savefig('sig_fig_{}{}.png'.format(shot.number,extra_filename),bbox_inches='tight')
+                np.savez('sig_{}{}.npz'.format(shot.number,extra_filename),shot=shot,T_min_warn=self.T_min_warn,T_max_warn=self.T_max_warn,prediction=prediction,truth=truth,use_signals=use_signals,P_thresh=P_thresh_opt)
+            #plt.show()
+        else:
+            print("Shot hasn't been processed")
+
+
+
+    def plot_shot_old(self,shot,save_fig=True,normalize=True,truth=None,prediction=None,P_thresh_opt=None,prediction_type='',extra_filename=''):
         if self.normalizer is None and normalize:
             if self.conf is not None:
                 self.saved_conf['paths']['normalizer_path'] = self.conf['paths']['normalizer_path']
@@ -802,44 +795,104 @@ def plot_shot1(shot,use_signals,save_fig=True,normalize=True,truth=None,predicti
             print("Shot hasn't been processed")
 
 
-    def tradeoff_plot(self,accuracy_range,missed_range,fp_range,early_alarm_range,save_figure=False,plot_string=''):
+    def tradeoff_plot(self,accuracy_range,missed_range,fp_range,early_alarm_range,save_figure=False,plot_string='',linestyle="-"):
+        fontsize=15
         plt.figure()
         P_thresh_range = self.get_p_thresh_range()
         # semilogx(P_thresh_range,accuracy_range,label="accuracy")
         if self.pred_ttd:
-            plt.semilogx(abs(P_thresh_range[::-1]),missed_range,'r',label="missed")
-            plt.plot(abs(P_thresh_range[::-1]),fp_range,'k',label="false positives")
+            plt.semilogx(abs(P_thresh_range[::-1]),missed_range,'r',label="missed",linestyle=linestyle)
+            plt.plot(abs(P_thresh_range[::-1]),fp_range,'k',label="false positives",linestyle=linestyle)
         else:
-            plt.plot(P_thresh_range,missed_range,'r',label="missed")
-            plt.plot(P_thresh_range,fp_range,'k',label="false positives")
+            plt.plot(P_thresh_range,missed_range,'r',label="missed",linestyle=linestyle)
+            plt.plot(P_thresh_range,fp_range,'k',label="false positives",linestyle=linestyle)
         # plot(P_thresh_range,early_alarm_range,'c',label="early alarms")
         plt.legend(loc=(1.0,.6))
-        plt.xlabel('Alarm threshold')
+        plt.xlabel('Alarm threshold',size=fontsize)
         plt.grid()
         title_str = 'metrics{}'.format(plot_string.replace('_',' '))
         plt.title(title_str)
         if save_figure:
             plt.savefig(title_str + '.png',bbox_inches='tight')
         plt.close('all')
-        plt.plot(fp_range,1-missed_range,'-b')
+        plt.plot(fp_range,1-missed_range,'-b',linestyle=linestyle)
         ax = plt.gca()
-        plt.xlabel('FP rate')
-        plt.ylabel('TP rate')
+        plt.xlabel('FP rate',size=fontsize)
+        plt.ylabel('TP rate',size=fontsize)
         major_ticks = np.arange(0,1.01,0.2)
         minor_ticks = np.arange(0,1.01,0.05)
         ax.set_xticks(major_ticks)
         ax.set_yticks(major_ticks)
         ax.set_xticks(minor_ticks,minor=True)
         ax.set_yticks(minor_ticks,minor=True)
+        plt.setp(plt.gca().get_yticklabels(),fontsize=fontsize)
+        plt.setp(plt.gca().get_xticklabels(),fontsize=fontsize)
         ax.grid(which='both')
         ax.grid(which='major',alpha=0.5)
         ax.grid(which='minor',alpha=0.3)
         plt.xlim([0,1])
         plt.ylim([0,1])
         if save_figure:
-            plt.savefig(title_str + '_roc.png',bbox_inches='tight')
+            plt.savefig(title_str + '_roc.png',bbox_inches='tight',dpi=200)
         print('ROC area ({}) is {}'.format(plot_string,self.roc_from_missed_fp(missed_range,fp_range)))
 
+    def get_pred_truth_disr_by_shot(self,shot):
+        if shot in self.shot_list_test:
+            mode = 'test'
+        elif shot in self.shot_list_train:
+            mode = 'train'
+        else:
+            print('Shot {} not found'.format(shot))
+            exit(1)
+        if mode == 'test':
+            pred = self.pred_test
+            truth = self.truth_test
+            is_disruptive = self.disruptive_test
+            shot_list = self.shot_list_test
+        else:
+            pred = self.pred_train
+            truth = self.truth_train
+            is_disruptive = self.disruptive_train
+            shot_list = self.shot_list_train
+        i = shot_list.index(shot)
+        t = truth[i]
+        p = pred[i]
+        is_disr = is_disruptive[i]
+        shot = shot_list.shots[i]
+        return p,t,is_disr
+
+    def save_shot(self,shot,P_thresh_opt = 0,extra_filename=''):
+        if self.normalizer is None:
+            if self.conf is not None:
+                self.saved_conf['paths']['normalizer_path'] = self.conf['paths']['normalizer_path']
+            nn = Normalizer(self.saved_conf)
+            nn.train()
+            self.normalizer = nn
+            self.normalizer.set_inference_mode(True)
+ 
+        shot.restore(self.shots_dir)
+        t_disrupt = shot.t_disrupt
+        is_disruptive =  shot.is_disruptive
+        self.normalizer.apply(shot)
+
+
+
+        pred,truth,is_disr = self.get_pred_truth_disr_by_shot(shot)
+        use_signals = self.saved_conf['paths']['use_signals']
+        np.savez('sig_{}{}.npz'.format(shot.number,extra_filename),shot=shot,T_min_warn=self.T_min_warn,T_max_warn=self.T_max_warn,prediction=pred,truth=truth,use_signals=use_signals,P_thresh=P_thresh_opt)
+
+    def get_roc_area_by_mode(self,mode='test'):
+        if mode == 'test':
+            pred = self.pred_test
+            truth = self.truth_test
+            is_disruptive = self.disruptive_test
+            shot_list = self.shot_list_test
+        else:
+            pred = self.pred_train
+            truth = self.truth_train
+            is_disruptive = self.disruptive_train
+            shot_list = self.shot_list_train
+        return self.get_roc_area(pred,truth,is_disruptive)
 
     def get_roc_area(self,all_preds,all_truths,all_disruptive):
         correct_range, accuracy_range, fp_range,missed_range,early_alarm_range = \
@@ -851,77 +904,5 @@ def plot_shot1(shot,use_signals,save_fig=True,normalize=True,truth=None,predicti
         #print(fp_range)
         #print(missed_range)
         return -np.trapz(1-missed_range,x=fp_range)
-
-
-
-
-
-# def cut_ttd(arr,length):
-#     return arr[length-1:]
-
-
-# def get_disruptive(is_disr_list):
-#     return array([1 if any(arr > 0.5) else 0 for arr in is_disr_list])
-
-  
-# def create_acceptable_regions(is_disrupt):
-#     end_indices = get_end_indices(is_disrupt) 
-#     acceptable = zeros_like(is_disrupt,dtype=bool)
-
-
-
-
-# def cut_ttd(arr,length):
-#     return arr[length-1:]
-
-
-# def get_disruptive(is_disr_list):
-#     return array([1 if any(arr > 0.5) else 0 for arr in is_disr_list])
-
-  
-# def create_acceptable_regions(is_disrupt):
-#     end_indices = get_end_indices(is_disrupt) 
-#     acceptable = zeros_like(is_disrupt,dtype=bool)
-#     for idx in end_indices:
-#         acceptable[idx - acceptable_timesteps:idx] = True
-#     return acceptable
-
-# def get_end_indices(is_disrupt):
-#     end_indices = where(np.logical_and(is_disrupt[:-1] > 0.5, is_disrupt[1:] < 0.5))[0]
-#     return end_indices
-
-# def get_accuracy_and_fp_rate(P_thresh,pred,is_disrupt,T_min_warn = 30,T_max_warn = 1000):
-#     predictions = pred > P_thresh
-#     predictions = reshape(predictions,(len(predictions),))
-    
-#     max_acceptable = create_acceptable_region(is_disrupt,T_max_warn)
-#     min_acceptable = create_acceptable_region(is_disrupt,T_min_warn)
-    
-#     tp = sum(np.logical_and(predictions,max_acceptable))
-#     fp = sum(np.logical_and(predictions,~max_acceptable))
-#     tn = sum(np.logical_and(~predictions,~min_acceptable))
-#     fn = sum(np.logical_and(~predictions,min_acceptable))
-   
-#     # print(1.0*tp/(tp + fp))
-#     # print(1.0*tn/(tn + fn))
-#     # print(1.0*(tp + tn)/(tp + fp + tn + fn))
-#     print('total: {}, tp: {} fp: {} fn: {} tn: {}'.format(len(predictions),tp,fp,fn,tn))
-    
-   
-#     return get_accuracy_and_fp_rate_from_stats(tp,fp,fn)
-
-
-# def get_thresholds(ttd_prime_by_shot,ttd_by_shot,disr,length, \
-#                            T_min_warn = 30,T_max_warn = 1000,verbose=False):
-    
-#     def fp_vs_thresh(P_thresh):
-#         correct,accuracy,fp_rate,missed,early_alarm_rate = summarize_shot_prediction_stats(P_thresh,ttd_prime_by_shot, \
-#                                 ttd_by_shot,disr,length,T_min_warn,T_max_warn,verbose=verbose)
-#         return fp_rate
-
-#     def missed_vs_thresh(P_thresh):
-#         correct,accuracy,fp_rate,missed,early_alarm_rate = summarize_shot_prediction_stats(P_thresh,ttd_prime_by_shot, \
-#                                 ttd_by_shot,disr,length,T_min_warn,T_max_warn,verbose=verbose)
-#         return fp_rate
 
 
