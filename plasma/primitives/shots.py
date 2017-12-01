@@ -305,6 +305,7 @@ class Shot(object):
         self.is_disruptive = is_disruptive
         self.t_disrupt = t_disrupt
         self.weight = 1.0
+        self.augmentation_fn = None
         if t_disrupt is not None:
             self.is_disruptive = Shot.is_disruptive_given_disruption_time(t_disrupt)
         else:
