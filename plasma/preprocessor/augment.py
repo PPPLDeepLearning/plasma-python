@@ -5,6 +5,33 @@ import abc
 import numpy as np
 import random
 
+
+class ByShotAugmentator(object):
+    def __init__(self,normalizer):
+        self.normalizer = normalizer
+
+    def __str__(self):
+        s = self.normalizer.__str__()
+        s += "\n including by shot augmentation"
+        return s
+
+    @abc.abstractmethod
+    def apply(self,shot):
+        '''
+        The purpose of the method is to apply normalization to a shot and then optionally apply augmentation with a function that is individual to every shot.
+
+        Argument list: 
+          - shot: plasma shot. Should contain an augment function
+
+        Config parameters list:
+          - conf['data']['augment_during_training']: boolean flag, yes or no to augment during training
+        '''
+        #first just apply normalization as usual.
+        self.normalizer.apply(shot)
+        assert(shot.augmentation_fn is not None)
+        shot.augmentation_fn(shot)
+
+
 class AbstractAugmentator(object):
 
     def __init__(self,normalizer,is_inference,conf):
