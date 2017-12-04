@@ -136,8 +136,24 @@ nstx = Machine("nstx","skylark.pppl.gov:8501::",fetch_nstx_data,max_cores=8)
 all_machines = [d3d,jet]
 
 profile_num_channels = 64
+#ZIPFIT comes from actual measurements
 etemp_profile = ProfileSignal("Electron temperature profile",["ZIPFIT01/PROFILES.ETEMPFIT"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerance=0.02)
 edens_profile = ProfileSignal("Electron density profile",["ZIPFIT01/PROFILES.EDENSFIT"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerance=0.02)
+itemp_profile = ProfileSignal("Ion temperature profile",["ZIPFIT01/PROFILES.ITEMPFIT"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerance=0.02)
+zdens_profile = ProfileSignal("Impurity density profile",["ZIPFIT01/PROFILES.ZDENSFIT"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerance=0.02)
+trot_profile = ProfileSignal("Rotation profile",["ZIPFIT01/PROFILES.TROTFIT"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerance=0.02)
+pthm_profile = ProfileSignal("Thermal pressure profile",["ZIPFIT01/PROFILES.PTHMFIT"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerance=0.02)# thermal pressure doesn't include fast ions
+neut_profile = ProfileSignal("Neutrals profile",["ZIPFIT01/PROFILES.NEUTFIT"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerance=0.02)
+
+q_profile = ProfileSignal("Q profile",["ZIPFIT01/PROFILES.BOOTSTRAP.QRHO"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerance=0.02)#compare to just q95
+bootstrap_current_profile = ProfileSignal("Rotation profile",["ZIPFIT01/PROFILES.BOOTSTRAP.JBS_SAUTER"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerance=0.02)
+
+#equilibrium_image = 2DSignal("2D Magnetic Equilibrium",["EFIT01/RESULTS.GEQDSK.PSIRZ"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerance=0.02)
+
+#EFIT is the inverse problem from external magnetic measurements
+#pressure_profile = ProfileSignal("Pressure profile",["EFIT01/RESULTS.GEQDSK.PRES"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerance=0.02)# pressure might be unphysical since it is not constrained by measurements, only the EFIT which does not know about density and temperature
+q_psi_profile = ProfileSignal("Q(psi) profile",["EFIT01/RESULTS.GEQDSK.QPSI"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerance=0.02)
+
 
 # epress_profile_spatial = ProfileSignal("Electron pressure profile",["ppf/hrts/pe/"],[jet],causal_shifts=[25],mapping_range=(2,4),num_channels=profile_num_channels)
 etemp_profile_spatial = ProfileSignal("Electron temperature profile",["ppf/hrts/te"],[jet],causal_shifts=[25],mapping_range=(2,4),num_channels=profile_num_channels,data_avail_tolerance=0.05)
@@ -193,10 +209,15 @@ all_signals = {'q95':q95,'li':li,'ip':ip,
 'pradcore':pradcore,'pradedge':pradedge,'pradtot':pradtot,
 'pin':pin,'torquein':torquein,
 'energydt':energydt,
-'etemp_profile':etemp_profile,'edens_profile':edens_profile,
- 'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr
+ 'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr,
 #'tmamp1':tmamp1,'tmamp2':tmamp2,'tmfreq1':tmfreq1,'tmfreq2':tmfreq2,'pechin':pechin,
 # 'etemp_profile_spatial':etemp_profile_spatial,'edens_profile_spatial':edens_profile_spatial,'etemp':etemp
+'etemp_profile':etemp_profile,'edens_profile':edens_profile,
+'itemp_profile':itemp_profile,'zdens_profile':zdens_profile,
+'trot_profile':trot_profile,'pthm_profile':pthm_profile,
+'neut_profile':neut_profile,'q_profile':q_profile,
+'bootstrap_current_profile':bootstrap_current_profile,
+'q_psi_profile':q_psi_profile
 }
 
 #new signals are not downloaded yet
