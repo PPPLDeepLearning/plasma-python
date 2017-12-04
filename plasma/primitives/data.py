@@ -118,6 +118,8 @@ class Signal(object):
         return idx
 
     def __eq__(self,other):
+        if other is None:
+            return False
         return self.description.__eq__(other.description)
 
     

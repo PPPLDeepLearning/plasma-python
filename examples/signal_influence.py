@@ -36,6 +36,7 @@ sys.setrecursionlimit(10000)
 
 from plasma.conf import conf
 from plasma.models.loader import Loader
+from plasma.primitives.shots import ShotList
 from plasma.preprocessor.normalize import Normalizer
 from plasma.preprocessor.augment import ByShotAugmentator
 from plasma.preprocessor.preprocess import guarantee_preprocessed
@@ -73,7 +74,7 @@ only_predict = len(sys.argv) > 1
 custom_path = None
 if only_predict:
     custom_path = sys.argv[1]
-shot_num = sys.argv[2]
+shot_num = int(sys.argv[2])
 print("predicting using path {} on shot {}".format(custom_path,shot_num))
 
 assert(only_predict)
@@ -85,27 +86,54 @@ if task_index == 0: #make sure preprocessing has been run, and is saved as a fil
 comm.Barrier()
 shot_list_train,shot_list_validate,shot_list_test = guarantee_preprocessed(conf)
 
-shot_list = sum([l.filter_by_number([shot_num]) for l in [shot_list_train,shot_list_validate,shot_list_test]],[])
+shot_list = sum([l.filter_by_number([shot_num]) for l in [shot_list_train,shot_list_validate,shot_list_test]],ShotList())
+assert(len(shot_list) == 1)
 # for s in shot_list.shots:
     # s.restore()
 
-def hide_signal_data(shot,t=0,sig_to_hide=None):
+def chunks(l, n):
+    """Yield successive n-sized chunks from l."""
+    return[ l[i:i + n] for i in range(0, len(l), n)]
+
+def hide_signal_data(shot,t=0,sigs_to_hide=None):
     for sig in shot.signals:
-        if sig == sig_to_hide or sig_to_hide == None:
+        if sigs_to_hide is None or (sigs_to_hide is not None and sig in sigs_to_hide):
             shot.signals_dict[sig][t:,:] = shot.signals_dict[sig][t,:]
 
+def create_shot_list_tmp(original_shot,time_points,sigs=None):
+    shot_list_tmp = ShotList()
+    T = len(original_shot.ttd)
+    t_range = np.linspace(0,T-1,time_points,dtype=np.int)
+    for t in t_range:
+        new_shot = copy.copy(original_shot)
+        assert(new_shot.augmentation_fn == None)
+        new_shot.augmentation_fn = partial(hide_signal_data,t = t,sigs_to_hide=sigs)
+        #new_shot.number = original_shot.number
+        shot_list_tmp.append(new_shot)
+    return shot_list_tmp,t_range
 
-original_shot = s[0]
-T = len(original_shot.ttd)
-t_range = np.linspace(0,T-1,10,dtype=np.int)
-for t in t_range:
-    new_shot = copy.deepcopy(original_shot)
-    assert(new_shot.augmentation_fn == None)
-    new_shot.augmentation_fn = partial(hide_signal_data,t = t)
-    hide_signal_data(new_shot,t,None)
-    new_shot.number = original_shot.number
-    shot_list.append(new_shot)
+def get_importance_measure(original_shot,loader,custom_path,metric,time_points=10,sig=None):
+    shot_list_tmp,t_range = create_shot_list_tmp(original_shot,time_points,sigs) 
+    y_prime,y_gold,disruptive = mpi_make_predictions(conf,shot_list_tmp,loader,custom_path)
+    shot_list_tmp.make_light()
+    return t_range,get_importance_measure_given_y_prime(y_prime,metric),y_prime[-1]
 
+def difference_metric(y_prime,y_prime_orig):
+    idx = np.argmax(y_prime_orig) 
+    return (np.max(y_prime_orig) - y_prime[idx])/(np.max(y_prime_orig) - np.min(y_prime_orig))
+
+def get_importance_measure_given_y_prime(y_prime,metric):
+    differences = [metric(y_prime[i],y_prime[-1]) for i in range(len(y_prime))]
+    return 1.0-np.array(differences)#/np.max(differences)
+
+
+
+
+original_shot = shot_list[0]
+original_shot.augmentation_fn = None
+original_shot.restore(conf['paths']['processed_prepath'])
+
+#remove original shot
 
 
 print("normalization",end='')
@@ -120,29 +148,30 @@ print("...done")
 
 #load last model for testing
 loader.set_inference_mode(True)
-print('saving results')
-y_prime = []
-y_gold = []
-disruptive= []
+use_signals = copy.copy(conf['paths']['use_signals'])
+use_signals.append(None)
+importances = dict()
+y_prime = 0
+use_signals = [[s] for s in use_signals[:-3]] + [use_signals[-3:-1]] + [use_signals[-1]]
+print(use_signals)
+for sigs in use_signals:
+    t_range,measure,y_prime = get_importance_measure(original_shot,loader,custom_path,difference_metric,time_points=128,sig=sigs)
+    if sigs is None:
+        idx = None
+    else:
+        idx = tuple(sorted(sigs))
+    importances[idx] = (t_range,measure) 
+    
 
-# y_prime_train,y_gold_train,disruptive_train = make_predictions(conf,shot_list_train,loader)
-# y_prime_test,y_gold_test,disruptive_test = make_predictions(conf,shot_list_test,loader)
-
-y_prime,y_gold,disruptive = mpi_make_predictions(conf,shot_list,loader,custom_path)
 
 if task_index == 0:
-    disruptive = np.array(disruptive)
-
-    shot_list.make_light()
-
-    save_str = 'signal_influence_results_' + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    save_str = 'signal_influence_results_{}_'.format(shot_num) + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     result_base_path = conf['paths']['results_prepath']
     if not os.path.exists(result_base_path):
         os.makedirs(result_base_path)
-
     np.savez(result_base_path+save_str,
-        y_gold=y_gold,y_prime=y_prime,disruptive=disruptive,
-        shot_list=shot_list,conf = conf)
+        original_shot=original_shot,importances=importances,y_prime=y_prime,conf = conf)
+    shot_list.make_light()
 
 sys.stdout.flush()
 if task_index == 0:

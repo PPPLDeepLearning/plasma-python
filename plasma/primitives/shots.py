@@ -329,7 +329,7 @@ class Shot(object):
 
     def __str__(self):
         string = 'number: {}\n'.format(self.number)
-        string = 'machine: {}\n'.format(self.machine)
+        string += 'machine: {}\n'.format(self.machine)
         string += 'signals: {}\n'.format(self.signals )
         string += 'signals_dict: {}\n'.format(self.signals_dict )
         string += 'ttd: {}\n'.format(self.ttd )

@@ -15,7 +15,6 @@ class ByShotAugmentator(object):
         s += "\n including by shot augmentation"
         return s
 
-    @abc.abstractmethod
     def apply(self,shot):
         '''
         The purpose of the method is to apply normalization to a shot and then optionally apply augmentation with a function that is individual to every shot.
@@ -28,8 +27,11 @@ class ByShotAugmentator(object):
         '''
         #first just apply normalization as usual.
         self.normalizer.apply(shot)
-        assert(shot.augmentation_fn is not None)
-        shot.augmentation_fn(shot)
+        if shot.augmentation_fn is not None:
+            shot.augmentation_fn(shot)
+
+    def set_inference_mode(self,is_inference):
+        self.normalizer.set_inference_mode(is_inference)
 
 
 class AbstractAugmentator(object):
@@ -50,6 +52,10 @@ class AbstractAugmentator(object):
         s += "Signal to augmented: {}\n".format(self.to_augment_str)
         s += "Is inference: {}\n".format(self.is_inference)
         return s
+    
+    #for compatibility with code that changes the mode of the normalizer
+    def set_inference_mode(self,is_inference):
+        self.normalizer.set_inference_mode(is_inference)
 
     @abc.abstractmethod
     def apply(self,shot):
@@ -58,6 +64,7 @@ class AbstractAugmentator(object):
     @abc.abstractmethod
     def augment(self,sig):
         pass
+    
 
 class Augmentator(AbstractAugmentator):
 
