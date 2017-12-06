@@ -132,7 +132,10 @@ class Preprocessor(object):
         shot_list_train = data['shot_list_train'][()]
         shot_list_validate = data['shot_list_validate'][()]
         shot_list_test = data['shot_list_test'][()]
-        return shot_list_train,shot_list_validate,shot_list_test
+        if isinstance(shot_list_train,ShotList):
+            return shot_list_train,shot_list_validate,shot_list_test
+        else:
+            return ShotList(shot_list_train),ShotList(shot_list_validate),ShotList(shot_list_test)
 
 
     def save_shotlists(self,shot_list_train,shot_list_validate,shot_list_test):
