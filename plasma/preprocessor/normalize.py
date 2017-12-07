@@ -98,9 +98,9 @@ class Normalizer(object):
 
     def train_on_files(self,shot_files,use_shots,all_machines):
         conf = self.conf
-        all_signals = conf['paths']['all_signals'] 
+        use_signals = conf['paths']['use_signals'] 
         shot_list = ShotList()
-        shot_list.load_from_shot_list_files_objects(shot_files,all_signals)
+        shot_list.load_from_shot_list_files_objects(shot_files,use_signals)
         shot_list_picked = shot_list.random_sublist(use_shots) 
 
         previously_saved,machines_saved = self.previously_saved_stats()
