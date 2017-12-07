@@ -74,9 +74,9 @@ class Preprocessor(object):
 
     def preprocess_from_files(self,shot_files,use_shots):
         #all shots, including invalid ones
-        all_signals = self.conf['paths']['all_signals'] 
+        use_signals = self.conf['paths']['use_signals'] 
         shot_list = ShotList()
-        shot_list.load_from_shot_list_files_objects(shot_files,all_signals)
+        shot_list.load_from_shot_list_files_objects(shot_files,use_signals)
         shot_list_picked = shot_list.random_sublist(use_shots)
 
         #empty
