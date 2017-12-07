@@ -117,7 +117,7 @@ class ShotList(object):
         train_frac = conf['training']['train_frac']
         shuffle_training = conf['training']['shuffle_training']
         use_shots = conf['data']['use_shots']
-        use_signals = conf['paths']['use_signals']
+        all_signals = conf['paths']['all_signals']
         #split randomly
         use_shots_train = int(round(train_frac*use_shots))
         use_shots_test = int(round((1-train_frac)*use_shots))
@@ -126,10 +126,10 @@ class ShotList(object):
         #train and test list given
         else:
             shot_list_train = ShotList()
-            shot_list_train.load_from_shot_list_files_objects(shot_files,use_signals)
+            shot_list_train.load_from_shot_list_files_objects(shot_files,all_signals)
                 
             shot_list_test = ShotList()
-            shot_list_test.load_from_shot_list_files_objects(shot_files_test,use_signals)
+            shot_list_test.load_from_shot_list_files_objects(shot_files_test,all_signals)
         
         
         shot_numbers_train = [shot.number for shot in shot_list_train]
