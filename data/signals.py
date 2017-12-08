@@ -209,7 +209,7 @@ all_signals = {'q95':q95,'li':li,'ip':ip,
 'pradcore':pradcore,'pradedge':pradedge,'pradtot':pradtot,
 'pin':pin,'torquein':torquein,
 'energydt':energydt,
- 'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr,
+ 'ipdirect':ipdirect, #'iptarget':iptarget,'iperr':iperr,
 #'tmamp1':tmamp1,'tmamp2':tmamp2,'tmfreq1':tmfreq1,'tmfreq2':tmfreq2,'pechin':pechin,
 # 'etemp_profile_spatial':etemp_profile_spatial,'edens_profile_spatial':edens_profile_spatial,'etemp':etemp
 'etemp_profile':etemp_profile,'edens_profile':edens_profile,
