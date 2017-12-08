@@ -213,12 +213,12 @@ all_signals = {'q95':q95,'li':li,'ip':ip,
 #'tmamp1':tmamp1,'tmamp2':tmamp2,'tmfreq1':tmfreq1,'tmfreq2':tmfreq2,'pechin':pechin,
 # 'etemp_profile_spatial':etemp_profile_spatial,'edens_profile_spatial':edens_profile_spatial,'etemp':etemp
 'etemp_profile':etemp_profile,'edens_profile':edens_profile,
-'itemp_profile':itemp_profile,'zdens_profile':zdens_profile,
-'trot_profile':trot_profile,'pthm_profile':pthm_profile,
-'neut_profile':neut_profile,'q_profile':q_profile,
-'bootstrap_current_profile':bootstrap_current_profile,
-'q_psi_profile':q_psi_profile
-}
+'itemp_profile':itemp_profile,'zdens_profile':zdens_profile}
+#'trot_profile':trot_profile,'pthm_profile':pthm_profile,
+#'neut_profile':neut_profile,'q_profile':q_profile,
+#'bootstrap_current_profile':bootstrap_current_profile,
+#'q_psi_profile':q_psi_profile
+#}
 
 #new signals are not downloaded yet
 
