@@ -137,7 +137,7 @@ def parameters(input_file):
         else:
             #default case
             params['paths']['use_signals'] = list(params['paths']['use_signals_dict'].values())
-            params['paths']['all_signals'] = list(params['paths']['use_signals_dict'].values())
+            params['paths']['all_signals'] = list(params['paths']['all_signals_dict'].values())
 
         print("Selected signals (determines which signals training is run on):\n{}".format(params['paths']['use_signals']))
 
