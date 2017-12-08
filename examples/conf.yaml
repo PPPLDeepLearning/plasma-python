@@ -46,6 +46,7 @@ data:
     window_size: 10
     #TODO optimize
     normalizer: 'var'
+    norm_stat_range: 100.0
     equalize_classes: False
     # shallow_sample_prob: 0.01 #the fraction of samples with which to train the shallow model
     floatx: 'float32'
