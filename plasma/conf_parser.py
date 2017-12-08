@@ -132,12 +132,12 @@ def parameters(input_file):
             selected_signals = {k: params['paths']['use_signals_dict'][k] for k in params['paths']['specific_signals']}
             params['paths']['use_signals'] = list(selected_signals.values())
 
-            selected_signals = {k: params['paths']['all_signals_dict'][k] for k in params['paths']['specific_signals']}
+            selected_signals = {k: fully_defined_signals[k] for k in params['paths']['specific_signals']}
             params['paths']['all_signals'] = list(selected_signals.values())
         else:
             #default case
             params['paths']['use_signals'] = list(params['paths']['use_signals_dict'].values())
-            params['paths']['all_signals'] = list(params['paths']['all_signals_dict'].values())
+            params['paths']['all_signals'] = list(fully_defined_signals.values())
 
         print("Selected signals (determines which signals training is run on):\n{}".format(params['paths']['use_signals']))
 
