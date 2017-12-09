@@ -204,16 +204,13 @@ ipdirect = Signal("plasma current direction",["d3d/iptdirect"],[d3d])
 #}
 
 #Restricted subset to those signals that are present for most shots. The idea is to remove signals that cause many shots to be dropped from the dataset.
-all_signals = {'q95':q95,'li':li,'ip':ip,
-'betan':betan,'energy':energy,'lm':lm,'dens':dens,
-'pradcore':pradcore,'pradedge':pradedge,'pradtot':pradtot,
-'pin':pin,'torquein':torquein,
-'energydt':energydt,
- 'ipdirect':ipdirect, #'iptarget':iptarget,'iperr':iperr,
+all_signals = {'q95':q95,'li':li,'ip':ip,'betan':betan,'energy':energy,'lm':lm,'dens':dens,'pradcore':pradcore,
+'pradedge':pradedge,'pradtot':pradtot,'pin':pin,
+'torquein':torquein,
+'energydt':energydt,'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr,
+'etemp_profile':etemp_profile,'edens_profile':edens_profile}
 #'tmamp1':tmamp1,'tmamp2':tmamp2,'tmfreq1':tmfreq1,'tmfreq2':tmfreq2,'pechin':pechin,
 # 'etemp_profile_spatial':etemp_profile_spatial,'edens_profile_spatial':edens_profile_spatial,'etemp':etemp
-'etemp_profile':etemp_profile,'edens_profile':edens_profile,
-'itemp_profile':itemp_profile,'zdens_profile':zdens_profile}
 #'trot_profile':trot_profile,'pthm_profile':pthm_profile,
 #'neut_profile':neut_profile,'q_profile':q_profile,
 #'bootstrap_current_profile':bootstrap_current_profile,

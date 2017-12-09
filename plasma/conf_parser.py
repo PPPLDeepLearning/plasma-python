@@ -94,9 +94,8 @@ def parameters(input_file):
         elif params['paths']['data'] == 'd3d_data':
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = [] 
-            params['paths']['use_signals_dict'] = {'q95':q95,'li':li,'ip':ip,'lm':lm,'betan':betan,'energy':energy,'dens':dens,'pradcore':pradcore,
-            'pradedge':pradedge,'pin':pin,'torquein':torquein,'ipdirect':ipdirect, #'iptarget':iptarget,'iperr':iperr,
-            'etemp_profile':etemp_profile ,'edens_profile':edens_profile}
+            params['paths']['use_signals_dict'] = {'q95':q95,'li':li,'ip':ip,'lm':lm,'betan':betan,'energy':energy,'dens':dens,'pradcore':pradcore,'pradedge':pradedge,'pin':pin,'torquein':torquein,'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr,
+'etemp_profile':etemp_profile ,'edens_profile':edens_profile}
         elif params['paths']['data'] == 'd3d_data_1D':
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = [] 
@@ -104,8 +103,7 @@ def parameters(input_file):
         elif params['paths']['data'] == 'd3d_data_0D':
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = [] 
-            params['paths']['use_signals_dict'] = {'q95':q95,'li':li,'ip':ip,'lm':lm,'betan':betan,'energy':energy,'dens':dens,'pradcore':pradcore,
-            'pradedge':pradedge,'pin':pin,'torquein':torquein,'ipdirect':ipdirect} #,'iptarget':iptarget,'iperr':iperr}
+            params['paths']['use_signals_dict'] = {'q95':q95,'li':li,'ip':ip,'lm':lm,'betan':betan,'energy':energy,'dens':dens,'pradcore':pradcore,'pradedge':pradedge,'pin':pin,'torquein':torquein,'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr}
         elif params['paths']['data'] == 'd3d_data_all':
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = [] 
