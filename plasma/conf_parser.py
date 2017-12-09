@@ -94,9 +94,8 @@ def parameters(input_file):
         elif params['paths']['data'] == 'd3d_data':
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = [] 
-            params['paths']['use_signals_dict'] = {'q95':q95,'li':li,'ip':ip,'lm':lm,'betan':betan,'energy':energy,'dens':dens,'pradcore':pradcore,
-            'pradedge':pradedge,'pin':pin,'torquein':torquein,'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr,
-            'etemp_profile':etemp_profile ,'edens_profile':edens_profile}
+            params['paths']['use_signals_dict'] = {'q95':q95,'li':li,'ip':ip,'lm':lm,'betan':betan,'energy':energy,'dens':dens,'pradcore':pradcore,'pradedge':pradedge,'pin':pin,'torquein':torquein,'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr,
+'etemp_profile':etemp_profile ,'edens_profile':edens_profile}
         elif params['paths']['data'] == 'd3d_data_1D':
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = [] 
@@ -104,8 +103,7 @@ def parameters(input_file):
         elif params['paths']['data'] == 'd3d_data_0D':
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = [] 
-            params['paths']['use_signals_dict'] = {'q95':q95,'li':li,'ip':ip,'lm':lm,'betan':betan,'energy':energy,'dens':dens,'pradcore':pradcore,
-            'pradedge':pradedge,'pin':pin,'torquein':torquein,'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr}
+            params['paths']['use_signals_dict'] = {'q95':q95,'li':li,'ip':ip,'lm':lm,'betan':betan,'energy':energy,'dens':dens,'pradcore':pradcore,'pradedge':pradedge,'pin':pin,'torquein':torquein,'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr}
         elif params['paths']['data'] == 'd3d_data_all':
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = [] 
@@ -132,12 +130,12 @@ def parameters(input_file):
             selected_signals = {k: params['paths']['use_signals_dict'][k] for k in params['paths']['specific_signals']}
             params['paths']['use_signals'] = list(selected_signals.values())
 
-            selected_signals = {k: fully_defined_signals[k] for k in params['paths']['specific_signals']}
+            selected_signals = {k: params['paths']['all_signals_dict'][k] for k in params['paths']['specific_signals']}
             params['paths']['all_signals'] = list(selected_signals.values())
         else:
             #default case
             params['paths']['use_signals'] = list(params['paths']['use_signals_dict'].values())
-            params['paths']['all_signals'] = list(fully_defined_signals.values())
+            params['paths']['all_signals'] = list(params['paths']['all_signals_dict'].values())
 
         print("Selected signals (determines which signals training is run on):\n{}".format(params['paths']['use_signals']))
 
