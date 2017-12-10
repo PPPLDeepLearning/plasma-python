@@ -39,17 +39,18 @@ analyzer.compute_tradeoffs_and_plot('train',save_figure=save_figure,plot_string=
 
 analyzer.summarize_shot_prediction_stats_by_mode(P_thresh_opt,'test')
 
-analyzer.example_plots(P_thresh_opt,'test','any')
-analyzer.example_plots(P_thresh_opt,'test',['FP'],extra_filename='test')
-analyzer.example_plots(P_thresh_opt,'test',['FN'],extra_filename='test')
-analyzer.example_plots(P_thresh_opt,'test',['TP'],extra_filename='test')
-analyzer.example_plots(P_thresh_opt,'test',['late'],extra_filename='test')
+normalize = True
+analyzer.example_plots(P_thresh_opt,'test','any',normalize=normalize)
+analyzer.example_plots(P_thresh_opt,'test',['FP'],extra_filename='test',normalize=normalize)
+analyzer.example_plots(P_thresh_opt,'test',['FN'],extra_filename='test',normalize=normalize)
+analyzer.example_plots(P_thresh_opt,'test',['TP'],extra_filename='test',normalize=normalize)
+analyzer.example_plots(P_thresh_opt,'test',['late'],extra_filename='test',normalize=normalize)
 
-analyzer.example_plots(P_thresh_opt,'train',['TN'],extra_filename='train')
-analyzer.example_plots(P_thresh_opt,'train',['FP'],extra_filename='train')
-analyzer.example_plots(P_thresh_opt,'train',['FN'],extra_filename='train')
-analyzer.example_plots(P_thresh_opt,'train',['TP'],extra_filename='train')
-analyzer.example_plots(P_thresh_opt,'train',['late'],extra_filename='train')
+analyzer.example_plots(P_thresh_opt,'train',['TN'],extra_filename='train',normalize=normalize)
+analyzer.example_plots(P_thresh_opt,'train',['FP'],extra_filename='train',normalize=normalize)
+analyzer.example_plots(P_thresh_opt,'train',['FN'],extra_filename='train',normalize=normalize)
+analyzer.example_plots(P_thresh_opt,'train',['TP'],extra_filename='train',normalize=normalize)
+analyzer.example_plots(P_thresh_opt,'train',['late'],extra_filename='train',normalize=normalize)
 
 
 alarms,disr_alarms,nondisr_alarms = analyzer.gather_first_alarms(P_thresh_opt,'test')
