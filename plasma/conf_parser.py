@@ -94,18 +94,20 @@ def parameters(input_file):
         elif params['paths']['data'] == 'd3d_data':
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = [] 
-            params['paths']['use_signals_dict'] = {'q95':q95,'li':li,'ip':ip,'lm':lm,'betan':betan,'energy':energy,'dens':dens,'pradcore':pradcore,
-            'pradedge':pradedge,'pin':pin,'torquein':torquein,'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr,
-            'etemp_profile':etemp_profile ,'edens_profile':edens_profile}
+            params['paths']['use_signals_dict'] = {'q95':q95,'li':li,'ip':ip,'lm':lm,'betan':betan,'energy':energy,'dens':dens,'pradcore':pradcore,'pradedge':pradedge,'pin':pin,'torquein':torquein,'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr,
+'etemp_profile':etemp_profile ,'edens_profile':edens_profile}
         elif params['paths']['data'] == 'd3d_data_1D':
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = [] 
             params['paths']['use_signals_dict'] = {'ipdirect':ipdirect,'etemp_profile':etemp_profile ,'edens_profile':edens_profile}
+        elif params['paths']['data'] == 'd3d_data_all_profiles':
+            params['paths']['shot_files'] = [d3d_full]
+            params['paths']['shot_files_test'] = [] 
+            params['paths']['use_signals_dict'] = {'ipdirect':ipdirect,'etemp_profile':etemp_profile ,'edens_profile':edens_profile,'itemp_profile':itemp_profile,'zdens_profile':zdens_profile,'trot_profile':trot_profile,'pthm_profile':pthm_profile,'neut_profile':neut_profile,'q_profile':q_profile,'bootstrap_current_profile':bootstrap_current_profile,'q_psi_profile':q_psi_profile}
         elif params['paths']['data'] == 'd3d_data_0D':
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = [] 
-            params['paths']['use_signals_dict'] = {'q95':q95,'li':li,'ip':ip,'lm':lm,'betan':betan,'energy':energy,'dens':dens,'pradcore':pradcore,
-            'pradedge':pradedge,'pin':pin,'torquein':torquein,'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr}
+            params['paths']['use_signals_dict'] = {'q95':q95,'li':li,'ip':ip,'lm':lm,'betan':betan,'energy':energy,'dens':dens,'pradcore':pradcore,'pradedge':pradedge,'pin':pin,'torquein':torquein,'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr}
         elif params['paths']['data'] == 'd3d_data_all':
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = [] 
@@ -130,14 +132,13 @@ def parameters(input_file):
                     print("Signal {} is not fully defined for {} machine. Skipping...".format(sig,params['paths']['data'].split("_")[0]))
             params['paths']['specific_signals'] = list(filter(lambda x: x in params['paths']['use_signals_dict'].keys(), params['paths']['specific_signals']))
             selected_signals = {k: params['paths']['use_signals_dict'][k] for k in params['paths']['specific_signals']}
-            params['paths']['use_signals'] = list(selected_signals.values())
+            params['paths']['use_signals'] = sort_by_channels(list(selected_signals.values()))
 
-            selected_signals = {k: fully_defined_signals[k] for k in params['paths']['specific_signals']}
-            params['paths']['all_signals'] = list(selected_signals.values())
         else:
             #default case
-            params['paths']['use_signals'] = list(params['paths']['use_signals_dict'].values())
-            params['paths']['all_signals'] = list(fully_defined_signals.values())
+            params['paths']['use_signals'] = sort_by_channels(list(params['paths']['use_signals_dict'].values()))
+
+        params['paths']['all_signals'] = sort_by_channels(list(params['paths']['all_signals_dict'].values()))
 
         print("Selected signals (determines which signals training is run on):\n{}".format(params['paths']['use_signals']))
 
@@ -152,4 +153,8 @@ def parameters(input_file):
 
 def get_unique_signal_hash(signals):
     return hash(tuple(sorted(signals)))
+
+#make sure 1D signals come last! This is necessary for model builder.
+def sort_by_channels(list_of_signals):
+    return sorted(list_of_signals,key = lambda x: x.num_channels)
 
