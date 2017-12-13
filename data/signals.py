@@ -158,6 +158,8 @@ q_psi_profile = ProfileSignal("Q(psi) profile",["EFIT01/RESULTS.GEQDSK.QPSI"],[d
 # epress_profile_spatial = ProfileSignal("Electron pressure profile",["ppf/hrts/pe/"],[jet],causal_shifts=[25],mapping_range=(2,4),num_channels=profile_num_channels)
 etemp_profile_spatial = ProfileSignal("Electron temperature profile",["ppf/hrts/te"],[jet],causal_shifts=[25],mapping_range=(2,4),num_channels=profile_num_channels,data_avail_tolerance=0.05)
 edens_profile_spatial = ProfileSignal("Electron density profile",["ppf/hrts/ne"],[jet],causal_shifts=[25],mapping_range=(2,4),num_channels=profile_num_channels,data_avail_tolerance=0.05)
+rho_profile_spatial = ProfileSignal("Rho at spatial positions",["ppf/hrts/rho"],[jet],causal_shifts=[25],mapping_range=(2,4),num_channels=profile_num_channels,data_avail_tolerance=0.05)
+
 etemp = Signal("electron temperature",["ppf/hrtx/te0"],[jet],causal_shifts=[25],data_avail_tolerance=0.05)
 # epress = Signal("electron pressure",["ppf/hrtx/pe0/"],[jet],causal_shifts=[25])
 
@@ -211,7 +213,7 @@ all_signals = {'q95':q95,'li':li,'ip':ip,
 'energydt':energydt,
  'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr,
 #'tmamp1':tmamp1,'tmamp2':tmamp2,'tmfreq1':tmfreq1,'tmfreq2':tmfreq2,'pechin':pechin,
-# 'etemp_profile_spatial':etemp_profile_spatial,'edens_profile_spatial':edens_profile_spatial,'etemp':etemp
+# 'rho_profile_spatial':rho_profile_spatial,'etemp_profile_spatial':etemp_profile_spatial,'edens_profile_spatial':edens_profile_spatial,'etemp':etemp
 'etemp_profile':etemp_profile,'edens_profile':edens_profile,
 'itemp_profile':itemp_profile,'zdens_profile':zdens_profile}
 #'trot_profile':trot_profile,'pthm_profile':pthm_profile,
