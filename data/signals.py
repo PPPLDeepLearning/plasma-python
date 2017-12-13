@@ -181,7 +181,8 @@ pradedge = Signal("Radiated Power Edge",['d3d/'+r'\bol_l03_p'],[d3d])
 # pechin = Signal("ECH input power, not always on",['d3d/pcechpwrf'],[d3d])
 pechin = Signal("ECH input power, not always on",['RF/ECH.TOTAL.ECHPWRC'],[d3d])
 
-betan = Signal("Normalized Beta",['jpf/gs/bl-bndia<s','d3d/efsbetan'],[jet,d3d])
+#betan = Signal("Normalized Beta",['jpf/gs/bl-bndia<s','d3d/efsbetan'],[jet,d3d])
+betan = Signal("Normalized Beta",['d3d/efsbetan'],[d3d])
 energydt = Signal("stored energy time derivative",['jpf/gs/bl-fdwdt<s'],[jet])
 
 torquein = Signal("Input Beam Torque",['d3d/bmstinj'],[d3d]) #Total Beam Power
