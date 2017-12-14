@@ -220,14 +220,17 @@ class Machine(object):
             time,data,mapping,success = self.fetch_data_fn(path,shot_num,c)
             if mapping is not None and np.ndim(mapping) == 1:#make sure there is a mapping for every timestep
                 T = len(time)
-                mapping = np.tile(mapping,(T,1)) 
+                mapping = np.tile(mapping,(T,1)).transpose()
+		assert(mapping.shape == data.shape), "shape of mapping and data is different"
             if mapping_path is not None:#fetch the mapping separately
                 time_map,data_map,mapping_map,success_map = self.fetch_data_fn(mapping_path,shot_num,c)
-                assert(time == time_map), "time for signal {} and mapping {} don't align: \n{}\n\n{}\n".format(path,mapping_path,time,time_map)
                 success = (success and success_map)
                 if not success:
                     print("No success for signal {} and mapping {}".format(path,mapping_path))
-                mapping = data_map
+		    mapping = data
+		else:
+               	    assert(np.all(time == time_map)), "time for signal {} and mapping {} don't align: \n{}\n\n{}\n".format(path,mapping_path,time,time_map)
+                    mapping = data_map
 
         except Exception as e:
             time,data = create_missing_value_filler()
