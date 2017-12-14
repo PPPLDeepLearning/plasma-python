@@ -53,23 +53,33 @@ class Signal(object):
         file_path = self.get_file_path(prepath,shot.machine,shot.number)
         return os.path.isfile(file_path)
 
-    def load_data(self,prepath,shot,dtype='float32'):
+    def load_data_from_txt_safe(self,prepath,shot,dtype='float32'):
         file_path = self.get_file_path(prepath,shot.machine,shot.number)
         if not self.is_saved(prepath,shot):
             print('Signal {}, shot {} was never downloaded'.format(self.description,shot.number))
-            return None,None,False
+            return None,False
 
         if os.path.getsize(file_path) == 0:
             print('Signal {}, shot {} was downloaded incorrectly (empty file). Removing.'.format(self.description,shot.number))
             os.remove(file_path)
-            return None,None,False
+            return None,False
         try:
             data = np.loadtxt(file_path,dtype=dtype)
+            if data == get_missing_value_array():
+                print('Signal {}, shot {} contains no data'.format(self.description,shot.number))
+                return None,False
         except:
             print('Couldnt load signal {} shot {}. Removing.'.format(file_path,shot.number))
             os.remove(file_path)
-            return None, None, False
-            
+            return None, False
+
+
+        return data,True
+
+    def load_data(self,prepath,shot,dtype='float32'):
+        data,succ = self.load_data_from_txt_safe(prepath,shot)
+        if not succ:
+            return None,None,False
             
         if np.ndim(data) == 1:
             data = np.expand_dims(data,axis=0)
@@ -166,12 +176,10 @@ class ProfileSignal(Signal):
         self.num_channels = num_channels
 
     def load_data(self,prepath,shot,dtype='float32'):
-        if not self.is_saved(prepath,shot):
-            print('Signal {}, shot {} was never downloaded'.format(self.description,shot.number))
+        data,succ = self.load_data_from_txt_safe(prepath,shot)
+        if not succ:
             return None,None,False
 
-        file_path = self.get_file_path(prepath,shot.machine,shot.number)
-        data = np.loadtxt(file_path,dtype=dtype)
         if np.ndim(data) == 1:
             data = np.expand_dims(data,axis=0)
             #_ = data[0,0]
@@ -186,7 +194,6 @@ class ProfileSignal(Signal):
         if len(t) <= 1 or (np.max(sig) == 0.0 and np.min(sig) == 0.0):
             print('Signal {}, shot {} contains no data'.format(self.description,shot.number))
             return None,None,False
-
         if np.any(np.isnan(t)) or np.any(np.isnan(sig)):
             print('Signal {}, shot {} contains NAN'.format(self.description,shot.number))
             return None,None,False
@@ -221,21 +228,22 @@ class Machine(object):
             if mapping is not None and np.ndim(mapping) == 1:#make sure there is a mapping for every timestep
                 T = len(time)
                 mapping = np.tile(mapping,(T,1)).transpose()
-		assert(mapping.shape == data.shape), "shape of mapping and data is different"
+                assert(mapping.shape == data.shape), "shape of mapping and data is different"
             if mapping_path is not None:#fetch the mapping separately
                 time_map,data_map,mapping_map,success_map = self.fetch_data_fn(mapping_path,shot_num,c)
                 success = (success and success_map)
                 if not success:
                     print("No success for signal {} and mapping {}".format(path,mapping_path))
-		    mapping = data
-		else:
+                else:
                	    assert(np.all(time == time_map)), "time for signal {} and mapping {} don't align: \n{}\n\n{}\n".format(path,mapping_path,time,time_map)
                     mapping = data_map
-
         except Exception as e:
-            time,data = create_missing_value_filler()
             print(e)
             sys.stdout.flush()
+
+        if not success:
+            return None,None,None,False
+
         time = np.array(time) + 1e-3*signal.get_causal_shift(self)
         return time,np.array(data),mapping,success
 
@@ -261,3 +269,6 @@ def create_missing_value_filler():
     time = np.linspace(0,100,100)
     vals = np.zeros_like(time)
     return time,vals
+
+def get_missing_value_array():
+    return np.array([-1.0])

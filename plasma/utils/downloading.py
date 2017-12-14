@@ -25,6 +25,7 @@ from functools import partial
 from multiprocessing import Queue
 import os
 import errno
+from plasma.primitives.data import get_missing_value_array
 
 # import gadata
 
@@ -42,6 +43,15 @@ def create_missing_value_filler():
 def makedirs_process_safe(dirpath):
     try: #can lead to race condition
         os.makedirs(dirpath)
+    except OSError as e:
+        if e.errno == errno.EEXIST:# File exists, and it's a directory, another process beat us to creating this dir, that's OK.
+            pass
+        else:# Our target dir exists as a file, or different error, reraise the error!
+            raise
+
+def makedirdepth_process_safe(dirpath):
+    try: #can lead to race condition
+        mkdirdepth(dirpath)
     except OSError as e:
         if e.errno == errno.EEXIST:# File exists, and it's a directory, another process beat us to creating this dir, that's OK.
             pass
@@ -86,25 +96,20 @@ def save_shot(shot_num_queue,c,signals,save_prepath,machine,sentinel=-1):
                     except:
                         #missing_values += 1
                         print('Signal {}, shot {} missing. Filling with zeros'.format(signal_path,shot_num))
-                        time,data = create_missing_value_filler()
-                        mapping = None
+                        success = False
 
                     
-                    data_two_column = np.vstack((np.atleast_2d(time),np.atleast_2d(data))).transpose()
-                    if mapping is not None:
-                        mapping_two_column = np.vstack((np.atleast_2d(time),np.atleast_2d(mapping))).transpose()
-                        # mapping_two_column = np.hstack((np.array([[0.0]]),np.atleast_2d(mapping)))
-                        data_two_column = np.vstack((mapping_two_column,data_two_column))
-                    try: #can lead to race condition
-                        mkdirdepth(save_path_full)
-                    except OSError as e:
-                        if e.errno == errno.EEXIST:
-                            # File exists, and it's a directory, another process beat us to creating this dir, that's OK.
-                            pass
-                        else:
-                            # Our target dir exists as a file, or different error, reraise the error!
-                            raise
-                    np.savetxt(save_path_full,data_two_column,fmt = '%.5e')#fmt = '%f %f')
+                    if success:
+                        data_two_column = np.vstack((np.atleast_2d(time),np.atleast_2d(data))).transpose()
+                        if mapping is not None:
+                            mapping_two_column = np.vstack((np.atleast_2d(time),np.atleast_2d(mapping))).transpose()
+                            # mapping_two_column = np.hstack((np.array([[0.0]]),np.atleast_2d(mapping)))
+                            data_two_column = np.vstack((mapping_two_column,data_two_column))
+                    makedirdepth_process_safe(save_path_full)
+                    if success:
+                        np.savetxt(save_path_full,data_two_column,fmt = '%.5e')#fmt = '%f %f')
+                    else
+                        np.savetxt(save_path_full,get_missing_value_array())
                     print('.',end='')
                 except:
                     print('Could not save shot {}, signal {}'.format(shot_num,signal_path))
