@@ -15,7 +15,10 @@ from plasma.utils.downloading import format_save_path
 #           self.signals.append(Signal(signal_descriptions[i],signal_paths[i]))
 
 class Signal(object):
-    def __init__(self,description,paths,machines,tex_label=None,causal_shifts=None,is_ip=False,normalize=True,data_avail_tolerance=0,is_strictly_positive=False):
+    def __init__(self,description,paths,machines,tex_label=None,
+        causal_shifts=None,is_ip=False,normalize=True,
+        data_avail_tolerances=None,is_strictly_positive=False,
+        mapping_paths=None):
         assert(len(paths) == len(machines))
         self.description = description
         self.paths = paths
@@ -26,8 +29,11 @@ class Signal(object):
         self.is_ip = is_ip
         self.num_channels = 1
         self.normalize = normalize
-        self.data_avail_tolerance = data_avail_tolerance
+        if data_avail_tolerances == None:
+            data_avail_tolerances = [0 for m in machines]
+        self.data_avail_tolerances = data_avail_tolerances
         self.is_strictly_positive=is_strictly_positive
+        self.mapping_paths = mapping_paths
 
     def is_strictly_positive_fn(self):
         return self.is_strictly_positive
@@ -112,9 +118,20 @@ class Signal(object):
         idx = self.get_idx(machine)
         return self.paths[idx]
 
+    def get_mapping_path(self,machine):
+        if self.mapping_paths is None:
+            return None
+        else:
+            idx = self.get_idx(machine)
+            return self.mapping_paths[idx]    
+
     def get_causal_shift(self,machine):
         idx = self.get_idx(machine)
         return self.causal_shifts[idx]
+
+    def get_data_avail_tolerance(self,machine):
+        idx = self.get_idx(machine)
+        return self.data_avail_tolerances[idx]
 
     def get_idx(self,machine):
         assert(machine in self.machines)
@@ -143,8 +160,8 @@ class Signal(object):
         return self.description
 
 class ProfileSignal(Signal):
-    def __init__(self,description,paths,machines,tex_label=None,causal_shifts=None,mapping_range=(0,1),num_channels=32,data_avail_tolerance=0,is_strictly_positive=False):
-        super(ProfileSignal, self).__init__(description,paths,machines,tex_label,causal_shifts,is_ip=False,data_avail_tolerance=data_avail_tolerance,is_strictly_positive=is_strictly_positive)
+    def __init__(self,description,paths,machines,tex_label=None,causal_shifts=None,mapping_range=(0,1),num_channels=32,data_avail_tolerances=None,is_strictly_positive=False,mapping_paths=None):
+        super(ProfileSignal, self).__init__(description,paths,machines,tex_label,causal_shifts,is_ip=False,data_avail_tolerance=data_avail_tolerance,is_strictly_positive=is_strictly_positive,mapping_paths=mapping_paths)
         self.mapping_range = mapping_range
         self.num_channels = num_channels
 
@@ -195,10 +212,18 @@ class Machine(object):
 
     def fetch_data(self,signal,shot_num,c):
         path = signal.get_path(self)
+        mapping_path = signal.get_mapping_path(self)
         success = False
         mapping = None
         try:
             time,data,mapping,success = self.fetch_data_fn(path,shot_num,c)
+            if mapping_path is not None:
+                time_map,data_map,mapping_map,success_map = self.fetch_data_fn(mapping_path,shot_num,c)
+                assert(time == time_map), "time for signal {} and mapping {} don't align: \n{}\n\n{}\n".format(path,mapping_path,time,time_map)
+                success = (success and success_map)
+                if not success:
+                    print("No success for signal {} and mapping {}".format(path,mapping_path))
+                mapping = data_map
         except Exception as e:
             time,data = create_missing_value_filler()
             print(e)

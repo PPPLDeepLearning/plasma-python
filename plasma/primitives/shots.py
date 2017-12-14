@@ -401,11 +401,11 @@ class Shot(object):
                 signal_arrays.append(sig)
                 time_arrays.append(t)
                 if self.is_disruptive and self.t_disrupt > np.max(t):
-                    if self.t_disrupt > np.max(t) + signal.data_avail_tolerance:
+                    if self.t_disrupt > np.max(t) + signal.get_data_avail_tolerance(self.machine):
                         print('Shot {}: disruption event is not contained in valid time region of signal {} by {}s, omitting.'.format(self.number,signal,self.t_disrupt - np.max(t)))
                         valid = False 
                     else:
-                        t_max = np.max(t) + signal.data_avail_tolerance
+                        t_max = np.max(t) + signal.get_data_avail_tolerance(self.machine)
                 else:
                     t_max = min(t_max,np.max(t))
 
