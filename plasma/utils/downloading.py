@@ -25,7 +25,6 @@ from functools import partial
 from multiprocessing import Queue
 import os
 import errno
-from plasma.primitives.data import get_missing_value_array
 
 # import gadata
 
@@ -35,10 +34,9 @@ from plasma.primitives.data import get_missing_value_array
 
 #print("Importing numpy version"+np.__version__)
 
-def create_missing_value_filler():
-    time = np.linspace(0,100,100)
-    vals = np.zeros_like(time)
-    return time,vals
+
+def get_missing_value_array():
+    return np.array([-1.0])
 
 def makedirs_process_safe(dirpath):
     try: #can lead to race condition
@@ -108,8 +106,8 @@ def save_shot(shot_num_queue,c,signals,save_prepath,machine,sentinel=-1):
                     makedirdepth_process_safe(save_path_full)
                     if success:
                         np.savetxt(save_path_full,data_two_column,fmt = '%.5e')#fmt = '%f %f')
-                    else
-                        np.savetxt(save_path_full,get_missing_value_array())
+                    else:
+                        np.savetxt(save_path_full,get_missing_value_array(),fmt = '%.5e')
                     print('.',end='')
                 except:
                     print('Could not save shot {}, signal {}'.format(shot_num,signal_path))
