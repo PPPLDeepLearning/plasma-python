@@ -174,11 +174,12 @@ class ProfileSignal(Signal):
         data = np.loadtxt(file_path,dtype=dtype)
         if np.ndim(data) == 1:
             data = np.expand_dims(data,axis=0)
-        _ = data[0,0]
-        mapping = data[0,1:]
+            #_ = data[0,0]
+        T = data.shape[0]/2 #time is stored twice, once for mapping and once for signal
+        mapping = data[:T,1:]
         remapping = np.linspace(self.mapping_range[0],self.mapping_range[1],self.num_channels)
-        t = data[1:,0]
-        sig = data[1:,1:]
+        t = data[:T,0] 
+        sig = data[T:,1:]
         if sig.shape[1] < 2:
             print('Signal {}, shot {} should be profile but has only one channel. Possibly only one profile fit was run for the duration of the shot and was transposed during downloading. Need at least 2.'.format(self.description,shot.number))
             return None,None,False
@@ -193,7 +194,7 @@ class ProfileSignal(Signal):
         timesteps = len(t)
         sig_interp = np.zeros((timesteps,self.num_channels))
         for i in range(timesteps):
-            f = UnivariateSpline(mapping,sig[i,:],s=0,k=1,ext=0)
+            f = UnivariateSpline(mapping[i,:],sig[i,:],s=0,k=1,ext=0)
             sig_interp[i,:] = f(remapping)
 
         return t,sig_interp,True
@@ -217,13 +218,17 @@ class Machine(object):
         mapping = None
         try:
             time,data,mapping,success = self.fetch_data_fn(path,shot_num,c)
-            if mapping_path is not None:
+            if mapping is not None and np.ndim(mapping) == 1:#make sure there is a mapping for every timestep
+                T = len(time)
+                mapping = np.tile(mapping,(T,1)) 
+            if mapping_path is not None:#fetch the mapping separately
                 time_map,data_map,mapping_map,success_map = self.fetch_data_fn(mapping_path,shot_num,c)
                 assert(time == time_map), "time for signal {} and mapping {} don't align: \n{}\n\n{}\n".format(path,mapping_path,time,time_map)
                 success = (success and success_map)
                 if not success:
                     print("No success for signal {} and mapping {}".format(path,mapping_path))
                 mapping = data_map
+
         except Exception as e:
             time,data = create_missing_value_filler()
             print(e)

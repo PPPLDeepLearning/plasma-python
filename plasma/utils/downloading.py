@@ -92,7 +92,8 @@ def save_shot(shot_num_queue,c,signals,save_prepath,machine,sentinel=-1):
                     
                     data_two_column = np.vstack((np.atleast_2d(time),np.atleast_2d(data))).transpose()
                     if mapping is not None:
-                        mapping_two_column = np.hstack((np.array([[0.0]]),np.atleast_2d(mapping)))
+                        mapping_two_column = np.vstack((np.atleast_2d(time),np.atleast_2d(mapping))).transpose()
+                        # mapping_two_column = np.hstack((np.array([[0.0]]),np.atleast_2d(mapping)))
                         data_two_column = np.vstack((mapping_two_column,data_two_column))
                     try: #can lead to race condition
                         mkdirdepth(save_path_full)
