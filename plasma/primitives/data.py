@@ -161,7 +161,7 @@ class Signal(object):
 
 class ProfileSignal(Signal):
     def __init__(self,description,paths,machines,tex_label=None,causal_shifts=None,mapping_range=(0,1),num_channels=32,data_avail_tolerances=None,is_strictly_positive=False,mapping_paths=None):
-        super(ProfileSignal, self).__init__(description,paths,machines,tex_label,causal_shifts,is_ip=False,data_avail_tolerance=data_avail_tolerance,is_strictly_positive=is_strictly_positive,mapping_paths=mapping_paths)
+        super(ProfileSignal, self).__init__(description,paths,machines,tex_label,causal_shifts,is_ip=False,data_avail_tolerances=data_avail_tolerances,is_strictly_positive=is_strictly_positive,mapping_paths=mapping_paths)
         self.mapping_range = mapping_range
         self.num_channels = num_channels
 
