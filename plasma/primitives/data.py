@@ -253,7 +253,7 @@ class ProfileSignal(Signal):
 
 
 class ChannelSignal(Signal):
-    def __init__(self,description,paths,machines,tex_label=None,causal_shifts=None,mapping_range=(0,1),num_channels=32,data_avail_tolerances=None,is_strictly_positive=False,mapping_paths=None):
+    def __init__(self,description,paths,machines,tex_label=None,causal_shifts=None,data_avail_tolerances=None,is_strictly_positive=False,mapping_paths=None):
         super(ChannelSignal, self).__init__(description,paths,machines,tex_label,causal_shifts,is_ip=False,data_avail_tolerances=data_avail_tolerances,is_strictly_positive=is_strictly_positive,mapping_paths=mapping_paths)
         nums,new_paths = self.get_channel_nums(paths)
         self.channel_nums = nums

@@ -238,6 +238,7 @@ print(all_signals.values())
 fully_defined_signals = {sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if sig.is_defined_on_machines(all_machines)}
 d3d_signals = {sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if sig.is_defined_on_machine(d3d)}
 jet_signals = {sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if sig.is_defined_on_machine(jet)}
+jet_signals_0D = {sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if (sig.is_defined_on_machine(jet) and sig.num_channels == 1)}
 
 
 #['pcechpwrf'] #Total ECH Power Not always on!
