@@ -79,18 +79,19 @@ model:
     rnn_type: 'LSTM'
     #TODO optimize
     rnn_layers: 2
-    num_conv_filters: 10
+    num_conv_filters: 128
     size_conv_filters: 3
     num_conv_layers: 3
     pool_size: 2
-    dense_size: 200
+    dense_size: 128
+    extra_dense_input: False
     #have not found a difference yet
     optimizer: 'adam'
     clipnorm: 10.0
     regularization: 0.0
     dense_regularization: 0.01
     #1e-4 is too high, 5e-7 is too low. 5e-5 seems best at 256 batch size, full dataset and ~10 epochs, and lr decay of 0.90. 1e-4 also works well if we decay a lot (i.e ~0.7 or more)
-    lr: 0.00001 #0.00001 #0.0005 #for adam plots 0.0000001 #0.00005 #0.00005 #0.00005
+    lr: 0.00002 #0.00001 #0.0005 #for adam plots 0.0000001 #0.00005 #0.00005 #0.00005
     lr_decay: 0.97 #0.98 #0.9
     stateful: True
     return_sequences: True
@@ -109,7 +110,7 @@ training:
     max_patch_length: 100000
     #How many shots are we loading at once?
     num_shots_at_once: 200
-    num_epochs: 400
+    num_epochs: 1000
     use_mock_data: False
     data_parallel: False
     hyperparam_tuning: False
