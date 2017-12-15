@@ -75,7 +75,6 @@ class Signal(object):
             os.remove(file_path)
             return None, False
 
-
         return data,True
 
     def load_data(self,prepath,shot,dtype='float32'):
@@ -224,7 +223,8 @@ class ProfileSignal(Signal):
         timesteps = len(t)
         sig_interp = np.zeros((timesteps,self.num_channels))
         for i in range(timesteps):
-            f = UnivariateSpline(mapping[i,:],sig[i,:],s=0,k=1,ext=0)
+            _,order = np.unique(mapping[i,:],return_index=True) #make sure the mapping is ordered and unique
+            f = UnivariateSpline(mapping[i,order],sig[i,order],s=0,k=1,ext=0)
             sig_interp[i,:] = f(remapping)
 
         return t,sig_interp,True
