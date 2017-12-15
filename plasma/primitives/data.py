@@ -1,6 +1,7 @@
 import numpy as np
 import time
 import sys,os
+import re
 
 from scipy.interpolate import UnivariateSpline
 
@@ -119,9 +120,9 @@ class Signal(object):
         return t,sig,True
 
 
-    def fetch_data_basic(self,machine,shot_num,c):
-        path = self.get_path(machine)
-        mapping_path = self.get_mapping_path(machine)
+    def fetch_data_basic(self,machine,shot_num,c,path=None):
+	if path is None:
+	    path = self.get_path(machine)
         success = False
         mapping = None
         try:
@@ -229,13 +230,15 @@ class ProfileSignal(Signal):
 
     def fetch_data(self,machine,shot_num,c):
         time,data,mapping,success = self.fetch_data_basic(machine,shot_num,c)
+        path = self.get_path(machine)
+        mapping_path = self.get_mapping_path(machine)
 
         if mapping is not None and np.ndim(mapping) == 1:#make sure there is a mapping for every timestep
             T = len(time)
             mapping = np.tile(mapping,(T,1)).transpose()
             assert(mapping.shape == data.shape), "shape of mapping and data is different"
         if mapping_path is not None:#fetch the mapping separately
-            time_map,data_map,mapping_map,success_map = machine.fetch_data_fn(mapping_path,shot_num,c)
+            time_map,data_map,mapping_map,success_map = self.fetch_data_basic(machine,shot_num,c,path=mapping_path)
             success = (success and success_map)
             if not success:
                 print("No success for signal {} and mapping {}".format(path,mapping_path))
@@ -279,13 +282,14 @@ class ChannelSignal(Signal):
 
     def fetch_data(self,machine,shot_num,c):
         time,data,mapping,success = self.fetch_data_basic(machine,shot_num,c)
+	mapping = None #we are not interested in the whole profile
         channel_num = self.get_channel_num(machine)
         if channel_num is not None and success:
             if np.ndim(data) != 2:
                 print("Channel Signal {} expected 2D array for shot {}".format(self,shot))
                 success = False
             else:
-                data = data[:,channel_num]
+                data = data[channel_num,:] #extract channel of interest
         return time,data,mapping,success
 
     def get_file_path(self,prepath,machine,shot_number):

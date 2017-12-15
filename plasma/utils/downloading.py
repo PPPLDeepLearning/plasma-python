@@ -91,7 +91,9 @@ def save_shot(shot_num_queue,c,signals,save_prepath,machine,sentinel=-1):
                         time,data,mapping,success = signal.fetch_data(machine,shot_num,c) 
                         if not success:
                             print('No success shot {}, signal {}'.format(shot_num,signal))
-                    except:
+                    except Exception as e:
+                        print(e)
+                        sys.stdout.flush()
                         #missing_values += 1
                         print('Signal {}, shot {} missing. Filling with zeros'.format(signal_path,shot_num))
                         success = False
