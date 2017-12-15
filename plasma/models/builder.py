@@ -19,6 +19,7 @@ import re
 import os,sys
 import numpy as np
 from copy import deepcopy
+from plasma.utils.downloading import makedirs_process_safe
 
 
 class LossHistory(Callback):
@@ -137,16 +138,18 @@ class ModelBuilder(object):
             pre_rnn_1D = Permute((2,1)) (pre_rnn_1D)
             
             for i in range(model_conf['num_conv_layers']):
-                pre_rnn_1D = Convolution1D(num_conv_filters,size_conv_filters,padding='valid',activation='relu') (pre_rnn_1D)
+                div_fac = 2**i
+                pre_rnn_1D = Convolution1D(num_conv_filters/div_fac,size_conv_filters,padding='valid',activation='relu') (pre_rnn_1D)
+                pre_rnn_1D = Convolution1D(num_conv_filters/div_fac,1,padding='valid',activation='relu') (pre_rnn_1D)
                 pre_rnn_1D = MaxPooling1D(pool_size) (pre_rnn_1D)
             pre_rnn_1D = Flatten() (pre_rnn_1D)
-            pre_rnn_1D = Dense(num_conv_filters*4,activation='relu',kernel_regularizer=l2(dense_regularization),bias_regularizer=l2(dense_regularization),activity_regularizer=l2(dense_regularization)) (pre_rnn_1D)
-            pre_rnn_1D = Dense(num_conv_filters,activation='relu',kernel_regularizer=l2(dense_regularization),bias_regularizer=l2(dense_regularization),activity_regularizer=l2(dense_regularization)) (pre_rnn_1D)
+            pre_rnn_1D = Dense(dense_size,activation='relu',kernel_regularizer=l2(dense_regularization),bias_regularizer=l2(dense_regularization),activity_regularizer=l2(dense_regularization)) (pre_rnn_1D)
+            pre_rnn_1D = Dense(dense_size/4,activation='relu',kernel_regularizer=l2(dense_regularization),bias_regularizer=l2(dense_regularization),activity_regularizer=l2(dense_regularization)) (pre_rnn_1D)
             pre_rnn = Concatenate() ([pre_rnn_0D,pre_rnn_1D])
         else:
             pre_rnn = pre_rnn_input        
 
-        if model_conf['rnn_layers'] == 0:
+        if model_conf['rnn_layers'] == 0 or model_conf['extra_dense_input']:
             pre_rnn = Dense(dense_size,activation='relu',kernel_regularizer=l2(dense_regularization),bias_regularizer=l2(dense_regularization),activity_regularizer=l2(dense_regularization)) (pre_rnn)
             pre_rnn = Dense(dense_size/2,activation='relu',kernel_regularizer=l2(dense_regularization),bias_regularizer=l2(dense_regularization),activity_regularizer=l2(dense_regularization)) (pre_rnn)
             pre_rnn = Dense(dense_size/4,activation='relu',kernel_regularizer=l2(dense_regularization),bias_regularizer=l2(dense_regularization),activity_regularizer=l2(dense_regularization)) (pre_rnn)
@@ -214,16 +217,7 @@ class ModelBuilder(object):
 
     def ensure_save_directory(self):
         prepath = self.conf['paths']['model_save_path']
-        if not os.path.exists(prepath):
-            try: #can lead to race condition
-                os.makedirs(prepath)
-            except OSError as e:
-                if e.errno == errno.EEXIST:
-                    # File exists, and it's a directory, another process beat us to creating this dir, that's OK.
-                    pass
-                else:
-                    # Our target dir exists as a file, or different error, reraise the error!
-                    raise
+        makedirs_process_safe(prepath)
 
     def load_model_weights(self,model,custom_path=None):
         if custom_path == None:
