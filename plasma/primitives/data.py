@@ -1,11 +1,12 @@
 import numpy as np
 import time
 import sys,os
+import re
 
 from scipy.interpolate import UnivariateSpline
 
 from plasma.utils.processing import get_individual_shot_file
-from plasma.utils.downloading import format_save_path
+from plasma.utils.downloading import format_save_path,get_missing_value_array
 
 # class SignalCollection:
 #   """GA Data Obj"""
@@ -15,7 +16,10 @@ from plasma.utils.downloading import format_save_path
 #           self.signals.append(Signal(signal_descriptions[i],signal_paths[i]))
 
 class Signal(object):
-    def __init__(self,description,paths,machines,tex_label=None,causal_shifts=None,is_ip=False,normalize=True,data_avail_tolerance=0,is_strictly_positive=False):
+    def __init__(self,description,paths,machines,tex_label=None,
+        causal_shifts=None,is_ip=False,normalize=True,
+        data_avail_tolerances=None,is_strictly_positive=False,
+        mapping_paths=None):
         assert(len(paths) == len(machines))
         self.description = description
         self.paths = paths
@@ -26,8 +30,11 @@ class Signal(object):
         self.is_ip = is_ip
         self.num_channels = 1
         self.normalize = normalize
-        self.data_avail_tolerance = data_avail_tolerance
+        if data_avail_tolerances == None:
+            data_avail_tolerances = [0 for m in machines]
+        self.data_avail_tolerances = data_avail_tolerances
         self.is_strictly_positive=is_strictly_positive
+        self.mapping_paths = mapping_paths
 
     def is_strictly_positive_fn(self):
         return self.is_strictly_positive
@@ -47,23 +54,33 @@ class Signal(object):
         file_path = self.get_file_path(prepath,shot.machine,shot.number)
         return os.path.isfile(file_path)
 
-    def load_data(self,prepath,shot,dtype='float32'):
+    def load_data_from_txt_safe(self,prepath,shot,dtype='float32'):
         file_path = self.get_file_path(prepath,shot.machine,shot.number)
         if not self.is_saved(prepath,shot):
             print('Signal {}, shot {} was never downloaded'.format(self.description,shot.number))
-            return None,None,False
+            return None,False
 
         if os.path.getsize(file_path) == 0:
             print('Signal {}, shot {} was downloaded incorrectly (empty file). Removing.'.format(self.description,shot.number))
             os.remove(file_path)
-            return None,None,False
+            return None,False
         try:
             data = np.loadtxt(file_path,dtype=dtype)
+            if data == get_missing_value_array():
+                print('Signal {}, shot {} contains no data'.format(self.description,shot.number))
+                return None,False
         except:
             print('Couldnt load signal {} shot {}. Removing.'.format(file_path,shot.number))
             os.remove(file_path)
-            return None, None, False
-            
+            return None, False
+
+
+        return data,True
+
+    def load_data(self,prepath,shot,dtype='float32'):
+        data,succ = self.load_data_from_txt_safe(prepath,shot)
+        if not succ:
+            return None,None,False
             
         if np.ndim(data) == 1:
             data = np.expand_dims(data,axis=0)
@@ -102,6 +119,27 @@ class Signal(object):
 
         return t,sig,True
 
+
+    def fetch_data_basic(self,machine,shot_num,c,path=None):
+	if path is None:
+	    path = self.get_path(machine)
+        success = False
+        mapping = None
+        try:
+            time,data,mapping,success = machine.fetch_data_fn(path,shot_num,c)
+        except Exception as e:
+            print(e)
+            sys.stdout.flush()
+
+        if not success:
+            return None,None,None,False
+
+        time = np.array(time) + 1e-3*self.get_causal_shift(machine)
+        return time,np.array(data),mapping,success    
+
+    def fetch_data(self,machine,shot_num,c):
+        return self.fetch_data_basic(machine,shot_num,c)
+
     def is_defined_on_machine(self,machine):
         return machine in self.machines
 
@@ -112,9 +150,20 @@ class Signal(object):
         idx = self.get_idx(machine)
         return self.paths[idx]
 
+    def get_mapping_path(self,machine):
+        if self.mapping_paths is None:
+            return None
+        else:
+            idx = self.get_idx(machine)
+            return self.mapping_paths[idx]    
+
     def get_causal_shift(self,machine):
         idx = self.get_idx(machine)
         return self.causal_shifts[idx]
+
+    def get_data_avail_tolerance(self,machine):
+        idx = self.get_idx(machine)
+        return self.data_avail_tolerances[idx]
 
     def get_idx(self,machine):
         assert(machine in self.machines)
@@ -143,32 +192,30 @@ class Signal(object):
         return self.description
 
 class ProfileSignal(Signal):
-    def __init__(self,description,paths,machines,tex_label=None,causal_shifts=None,mapping_range=(0,1),num_channels=32,data_avail_tolerance=0,is_strictly_positive=False):
-        super(ProfileSignal, self).__init__(description,paths,machines,tex_label,causal_shifts,is_ip=False,data_avail_tolerance=data_avail_tolerance,is_strictly_positive=is_strictly_positive)
+    def __init__(self,description,paths,machines,tex_label=None,causal_shifts=None,mapping_range=(0,1),num_channels=32,data_avail_tolerances=None,is_strictly_positive=False,mapping_paths=None):
+        super(ProfileSignal, self).__init__(description,paths,machines,tex_label,causal_shifts,is_ip=False,data_avail_tolerances=data_avail_tolerances,is_strictly_positive=is_strictly_positive,mapping_paths=mapping_paths)
         self.mapping_range = mapping_range
         self.num_channels = num_channels
 
     def load_data(self,prepath,shot,dtype='float32'):
-        if not self.is_saved(prepath,shot):
-            print('Signal {}, shot {} was never downloaded'.format(self.description,shot.number))
+        data,succ = self.load_data_from_txt_safe(prepath,shot)
+        if not succ:
             return None,None,False
 
-        file_path = self.get_file_path(prepath,shot.machine,shot.number)
-        data = np.loadtxt(file_path,dtype=dtype)
         if np.ndim(data) == 1:
             data = np.expand_dims(data,axis=0)
-        _ = data[0,0]
-        mapping = data[0,1:]
+            #_ = data[0,0]
+        T = data.shape[0]/2 #time is stored twice, once for mapping and once for signal
+        mapping = data[:T,1:]
         remapping = np.linspace(self.mapping_range[0],self.mapping_range[1],self.num_channels)
-        t = data[1:,0]
-        sig = data[1:,1:]
+        t = data[:T,0] 
+        sig = data[T:,1:]
         if sig.shape[1] < 2:
             print('Signal {}, shot {} should be profile but has only one channel. Possibly only one profile fit was run for the duration of the shot and was transposed during downloading. Need at least 2.'.format(self.description,shot.number))
             return None,None,False
         if len(t) <= 1 or (np.max(sig) == 0.0 and np.min(sig) == 0.0):
             print('Signal {}, shot {} contains no data'.format(self.description,shot.number))
             return None,None,False
-
         if np.any(np.isnan(t)) or np.any(np.isnan(sig)):
             print('Signal {}, shot {} contains NAN'.format(self.description,shot.number))
             return None,None,False
@@ -176,10 +223,82 @@ class ProfileSignal(Signal):
         timesteps = len(t)
         sig_interp = np.zeros((timesteps,self.num_channels))
         for i in range(timesteps):
-            f = UnivariateSpline(mapping,sig[i,:],s=0,k=1,ext=0)
+            f = UnivariateSpline(mapping[i,:],sig[i,:],s=0,k=1,ext=0)
             sig_interp[i,:] = f(remapping)
 
         return t,sig_interp,True
+
+    def fetch_data(self,machine,shot_num,c):
+        time,data,mapping,success = self.fetch_data_basic(machine,shot_num,c)
+        path = self.get_path(machine)
+        mapping_path = self.get_mapping_path(machine)
+
+        if mapping is not None and np.ndim(mapping) == 1:#make sure there is a mapping for every timestep
+            T = len(time)
+            mapping = np.tile(mapping,(T,1)).transpose()
+            assert(mapping.shape == data.shape), "shape of mapping and data is different"
+        if mapping_path is not None:#fetch the mapping separately
+            time_map,data_map,mapping_map,success_map = self.fetch_data_basic(machine,shot_num,c,path=mapping_path)
+            success = (success and success_map)
+            if not success:
+                print("No success for signal {} and mapping {}".format(path,mapping_path))
+            else:
+                assert(np.all(time == time_map)), "time for signal {} and mapping {} don't align: \n{}\n\n{}\n".format(path,mapping_path,time,time_map)
+                mapping = data_map
+
+        if not success:
+            return None,None,None,False
+        return time,data,mapping,success 
+
+
+class ChannelSignal(Signal):
+    def __init__(self,description,paths,machines,tex_label=None,causal_shifts=None,mapping_range=(0,1),num_channels=32,data_avail_tolerances=None,is_strictly_positive=False,mapping_paths=None):
+        super(ChannelSignal, self).__init__(description,paths,machines,tex_label,causal_shifts,is_ip=False,data_avail_tolerances=data_avail_tolerances,is_strictly_positive=is_strictly_positive,mapping_paths=mapping_paths)
+        nums,new_paths = self.get_channel_nums(paths)
+        self.channel_nums = nums
+        self.paths = new_paths
+
+    def get_channel_nums(self,paths):
+        regex = re.compile('channel\d+')
+        regex_int = re.compile('\d+')
+        nums = []
+        new_paths = []
+        for p in paths:
+            assert(p[-1] != '/')
+            elements = p.split('/')
+            res = regex.findall(elements[-1])
+            assert(len(res) < 2)
+            if len(res) == 0:
+                nums.append(None)
+                new_paths.append(p)
+            else:
+                nums.append(int(regex_int.findall(res[0])[0]))
+                new_paths.append("/".join(elements[:-1]))
+        return nums,new_paths
+
+    def get_channel_num(self,machine):
+        idx = self.get_idx(machine)
+        return self.channel_nums[idx]
+
+    def fetch_data(self,machine,shot_num,c):
+        time,data,mapping,success = self.fetch_data_basic(machine,shot_num,c)
+	mapping = None #we are not interested in the whole profile
+        channel_num = self.get_channel_num(machine)
+        if channel_num is not None and success:
+            if np.ndim(data) != 2:
+                print("Channel Signal {} expected 2D array for shot {}".format(self,shot))
+                success = False
+            else:
+                data = data[channel_num,:] #extract channel of interest
+        return time,data,mapping,success
+
+    def get_file_path(self,prepath,machine,shot_number):
+        dirname = self.get_path(machine)
+        num = self.get_channel_num(machine)
+        if num is not None:
+            dirname += "/channel{}".format(num)
+        return get_individual_shot_file(prepath + '/' + machine.name + '/' +dirname + '/',shot_number)
+
 
 
 class Machine(object):
@@ -192,19 +311,6 @@ class Machine(object):
 
     def get_connection(self):
         return Connection(server)
-
-    def fetch_data(self,signal,shot_num,c):
-        path = signal.get_path(self)
-        success = False
-        mapping = None
-        try:
-            time,data,mapping,success = self.fetch_data_fn(path,shot_num,c)
-        except Exception as e:
-            time,data = create_missing_value_filler()
-            print(e)
-            sys.stdout.flush()
-        time = np.array(time) + 1e-3*signal.get_causal_shift(self)
-        return time,np.array(data),mapping,success
 
     def __eq__(self,other):
         return self.name.__eq__(other.name)
@@ -224,7 +330,4 @@ class Machine(object):
     def __repr__(self):
         return self.__str__()
 
-def create_missing_value_filler():
-    time = np.linspace(0,100,100)
-    vals = np.zeros_like(time)
-    return time,vals
+

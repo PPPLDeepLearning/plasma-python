@@ -3,7 +3,7 @@ import numpy as np
 import time
 import sys
 
-from plasma.primitives.data import Signal,ProfileSignal,Machine
+from plasma.primitives.data import Signal,ProfileSignal,ChannelSignal,Machine
 
 def create_missing_value_filler():
 	time = np.linspace(0,100,100)
@@ -137,33 +137,33 @@ all_machines = [d3d,jet]
 
 profile_num_channels = 64
 #ZIPFIT comes from actual measurements
-etemp_profile = ProfileSignal("Electron temperature profile",["ZIPFIT01/PROFILES.ETEMPFIT"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerance=0.02)
-edens_profile = ProfileSignal("Electron density profile",["ZIPFIT01/PROFILES.EDENSFIT"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerance=0.02)
-itemp_profile = ProfileSignal("Ion temperature profile",["ZIPFIT01/PROFILES.ITEMPFIT"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerance=0.02)
-zdens_profile = ProfileSignal("Impurity density profile",["ZIPFIT01/PROFILES.ZDENSFIT"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerance=0.02)
-trot_profile = ProfileSignal("Rotation profile",["ZIPFIT01/PROFILES.TROTFIT"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerance=0.02)
-pthm_profile = ProfileSignal("Thermal pressure profile",["ZIPFIT01/PROFILES.PTHMFIT"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerance=0.02)# thermal pressure doesn't include fast ions
-neut_profile = ProfileSignal("Neutrals profile",["ZIPFIT01/PROFILES.NEUTFIT"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerance=0.02)
+etemp_profile = ProfileSignal("Electron temperature profile",["ppf/hrts/te","ZIPFIT01/PROFILES.ETEMPFIT"],[jet,d3d],mapping_paths=["ppf/hrts/rho",None],causal_shifts=[25,10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerances=[0.05,0.02])
+edens_profile = ProfileSignal("Electron density profile",["ppf/hrts/ne","ZIPFIT01/PROFILES.EDENSFIT"],[jet,d3d],mapping_paths=["ppf/hrts/rho",None],causal_shifts=[25,10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerances=[0.05,0.02])
+itemp_profile = ProfileSignal("Ion temperature profile",["ZIPFIT01/PROFILES.ITEMPFIT"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerances=[0.02])
+zdens_profile = ProfileSignal("Impurity density profile",["ZIPFIT01/PROFILES.ZDENSFIT"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerances=[0.02])
+trot_profile = ProfileSignal("Rotation profile",["ZIPFIT01/PROFILES.TROTFIT"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerances=[0.02])
+pthm_profile = ProfileSignal("Thermal pressure profile",["ZIPFIT01/PROFILES.PTHMFIT"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerances=[0.02])# thermal pressure doesn't include fast ions
+neut_profile = ProfileSignal("Neutrals profile",["ZIPFIT01/PROFILES.NEUTFIT"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerances=[0.02])
 
-q_profile = ProfileSignal("Q profile",["ZIPFIT01/PROFILES.BOOTSTRAP.QRHO"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerance=0.02)#compare to just q95
-bootstrap_current_profile = ProfileSignal("Rotation profile",["ZIPFIT01/PROFILES.BOOTSTRAP.JBS_SAUTER"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerance=0.02)
+q_profile = ProfileSignal("Q profile",["ZIPFIT01/PROFILES.BOOTSTRAP.QRHO"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerances=[0.02])#compare to just q95
+bootstrap_current_profile = ProfileSignal("Rotation profile",["ZIPFIT01/PROFILES.BOOTSTRAP.JBS_SAUTER"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerances=[0.02])
 
-#equilibrium_image = 2DSignal("2D Magnetic Equilibrium",["EFIT01/RESULTS.GEQDSK.PSIRZ"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerance=0.02)
+#equilibrium_image = 2DSignal("2D Magnetic Equilibrium",["EFIT01/RESULTS.GEQDSK.PSIRZ"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerances=[0.02])
 
 #EFIT is the inverse problem from external magnetic measurements
-#pressure_profile = ProfileSignal("Pressure profile",["EFIT01/RESULTS.GEQDSK.PRES"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerance=0.02)# pressure might be unphysical since it is not constrained by measurements, only the EFIT which does not know about density and temperature
-q_psi_profile = ProfileSignal("Q(psi) profile",["EFIT01/RESULTS.GEQDSK.QPSI"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerance=0.02)
+#pressure_profile = ProfileSignal("Pressure profile",["EFIT01/RESULTS.GEQDSK.PRES"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerances=[0.02])# pressure might be unphysical since it is not constrained by measurements, only the EFIT which does not know about density and temperature
+q_psi_profile = ProfileSignal("Q(psi) profile",["EFIT01/RESULTS.GEQDSK.QPSI"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerances=[0.02])
 
 
 # epress_profile_spatial = ProfileSignal("Electron pressure profile",["ppf/hrts/pe/"],[jet],causal_shifts=[25],mapping_range=(2,4),num_channels=profile_num_channels)
-etemp_profile_spatial = ProfileSignal("Electron temperature profile",["ppf/hrts/te"],[jet],causal_shifts=[25],mapping_range=(2,4),num_channels=profile_num_channels,data_avail_tolerance=0.05)
-edens_profile_spatial = ProfileSignal("Electron density profile",["ppf/hrts/ne"],[jet],causal_shifts=[25],mapping_range=(2,4),num_channels=profile_num_channels,data_avail_tolerance=0.05)
-rho_profile_spatial = ProfileSignal("Rho at spatial positions",["ppf/hrts/rho"],[jet],causal_shifts=[25],mapping_range=(2,4),num_channels=profile_num_channels,data_avail_tolerance=0.05)
+etemp_profile_spatial = ProfileSignal("Electron temperature profile",["ppf/hrts/te"],[jet],causal_shifts=[25],mapping_range=(2,4),num_channels=profile_num_channels,data_avail_tolerances=[0.05])
+edens_profile_spatial = ProfileSignal("Electron density profile",["ppf/hrts/ne"],[jet],causal_shifts=[25],mapping_range=(2,4),num_channels=profile_num_channels,data_avail_tolerances=[0.05])
+rho_profile_spatial = ProfileSignal("Rho at spatial positions",["ppf/hrts/rho"],[jet],causal_shifts=[25],mapping_range=(2,4),num_channels=profile_num_channels,data_avail_tolerances=[0.05])
 
-etemp = Signal("electron temperature",["ppf/hrtx/te0"],[jet],causal_shifts=[25],data_avail_tolerance=0.05)
+etemp = Signal("electron temperature",["ppf/hrtx/te0"],[jet],causal_shifts=[25],data_avail_tolerances=[0.05])
 # epress = Signal("electron pressure",["ppf/hrtx/pe0/"],[jet],causal_shifts=[25])
 
-q95 = Signal("q95 safety factor",['ppf/efit/q95',"EFIT01/RESULTS.AEQDSK.Q95"],[jet,d3d],causal_shifts=[15,10],normalize=False,data_avail_tolerance=0.03)
+q95 = Signal("q95 safety factor",['ppf/efit/q95',"EFIT01/RESULTS.AEQDSK.Q95"],[jet,d3d],causal_shifts=[15,10],normalize=False,data_avail_tolerances=[0.03,0.02])
 
 ip = Signal("plasma current",["jpf/da/c2-ipla","d3d/ipspr15V"],[jet,d3d],is_ip=True) #"d3d/ipsip" was used before, ipspr15V seems to be available for a superset of shots.
 iptarget = Signal("plasma current target",["d3d/ipsiptargt"],[d3d])
@@ -176,8 +176,8 @@ energy = Signal("stored energy",['jpf/gs/bl-wmhd<s','d3d/efswmhd'],[jet,d3d])
 pin = Signal("Input Power (beam for d3d)",['jpf/gs/bl-ptot<s','d3d/bmspinj'],[jet,d3d]) #Total Beam Power
 
 pradtot = Signal("Radiated Power",['jpf/db/b5r-ptot>out'],[jet])
-pradcore = Signal("Radiated Power Core",['d3d/'+r'\bol_l15_p'],[d3d])
-pradedge = Signal("Radiated Power Edge",['d3d/'+r'\bol_l03_p'],[d3d])
+pradcore = ChannelSignal("Radiated Power Core",['ppf/bolo/kb5h/channel14', 'd3d/'+r'\bol_l15_p'],[jet,d3d])
+pradedge = ChannelSignal("Radiated Power Edge",['ppf/bolo/kb5h/channel10','d3d/'+r'\bol_l03_p'],[jet,d3d])
 # pechin = Signal("ECH input power, not always on",['d3d/pcechpwrf'],[d3d])
 pechin = Signal("ECH input power, not always on",['RF/ECH.TOTAL.ECHPWRC'],[d3d])
 
@@ -211,14 +211,14 @@ all_signals = {'q95':q95,'li':li,'ip':ip,'betan':betan,'energy':energy,'lm':lm,'
 'pradedge':pradedge,'pradtot':pradtot,'pin':pin,
 'torquein':torquein,
 'energydt':energydt,'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr,
-#'tmamp1':tmamp1,'tmamp2':tmamp2,'tmfreq1':tmfreq1,'tmfreq2':tmfreq2,'pechin':pechin,
-# 'rho_profile_spatial':rho_profile_spatial,'etemp_profile_spatial':etemp_profile_spatial,'edens_profile_spatial':edens_profile_spatial,'etemp':etemp
-'etemp_profile':etemp_profile,'edens_profile':edens_profile}
-#'itemp_profile':itemp_profile,'zdens_profile':zdens_profile}
-#'trot_profile':trot_profile,'pthm_profile':pthm_profile,
-#'neut_profile':neut_profile,'q_profile':q_profile,
-#'bootstrap_current_profile':bootstrap_current_profile,
-#'q_psi_profile':q_psi_profile}
+'tmamp1':tmamp1,'tmamp2':tmamp2,'tmfreq1':tmfreq1,'tmfreq2':tmfreq2,'pechin':pechin,
+ 'rho_profile_spatial':rho_profile_spatial,'etemp':etemp,
+'etemp_profile':etemp_profile,'edens_profile':edens_profile,
+'itemp_profile':itemp_profile,'zdens_profile':zdens_profile,
+'trot_profile':trot_profile,'pthm_profile':pthm_profile,
+'neut_profile':neut_profile,'q_profile':q_profile,
+'bootstrap_current_profile':bootstrap_current_profile,
+'q_psi_profile':q_psi_profile}
 #}
 
 #new signals are not downloaded yet
