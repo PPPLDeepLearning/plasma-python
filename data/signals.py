@@ -176,10 +176,10 @@ energy = Signal("stored energy",['jpf/gs/bl-wmhd<s','d3d/efswmhd'],[jet,d3d])
 pin = Signal("Input Power (beam for d3d)",['jpf/gs/bl-ptot<s','d3d/bmspinj'],[jet,d3d]) #Total Beam Power
 
 pradtot = Signal("Radiated Power",['jpf/db/b5r-ptot>out'],[jet])
-pradcore = ChannelSignal("Radiated Power Core",[ 'd3d/'+r'\bol_l15_p'],[d3d])
-pradedge = ChannelSignal("Radiated Power Edge",['d3d/'+r'\bol_l03_p'],[d3d])
-#pradcore = ChannelSignal("Radiated Power Core",['ppf/bolo/kb5h/channel14', 'd3d/'+r'\bol_l15_p'],[jet,d3d])
-#pradedge = ChannelSignal("Radiated Power Edge",['ppf/bolo/kb5h/channel10','d3d/'+r'\bol_l03_p'],[jet,d3d])
+#pradcore = ChannelSignal("Radiated Power Core",[ 'd3d/'+r'\bol_l15_p'],[d3d])
+#pradedge = ChannelSignal("Radiated Power Edge",['d3d/'+r'\bol_l03_p'],[d3d])
+pradcore = ChannelSignal("Radiated Power Core",['ppf/bolo/kb5h/channel14', 'd3d/'+r'\bol_l15_p'],[jet,d3d])
+pradedge = ChannelSignal("Radiated Power Edge",['ppf/bolo/kb5h/channel10','d3d/'+r'\bol_l03_p'],[jet,d3d])
 # pechin = Signal("ECH input power, not always on",['d3d/pcechpwrf'],[d3d])
 pechin = Signal("ECH input power, not always on",['RF/ECH.TOTAL.ECHPWRC'],[d3d])
 
