@@ -380,7 +380,7 @@ class Shot(object):
 
     def get_signals_and_times_from_file(self,conf):
         valid = True
-        t_min = -1
+        t_min = -np.Inf
         t_max = np.Inf
         t_thresh = -1
         signal_arrays = []
@@ -409,7 +409,6 @@ class Shot(object):
                 else:
                     t_max = min(t_max,np.max(t))
 
-        assert(t_max > t_min or not valid)
         #make sure the shot is long enough.
         dt = conf['data']['dt']
         if (t_max - t_min)/dt <= (2*conf['model']['length']+conf['data']['T_min_warn']):
@@ -419,6 +418,7 @@ class Shot(object):
         # if self.is_disruptive and self.t_disrupt > t_max+conf['data']['data_avail_tolerance']:
         #     print('Shot {}: disruption event is not contained in valid time region by {}s, omitting.'.format(self.number,self.t_disrupt - t_max))
         #     valid = False 
+        assert(t_max > t_min or not valid), "t max: {}, t_min: {}".format(t_max,t_min)
                 
         
         if self.is_disruptive:
