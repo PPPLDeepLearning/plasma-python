@@ -377,7 +377,7 @@ class Shot(object):
         self.valid = valid
         #cut and resample
         if self.valid:
-                self.cut_and_resample_signals(time_arrays,signal_arrays,t_min,t_max,conf)
+            self.cut_and_resample_signals(time_arrays,signal_arrays,t_min,t_max,conf)
 
     def get_signals_and_times_from_file(self,conf):
         valid = True
