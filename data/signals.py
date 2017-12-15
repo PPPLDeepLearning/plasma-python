@@ -3,7 +3,7 @@ import numpy as np
 import time
 import sys
 
-from plasma.primitives.data import Signal,ProfileSignal,Machine
+from plasma.primitives.data import Signal,ProfileSignal,ChannelSignal,Machine
 
 def create_missing_value_filler():
 	time = np.linspace(0,100,100)
@@ -176,8 +176,8 @@ energy = Signal("stored energy",['jpf/gs/bl-wmhd<s','d3d/efswmhd'],[jet,d3d])
 pin = Signal("Input Power (beam for d3d)",['jpf/gs/bl-ptot<s','d3d/bmspinj'],[jet,d3d]) #Total Beam Power
 
 pradtot = Signal("Radiated Power",['jpf/db/b5r-ptot>out'],[jet])
-pradcore = Signal("Radiated Power Core",['d3d/'+r'\bol_l15_p'],[d3d])
-pradedge = Signal("Radiated Power Edge",['d3d/'+r'\bol_l03_p'],[d3d])
+pradcore = ChannelSignal("Radiated Power Core",['ppf/bolo/kb5h/channel14', 'd3d/'+r'\bol_l15_p'],[jet,d3d])
+pradedge = ChannelSignal("Radiated Power Edge",['ppf/bolo/kb5h/channel10','d3d/'+r'\bol_l03_p'],[jet,d3d])
 # pechin = Signal("ECH input power, not always on",['d3d/pcechpwrf'],[d3d])
 pechin = Signal("ECH input power, not always on",['RF/ECH.TOTAL.ECHPWRC'],[d3d])
 
@@ -211,14 +211,14 @@ all_signals = {'q95':q95,'li':li,'ip':ip,'betan':betan,'energy':energy,'lm':lm,'
 'pradedge':pradedge,'pradtot':pradtot,'pin':pin,
 'torquein':torquein,
 'energydt':energydt,'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr,
-#'tmamp1':tmamp1,'tmamp2':tmamp2,'tmfreq1':tmfreq1,'tmfreq2':tmfreq2,'pechin':pechin,
-# 'rho_profile_spatial':rho_profile_spatial,'etemp_profile_spatial':etemp_profile_spatial,'edens_profile_spatial':edens_profile_spatial,'etemp':etemp
-'etemp_profile':etemp_profile,'edens_profile':edens_profile}
-#'itemp_profile':itemp_profile,'zdens_profile':zdens_profile}
-#'trot_profile':trot_profile,'pthm_profile':pthm_profile,
-#'neut_profile':neut_profile,'q_profile':q_profile,
-#'bootstrap_current_profile':bootstrap_current_profile,
-#'q_psi_profile':q_psi_profile}
+'tmamp1':tmamp1,'tmamp2':tmamp2,'tmfreq1':tmfreq1,'tmfreq2':tmfreq2,'pechin':pechin,
+ 'rho_profile_spatial':rho_profile_spatial,'etemp':etemp,
+'etemp_profile':etemp_profile,'edens_profile':edens_profile,
+'itemp_profile':itemp_profile,'zdens_profile':zdens_profile,
+'trot_profile':trot_profile,'pthm_profile':pthm_profile,
+'neut_profile':neut_profile,'q_profile':q_profile,
+'bootstrap_current_profile':bootstrap_current_profile,
+'q_psi_profile':q_psi_profile}
 #}
 
 #new signals are not downloaded yet
