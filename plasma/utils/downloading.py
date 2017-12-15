@@ -90,7 +90,7 @@ def save_shot(shot_num_queue,c,signals,save_prepath,machine,sentinel=-1):
             if not success:
                 try:
                     try:
-                        time,data,mapping,success = machine.fetch_data(signal,shot_num,c) 
+                        time,data,mapping,success = signal.fetch_data(machine,shot_num,c) 
                         if not success:
                             print('No success shot {}, signal {}'.format(shot_num,signal))
                     except:

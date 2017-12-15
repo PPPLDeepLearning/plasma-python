@@ -118,6 +118,27 @@ class Signal(object):
 
         return t,sig,True
 
+
+    def fetch_data_basic(self,machine,shot_num,c):
+        path = self.get_path(machine)
+        mapping_path = self.get_mapping_path(machine)
+        success = False
+        mapping = None
+        try:
+            time,data,mapping,success = machine.fetch_data_fn(path,shot_num,c)
+        except Exception as e:
+            print(e)
+            sys.stdout.flush()
+
+        if not success:
+            return None,None,None,False
+
+        time = np.array(time) + 1e-3*self.get_causal_shift(machine)
+        return time,np.array(data),mapping,success    
+
+    def fetch_data(self,machine,shot_num,c):
+        return self.fetch_data_basic(machine,shot_num,c)
+
     def is_defined_on_machine(self,machine):
         return machine in self.machines
 
@@ -206,6 +227,75 @@ class ProfileSignal(Signal):
 
         return t,sig_interp,True
 
+    def fetch_data(self,machine,shot_num,c):
+        time,data,mapping,success = self.fetch_data_basic(machine,shot_num,c)
+
+        if mapping is not None and np.ndim(mapping) == 1:#make sure there is a mapping for every timestep
+            T = len(time)
+            mapping = np.tile(mapping,(T,1)).transpose()
+            assert(mapping.shape == data.shape), "shape of mapping and data is different"
+        if mapping_path is not None:#fetch the mapping separately
+            time_map,data_map,mapping_map,success_map = machine.fetch_data_fn(mapping_path,shot_num,c)
+            success = (success and success_map)
+            if not success:
+                print("No success for signal {} and mapping {}".format(path,mapping_path))
+            else:
+                assert(np.all(time == time_map)), "time for signal {} and mapping {} don't align: \n{}\n\n{}\n".format(path,mapping_path,time,time_map)
+                mapping = data_map
+
+        if not success:
+            return None,None,None,False
+        return time,data,mapping,success 
+
+
+class ChannelSignal(Signal):
+    def __init__(self,description,paths,machines,tex_label=None,causal_shifts=None,mapping_range=(0,1),num_channels=32,data_avail_tolerances=None,is_strictly_positive=False,mapping_paths=None):
+        super(ChannelSignal, self).__init__(description,paths,machines,tex_label,causal_shifts,is_ip=False,data_avail_tolerances=data_avail_tolerances,is_strictly_positive=is_strictly_positive,mapping_paths=mapping_paths)
+        nums,new_paths = self.get_channel_nums(paths)
+        self.channel_nums = nums
+        self.paths = new_paths
+
+    def get_channel_nums(self,paths):
+        regex = re.compile('channel\d+')
+        regex_int = re.compile('\d+')
+        nums = []
+        new_paths = []
+        for p in paths:
+            assert(p[-1] != '/')
+            elements = p.split('/')
+            res = regex.findall(elements[-1])
+            assert(len(res) < 2)
+            if len(res) == 0:
+                nums.append(None)
+                new_paths.append(p)
+            else:
+                nums.append(int(regex_int.findall(res[0])[0]))
+                new_paths.append("/".join(elements[:-1]))
+        return nums,new_paths
+
+    def get_channel_num(self,machine):
+        idx = self.get_idx(machine)
+        return self.channel_nums[idx]
+
+    def fetch_data(self,machine,shot_num,c):
+        time,data,mapping,success = self.fetch_data_basic(machine,shot_num,c)
+        channel_num = self.get_channel_num(machine)
+        if channel_num is not None and success:
+            if np.ndim(data) != 2:
+                print("Channel Signal {} expected 2D array for shot {}".format(self,shot))
+                success = False
+            else:
+                data = data[:,channel_num]
+        return time,data,mapping,success
+
+    def get_file_path(self,prepath,machine,shot_number):
+        dirname = self.get_path(machine)
+        num = self.get_channel_num(machine)
+        if num is not None:
+            dirname += "/channel{}".format(num)
+        return get_individual_shot_file(prepath + '/' + machine.name + '/' +dirname + '/',shot_number)
+
+
 
 class Machine(object):
     def __init__(self,name,server,fetch_data_fn,max_cores = 8,current_threshold=0):
@@ -217,35 +307,6 @@ class Machine(object):
 
     def get_connection(self):
         return Connection(server)
-
-    def fetch_data(self,signal,shot_num,c):
-        path = signal.get_path(self)
-        mapping_path = signal.get_mapping_path(self)
-        success = False
-        mapping = None
-        try:
-            time,data,mapping,success = self.fetch_data_fn(path,shot_num,c)
-            if mapping is not None and np.ndim(mapping) == 1:#make sure there is a mapping for every timestep
-                T = len(time)
-                mapping = np.tile(mapping,(T,1)).transpose()
-                assert(mapping.shape == data.shape), "shape of mapping and data is different"
-            if mapping_path is not None:#fetch the mapping separately
-                time_map,data_map,mapping_map,success_map = self.fetch_data_fn(mapping_path,shot_num,c)
-                success = (success and success_map)
-                if not success:
-                    print("No success for signal {} and mapping {}".format(path,mapping_path))
-                else:
-               	    assert(np.all(time == time_map)), "time for signal {} and mapping {} don't align: \n{}\n\n{}\n".format(path,mapping_path,time,time_map)
-                    mapping = data_map
-        except Exception as e:
-            print(e)
-            sys.stdout.flush()
-
-        if not success:
-            return None,None,None,False
-
-        time = np.array(time) + 1e-3*signal.get_causal_shift(self)
-        return time,np.array(data),mapping,success
 
     def __eq__(self,other):
         return self.name.__eq__(other.name)
