@@ -5,7 +5,7 @@ import sys,os
 from scipy.interpolate import UnivariateSpline
 
 from plasma.utils.processing import get_individual_shot_file
-from plasma.utils.downloading import format_save_path
+from plasma.utils.downloading import format_save_path,get_missing_value_array
 
 # class SignalCollection:
 #   """GA Data Obj"""
@@ -326,10 +326,4 @@ class Machine(object):
     def __repr__(self):
         return self.__str__()
 
-def create_missing_value_filler():
-    time = np.linspace(0,100,100)
-    vals = np.zeros_like(time)
-    return time,vals
 
-def get_missing_value_array():
-    return np.array([-1.0])
