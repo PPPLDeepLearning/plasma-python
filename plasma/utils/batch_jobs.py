@@ -48,7 +48,8 @@ def create_slurm_script(subdir,num_nodes,idx,executable_name,use_mpi,env_name="f
             f.write(line)
         f.write('module load '+env_type+'\n')
         f.write('source activate '+env_name+'\n')
-        f.write('module load cudatoolkit/8.0 cudnn/cuda-8.0/6.0 openmpi/cuda-8.0/intel-17.0/2.1.0/64 intel/17.0/64/17.0.4.196 intel-mkl/2017.3/4/64\n')
+        f.write('module load cudatoolkit/8.0 cudnn/cuda-8.0/6.0 openmpi/cuda-8.0/intel-17.0/2.1.0/64\n')
+        f.write('module load intel/17.0/64/17.0.5.239 intel-mkl/2017.3/4/64\n')
         # f.write('rm -f /tigress/{}/model_checkpoints/*.h5\n'.format(user))
         f.write('cd {}\n'.format(subdir))
         f.write('export OMPI_MCA_btl=\"tcp,self,sm\"\n')
@@ -82,7 +83,7 @@ def create_slurm_header(num_nodes,use_mpi,idx):
         assert(num_nodes == 1)
     lines = []
     lines.append('#!/bin/bash\n')
-    lines.append('#SBATCH -t 01:00:00\n')
+    lines.append('#SBATCH -t 06:00:00\n')
     lines.append('#SBATCH -N '+str(num_nodes)+'\n')
     if use_mpi:
         lines.append('#SBATCH --ntasks-per-node=4\n')
