@@ -214,7 +214,7 @@ all_signals = {'q95':q95,'li':li,'ip':ip,'betan':betan,'energy':energy,'lm':lm,'
 'torquein':torquein,
 'energydt':energydt,'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr,
 'tmamp1':tmamp1,'tmamp2':tmamp2,'tmfreq1':tmfreq1,'tmfreq2':tmfreq2,'pechin':pechin,
- 'rho_profile_spatial':rho_profile_spatial,'etemp':etemp,
+# 'rho_profile_spatial':rho_profile_spatial,'etemp':etemp,
 'etemp_profile':etemp_profile,'edens_profile':edens_profile,
 'itemp_profile':itemp_profile,'zdens_profile':zdens_profile,
 'trot_profile':trot_profile,'pthm_profile':pthm_profile,

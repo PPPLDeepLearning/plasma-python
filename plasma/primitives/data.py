@@ -66,10 +66,11 @@ class Signal(object):
             return None,False
         try:
             data = np.loadtxt(file_path,dtype=dtype)
-            if data == get_missing_value_array():
+            if np.all(data == get_missing_value_array()):
                 print('Signal {}, shot {} contains no data'.format(self.description,shot.number))
                 return None,False
-        except:
+        except Exception as e:
+            print(e)
             print('Couldnt load signal {} shot {}. Removing.'.format(file_path,shot.number))
             os.remove(file_path)
             return None, False
