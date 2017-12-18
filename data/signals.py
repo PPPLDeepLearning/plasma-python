@@ -213,14 +213,14 @@ all_signals = {'q95':q95,'li':li,'ip':ip,'betan':betan,'energy':energy,'lm':lm,'
 'pradedge':pradedge,'pradtot':pradtot,'pin':pin,
 'torquein':torquein,
 'energydt':energydt,'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr,
-'tmamp1':tmamp1,'tmamp2':tmamp2,'tmfreq1':tmfreq1,'tmfreq2':tmfreq2,'pechin':pechin,
+#'tmamp1':tmamp1,'tmamp2':tmamp2,'tmfreq1':tmfreq1,'tmfreq2':tmfreq2,'pechin':pechin,
 # 'rho_profile_spatial':rho_profile_spatial,'etemp':etemp,
-'etemp_profile':etemp_profile,'edens_profile':edens_profile,
-'itemp_profile':itemp_profile,'zdens_profile':zdens_profile,
-'trot_profile':trot_profile,'pthm_profile':pthm_profile,
-'neut_profile':neut_profile,'q_profile':q_profile,
-'bootstrap_current_profile':bootstrap_current_profile,
-'q_psi_profile':q_psi_profile}
+'etemp_profile':etemp_profile,'edens_profile':edens_profile}
+#'itemp_profile':itemp_profile,'zdens_profile':zdens_profile,
+#'trot_profile':trot_profile,'pthm_profile':pthm_profile,
+#'neut_profile':neut_profile,'q_profile':q_profile,
+#'bootstrap_current_profile':bootstrap_current_profile,
+#'q_psi_profile':q_psi_profile}
 #}
 
 #new signals are not downloaded yet
@@ -236,6 +236,7 @@ print('all signals (determines which signals are downloaded and preprocessed):')
 print(all_signals.values())
 
 fully_defined_signals = {sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if sig.is_defined_on_machines(all_machines)}
+fully_defined_signals_0D = {sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if (sig.is_defined_on_machine(jet) and sig.num_channels == 1)}
 d3d_signals = {sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if sig.is_defined_on_machine(d3d)}
 jet_signals = {sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if sig.is_defined_on_machine(jet)}
 jet_signals_0D = {sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if (sig.is_defined_on_machine(jet) and sig.num_channels == 1)}
