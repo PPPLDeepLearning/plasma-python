@@ -1,5 +1,8 @@
 #!/bin/bash
 
+rm -rf /tigress/alexeys/processed_shots
+rm -rf /tigress/alexeys/processed_shotlists
+rm -rf /tigress/alexeys/normalization
 rm /tigress/alexeys/model_checkpoints/*
 
 ls ${PWD}
