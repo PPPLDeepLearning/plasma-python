@@ -126,4 +126,4 @@ callbacks:
     write_grads: False
 env: 
     name: 'frnn'
-    type: 'anaconda'
+    type: 'anaconda3'
