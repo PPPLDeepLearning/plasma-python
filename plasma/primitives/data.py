@@ -121,8 +121,8 @@ class Signal(object):
 
 
     def fetch_data_basic(self,machine,shot_num,c,path=None):
-	if path is None:
-	    path = self.get_path(machine)
+        if path is None:
+            path = self.get_path(machine)
         success = False
         mapping = None
         try:
@@ -283,7 +283,7 @@ class ChannelSignal(Signal):
 
     def fetch_data(self,machine,shot_num,c):
         time,data,mapping,success = self.fetch_data_basic(machine,shot_num,c)
-	mapping = None #we are not interested in the whole profile
+        mapping = None #we are not interested in the whole profile
         channel_num = self.get_channel_num(machine)
         if channel_num is not None and success:
             if np.ndim(data) != 2:
