@@ -4,9 +4,6 @@ rm /tigress/alexeys/model_checkpoints/*
 
 ls ${PWD}
 
-echo "Install new version"
-python setup.py install
-
 echo "Jenkins test Python3.6"
 export PYTHONHASHSEED=0
 module load anaconda3
