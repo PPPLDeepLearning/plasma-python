@@ -17,5 +17,7 @@ module load openmpi/cuda-8.0/intel-17.0/2.1.0/64
 module load intel/17.0/64/17.0.4.196
 export OMPI_MCA_btl="tcp,self,sm"
 
+sed -i -e 's/num_epochs: 1000/num_epochs: 2/g' conf.yaml
+
 echo $SLURM_NODELIST
 srun python mpi_learn.py
