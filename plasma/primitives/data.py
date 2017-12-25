@@ -1,3 +1,4 @@
+from __future__ import division
 import numpy as np
 import time
 import sys,os
@@ -205,7 +206,7 @@ class ProfileSignal(Signal):
         if np.ndim(data) == 1:
             data = np.expand_dims(data,axis=0)
             #_ = data[0,0]
-        T = data.shape[0]/2 #time is stored twice, once for mapping and once for signal
+        T = data.shape[0]//2 #time is stored twice, once for mapping and once for signal
         mapping = data[:T,1:]
         remapping = np.linspace(self.mapping_range[0],self.mapping_range[1],self.num_channels)
         t = data[:T,0] 
