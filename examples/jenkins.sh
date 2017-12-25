@@ -5,7 +5,6 @@ rm -rf /tigress/alexeys/processed_shots
 rm -rf /tigress/alexeys/processed_shotlists
 rm -rf /tigress/alexeys/normalization
 
-
 ls ${PWD}
 
 echo "Jenkins test Python3.6"
