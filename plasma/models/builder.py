@@ -1,3 +1,4 @@
+from __future__ import division
 import keras
 from keras.models import Sequential, Model
 from keras.layers import Input
@@ -139,20 +140,20 @@ class ModelBuilder(object):
             
             for i in range(model_conf['num_conv_layers']):
                 div_fac = 2**i
-                pre_rnn_1D = Convolution1D(num_conv_filters/div_fac,size_conv_filters,padding='valid',activation='relu') (pre_rnn_1D)
-                pre_rnn_1D = Convolution1D(num_conv_filters/div_fac,1,padding='valid',activation='relu') (pre_rnn_1D)
+                pre_rnn_1D = Convolution1D(num_conv_filters//div_fac,size_conv_filters,padding='valid',activation='relu') (pre_rnn_1D)
+                pre_rnn_1D = Convolution1D(num_conv_filters//div_fac,1,padding='valid',activation='relu') (pre_rnn_1D)
                 pre_rnn_1D = MaxPooling1D(pool_size) (pre_rnn_1D)
             pre_rnn_1D = Flatten() (pre_rnn_1D)
             pre_rnn_1D = Dense(dense_size,activation='relu',kernel_regularizer=l2(dense_regularization),bias_regularizer=l2(dense_regularization),activity_regularizer=l2(dense_regularization)) (pre_rnn_1D)
-            pre_rnn_1D = Dense(dense_size/4,activation='relu',kernel_regularizer=l2(dense_regularization),bias_regularizer=l2(dense_regularization),activity_regularizer=l2(dense_regularization)) (pre_rnn_1D)
+            pre_rnn_1D = Dense(dense_size//4,activation='relu',kernel_regularizer=l2(dense_regularization),bias_regularizer=l2(dense_regularization),activity_regularizer=l2(dense_regularization)) (pre_rnn_1D)
             pre_rnn = Concatenate() ([pre_rnn_0D,pre_rnn_1D])
         else:
             pre_rnn = pre_rnn_input        
 
         if model_conf['rnn_layers'] == 0 or model_conf['extra_dense_input']:
             pre_rnn = Dense(dense_size,activation='relu',kernel_regularizer=l2(dense_regularization),bias_regularizer=l2(dense_regularization),activity_regularizer=l2(dense_regularization)) (pre_rnn)
-            pre_rnn = Dense(dense_size/2,activation='relu',kernel_regularizer=l2(dense_regularization),bias_regularizer=l2(dense_regularization),activity_regularizer=l2(dense_regularization)) (pre_rnn)
-            pre_rnn = Dense(dense_size/4,activation='relu',kernel_regularizer=l2(dense_regularization),bias_regularizer=l2(dense_regularization),activity_regularizer=l2(dense_regularization)) (pre_rnn)
+            pre_rnn = Dense(dense_size//2,activation='relu',kernel_regularizer=l2(dense_regularization),bias_regularizer=l2(dense_regularization),activity_regularizer=l2(dense_regularization)) (pre_rnn)
+            pre_rnn = Dense(dense_size//4,activation='relu',kernel_regularizer=l2(dense_regularization),bias_regularizer=l2(dense_regularization),activity_regularizer=l2(dense_regularization)) (pre_rnn)
         
         pre_rnn_model = Model(inputs = pre_rnn_input,outputs=pre_rnn)
         x_input = Input(batch_shape = batch_input_shape)
