@@ -184,7 +184,8 @@ class Signal(object):
         return self.description.__lt__(other.description)
     
     def __hash__(self):
-        return self.description.__hash__()
+       import hashlib
+       return int(hashlib.md5(self.description.encode('utf-8')).hexdigest(),16)
 
     def __str__(self):
         return self.description

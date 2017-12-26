@@ -6,6 +6,7 @@ import getpass
 import uuid
 import yaml
 
+import hashlib
 
 def parameters(input_file):
     """Parse yaml file of configuration parameters."""
@@ -167,7 +168,7 @@ def parameters(input_file):
     return params
 
 def get_unique_signal_hash(signals):
-    return hash(tuple(sorted(signals)))
+    return int(hashlib.md5(''.join(tuple(map(lambda x: x.description, sorted(signals)))).encode('utf-8')).hexdigest(),16)
 
 #make sure 1D signals come last! This is necessary for model builder.
 def sort_by_channels(list_of_signals):

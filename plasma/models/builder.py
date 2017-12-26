@@ -22,6 +22,7 @@ import numpy as np
 from copy import deepcopy
 from plasma.utils.downloading import makedirs_process_safe
 
+import hashlib
 
 class LossHistory(Callback):
     def on_train_begin(self, logs=None):
@@ -40,7 +41,7 @@ class ModelBuilder(object):
         this_conf = deepcopy(self.conf)
         #don't make hash dependent on number of epochs.
         this_conf['training']['num_epochs'] = 0
-        unique_id =  hash(dill.dumps(this_conf))
+        unique_id = int(hashlib.md5((dill.dumps(this_conf).decode('unicode_escape')).encode('utf-8')).hexdigest(),16)
         return unique_id
 
     def get_0D_1D_indices(self):
