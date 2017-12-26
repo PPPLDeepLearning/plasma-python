@@ -53,7 +53,7 @@ def create_slurm_script(subdir,num_nodes,idx,executable_name,use_mpi,env_name="f
         # f.write('rm -f /tigress/{}/model_checkpoints/*.h5\n'.format(user))
         f.write('cd {}\n'.format(subdir))
         f.write('export OMPI_MCA_btl=\"tcp,self,sm\"\n')
-        f.write('srun env PYTHONHASHSEED=0 python {}\n'.format(executable_name))
+        f.write('srun python {}\n'.format(executable_name))
         f.write('echo "done."')
 
     return filepath
@@ -72,7 +72,7 @@ def create_pbs_script(subdir,num_nodes,idx,executable_name,use_mpi,env_name="frn
         f.write('module load tensorflow\n')
         # f.write('rm $HOME/tigress/alexeys/model_checkpoints/*\n')
         f.write('cd {}\n'.format(subdir))
-        f.write('aprun -n {} -N1 env PYTHONHASHSEED=0 env KERAS_HOME={} singularity exec $TENSORFLOW_CONTAINER python3 {}\n'.format(str(num_nodes),subdir,executable_name))
+        f.write('aprun -n {} -N1 env KERAS_HOME={} singularity exec $TENSORFLOW_CONTAINER python3 {}\n'.format(str(num_nodes),subdir,executable_name))
         f.write('echo "done."')
 
     return filepath
