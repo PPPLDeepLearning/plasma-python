@@ -19,4 +19,5 @@ module load intel/17.0/64/17.0.4.196
 sed -i -e 's/num_epochs: 1000/num_epochs: 2/g' conf.yaml
 
 echo $SLURM_NODELIST
+cd examples
 srun python mpi_learn.py
