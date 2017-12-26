@@ -16,6 +16,8 @@ module load cudnn/cuda-8.0/6.0
 module load openmpi/cuda-8.0/intel-17.0/2.1.0/64
 module load intel/17.0/64/17.0.4.196
 
+python setup.py install
+
 sed -i -e 's/num_epochs: 1000/num_epochs: 2/g' conf.yaml
 
 echo $SLURM_NODELIST
@@ -34,6 +36,9 @@ module load cudatoolkit/8.0
 module load cudnn/cuda-8.0/6.0
 module load openmpi/cuda-8.0/intel-17.0/2.1.0/64
 module load intel/17.0/64/17.0.4.196
+
+cd ..
+python setup.py install
 
 echo $SLURM_NODELIST
 cd examples
