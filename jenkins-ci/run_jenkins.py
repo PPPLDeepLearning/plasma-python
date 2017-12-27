@@ -3,7 +3,7 @@ import yaml
 import sys,os,getpass
 import plasma.conf
 
-num_nodes = 3
+num_nodes = 4 #Set in the Jenkins project area!!
 test_matrix = [("Python3","jet_data"),("Python2","jet_data")]
 
 run_directory = "{}/{}/jenkins/".format(plasma.conf.conf['fs_path'],getpass.getuser())
