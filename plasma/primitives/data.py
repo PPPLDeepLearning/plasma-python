@@ -231,6 +231,7 @@ class ProfileSignal(Signal):
                 sig_interp[i,:] = f(remapping)
             else:
                 print('Signal {}, shot {} has not enough points for linear interpolation. dfitpack.error: (m>k) failed for hidden m: fpcurf0:m=1'.format(self.description,shot.number))
+                return None,None,False
 
         return t,sig_interp,True
 
