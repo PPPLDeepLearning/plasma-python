@@ -1,3 +1,4 @@
+from __future__ import division 
 from pprint import pprint
 import yaml
 import datetime
@@ -50,7 +51,7 @@ def create_jenkins_script(subdir,num_nodes,executable_name,test_configuration,en
         f.write('cd /home/alexeys/jenkins/workspace/FRNM/PPPL\n') 
         f.write('python setup.py install\n')
         f.write('cd {}\n'.format(subdir))
-        f.write('srun -N 2 -n 8 python {}\n'.format(executable_name))
+        f.write('srun -N {} -n {} python {}\n'.format(num_nodes//2, num_nodes//2*4, executable_name))
 
     return filepath
 
