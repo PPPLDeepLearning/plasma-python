@@ -226,8 +226,11 @@ class ProfileSignal(Signal):
         sig_interp = np.zeros((timesteps,self.num_channels))
         for i in range(timesteps):
             _,order = np.unique(mapping[i,:],return_index=True) #make sure the mapping is ordered and unique
-            f = UnivariateSpline(mapping[i,order],sig[i,order],s=0,k=1,ext=0)
-            sig_interp[i,:] = f(remapping)
+            if sig[i,order].shape[0] > 2:
+                f = UnivariateSpline(mapping[i,order],sig[i,order],s=0,k=1,ext=0)
+                sig_interp[i,:] = f(remapping)
+            else:
+                print('Signal {}, shot {} has not enough points for linear interpolation. dfitpack.error: (m>k) failed for hidden m: fpcurf0:m=1'.format(self.description,shot.number))
 
         return t,sig_interp,True
 
