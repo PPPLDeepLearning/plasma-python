@@ -11,8 +11,6 @@ def generate_working_dirname(run_directory):
     s += "_{}".format(uuid.uuid4())
     return run_directory + s
 
-
-
 def get_executable_name(conf):
     shallow = conf['model']['shallow']
     if shallow:
@@ -30,6 +28,36 @@ def start_slurm_job(subdir,num_nodes,i,conf,shallow,env_name="frnn",env_type="an
     script = create_slurm_script(subdir,num_nodes,i,executable_name,use_mpi,env_name,env_type)
     sp.Popen("sbatch "+script,shell=True)
 
+
+def create_jenkins_script(subdir,num_nodes,executable_name,test_configuration,env_name="frnn",env_type="anaconda"):
+    filename = "jenkins_{}_{}.cmd".format(test_configuration[0],test_configuration[1]) #version of Python and the dataset
+    filepath = os.path.join(subdir,filename)
+    user = getpass.getuser()
+    with open(filepath,"w") as f:
+        f.write('#!/usr/bin/bash\n')
+        f.write('export OMPI_MCA_btl=\"tcp,self,sm\"\n')
+        f.write('echo \"Jenkins test {}\"\n'.format(test_configuration[1]))
+        f.write('rm /tigress/alexeys/model_checkpoints/*\n')
+        f.write('rm -rf /tigress/alexeys/processed_shots\n')
+        f.write('rm -rf /tigress/alexeys/processed_shotlists\n')
+        f.write('rm -rf /tigress/alexeys/normalization\n')
+        f.write('module load {}\n'.format(env_type))
+        f.write('source activate {}\n'.format(env_name))
+        f.write('module load cudatoolkit/8.0\n')
+        f.write('module load cudnn/cuda-8.0/6.0\n')
+        f.write('module load openmpi/cuda-8.0/intel-17.0/2.1.0/64\n')
+        f.write('module load intel/17.0/64/17.0.4.196\n')
+        f.write('cd /home/alexeys/jenkins/workspace/FRNM/PPPL\n') 
+        f.write('python setup.py install\n')
+        f.write('cd {}\n'.format(subdir))
+        f.write('srun -N 2 -n 8 python {}\n'.format(executable_name))
+
+    return filepath
+
+def start_jenkins_job(subdir,num_nodes,executable_name,test_configuration,env_name,env_type):
+    os.system(" ".join(["cp -p",executable_name,subdir]))
+    script = create_jenkins_script(subdir,num_nodes,executable_name,test_configuration,env_name,env_type)
+    sp.Popen("sh "+script,shell=True)
 
 def start_pbs_job(subdir,num_nodes,i,conf,shallow,env_name="frnn",env_type="anaconda"):
     executable_name,use_mpi = get_executable_name(conf)
