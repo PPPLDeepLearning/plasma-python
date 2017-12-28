@@ -49,5 +49,4 @@ python setup.py install
 echo $SLURM_NODELIST
 cd examples
 sed -i -e 's/data: jenkins_jet/data: jenkins_d3d/g' conf.yaml
-
 srun python mpi_learn.py
