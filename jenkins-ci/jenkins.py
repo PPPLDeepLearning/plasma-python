@@ -18,6 +18,7 @@ Popen("module load intel/17.0/64/17.0.4.196",shell=True)
 Popen("python setup.py install",shell=True)
 
 Popen("sed -i -e 's/num_epochs: 1000/num_epochs: 2/g' conf.yaml",shell=True)
+Popen("sed -i -e 's/data: jet_data/data: jenkins_jet/g' conf.yaml",shell=True)
 
 Popen("echo $SLURM_NODELIST",shell=True)
 Popen("cd examples",shell=True)
@@ -41,7 +42,7 @@ Popen("module load intel/17.0/64/17.0.4.196",shell=True)
 Popen("cd ..",shell=True)
 Popen("python setup.py install",shell=True)
 
-Popen("sed -i -e 's/data: jet_data/data: d3d_data/g' conf.yaml",shell=True)
+Popen("sed -i -e 's/data: jenkins_jet/data: jenkins_d3d/g' conf.yaml",shell=True)
 
 Popen("echo $SLURM_NODELIST",shell=True)
 Popen("cd examples",shell=True)
