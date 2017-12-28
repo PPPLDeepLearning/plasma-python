@@ -16,7 +16,7 @@ module load cudnn/cuda-8.0/6.0
 module load openmpi/cuda-8.0/intel-17.0/2.1.0/64
 module load intel/17.0/64/17.0.4.196
 
-cd ..
+cd /home/alexeys/jenkins/workspace/FRNM/PPPL
 python setup.py install
 
 echo $SLURM_NODELIST
