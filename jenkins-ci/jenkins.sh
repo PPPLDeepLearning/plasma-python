@@ -9,7 +9,7 @@ rm /tigress/alexeys/model_checkpoints/*
 rm -rf /tigress/alexeys/processed_shots
 rm -rf /tigress/alexeys/processed_shotlists
 rm -rf /tigress/alexeys/normalization
-module load anaconda3
+module load anaconda3/4.4.0
 source activate PPPL_dev3
 module load cudatoolkit/8.0
 module load cudnn/cuda-8.0/6.0
@@ -36,7 +36,7 @@ rm /tigress/alexeys/model_checkpoints/*
 
 source deactivate
 module purge
-module load anaconda
+module load anaconda/4.4.0
 source activate PPPL
 module load cudatoolkit/8.0
 module load cudnn/cuda-8.0/6.0
