@@ -3,8 +3,7 @@
 export OMPI_MCA_btl="tcp,self,sm"
 
 module load anaconda3/4.4.0
-conda create --yes --prefix /tigress/alexeys/jenkins/.conda/envs/jenkins3 --file requirements-travis.txt
-source activate jenkins3
+source activate /tigress/alexeys/jenkins/.conda/envs/jenkins3
 module load cudatoolkit/8.0
 module load cudnn/cuda-8.0/6.0
 module load openmpi/cuda-8.0/intel-17.0/2.1.0/64
