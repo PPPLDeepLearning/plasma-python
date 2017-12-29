@@ -9,7 +9,7 @@ rm /tigress/alexeys/model_checkpoints/*
 rm -rf /tigress/alexeys/processed_shots
 rm -rf /tigress/alexeys/processed_shotlists
 rm -rf /tigress/alexeys/normalization
-module load anaconda3
+module load anaconda3/4.4.0
 source activate PPPL_dev3
 module load cudatoolkit/8.0
 module load cudnn/cuda-8.0/6.0
@@ -21,7 +21,6 @@ cd /home/alexeys/jenkins/workspace/FRNM/PPPL
 echo ${PWD}
 python setup.py install
 
-echo ${PWD}
 echo $SLURM_NODELIST
 cd examples
 echo ${PWD}
@@ -32,21 +31,21 @@ sed -i -e 's/data: jet_data/data: jenkins_jet/g' conf.yaml
 srun python mpi_learn.py
 
 echo "Jenkins test Python2.7"
-rm /tigress/alexeys/model_checkpoints/*
+#rm /tigress/alexeys/model_checkpoints/*
 
-source deactivate
-module purge
-module load anaconda
-source activate PPPL
-module load cudatoolkit/8.0
-module load cudnn/cuda-8.0/6.0
-module load openmpi/cuda-8.0/intel-17.0/2.1.0/64
-module load intel/17.0/64/17.0.4.196
+#source deactivate
+#module purge
+#module load anaconda/4.4.0
+#source activate PPPL
+#module load cudatoolkit/8.0
+#module load cudnn/cuda-8.0/6.0
+#module load openmpi/cuda-8.0/intel-17.0/2.1.0/64
+#module load intel/17.0/64/17.0.4.196
 
-cd ..
-python setup.py install
+#cd ..
+#python setup.py install
 
-echo $SLURM_NODELIST
-cd examples
-sed -i -e 's/data: jenkins_jet/data: jenkins_d3d/g' conf.yaml
-srun python mpi_learn.py
+#echo $SLURM_NODELIST
+#cd examples
+#sed -i -e 's/data: jenkins_jet/data: jenkins_d3d/g' conf.yaml
+#srun python mpi_learn.py
