@@ -21,7 +21,6 @@ cd /home/alexeys/jenkins/workspace/FRNM/PPPL
 echo ${PWD}
 python setup.py install
 
-echo ${PWD}
 echo $SLURM_NODELIST
 cd examples
 echo ${PWD}
