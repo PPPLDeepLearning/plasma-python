@@ -18,7 +18,7 @@ echo `which mpicc`
 echo ${PWD}
 echo $SLURM_NODELIST
 
-cd examples
+cd jenkins-ci
 echo ${PWD}
 ls ${PWD}
 
