@@ -10,7 +10,7 @@ rm -rf /tigress/alexeys/processed_shots
 rm -rf /tigress/alexeys/processed_shotlists
 rm -rf /tigress/alexeys/normalization
 module load anaconda3/4.4.0
-source activate PPPL_dev3
+source activate /tigress/alexeys/jenkins/.conda/envs/jenkins3
 module load cudatoolkit/8.0
 module load cudnn/cuda-8.0/6.0
 module load openmpi/cuda-8.0/intel-17.0/2.1.0/64
@@ -36,7 +36,7 @@ echo "Jenkins test Python2.7"
 #source deactivate
 #module purge
 #module load anaconda/4.4.0
-#source activate PPPL
+#source activate /tigress/alexeys/jenkins/.conda/envs/jenkins2
 #module load cudatoolkit/8.0
 #module load cudnn/cuda-8.0/6.0
 #module load openmpi/cuda-8.0/intel-17.0/2.1.0/64
