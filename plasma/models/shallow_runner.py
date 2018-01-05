@@ -29,6 +29,8 @@ from plasma.utils.downloading import makedirs_process_safe
 
 from keras.utils.generic_utils import Progbar 
 
+import hashlib
+
 debug_use_shots = 100000
 model_filename = "saved_model.pkl"
 dataset_path = "dataset.npz"
@@ -85,8 +87,8 @@ class FeatureExtractor(object):
     def get_save_prepath(self):
         prepath = self.loader.conf['paths']['processed_prepath']
         use_signals = self.loader.conf['paths']['use_signals']
-        identifying_tuple = tuple(sorted(use_signals))
-        save_prepath = prepath + "shallow/use_signals_{}/".format(hash(identifying_tuple))
+        identifying_tuple = ''.join(tuple(map(lambda x: x.description, sorted(use_signals)))).encode('utf-8')
+        save_prepath = prepath + "shallow/use_signals_{}/".format(int(hashlib.md5(identifying_tuple).hexdigest(),16))
         return save_prepath
 
     def process(self,shot): 

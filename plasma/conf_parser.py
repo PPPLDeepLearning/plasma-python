@@ -6,6 +6,7 @@ import getpass
 import uuid
 import yaml
 
+import hashlib
 
 def parameters(input_file):
     """Parse yaml file of configuration parameters."""
@@ -69,12 +70,17 @@ def parameters(input_file):
         #shot lists
         jet_carbon_wall = ShotListFiles(jet,params['paths']['shot_list_dir'],['CWall_clear.txt','CFC_unint.txt'],'jet carbon wall data')
         jet_iterlike_wall = ShotListFiles(jet,params['paths']['shot_list_dir'],['ILW_unint.txt','BeWall_clear.txt'],'jet iter like wall data')
+
+        jenkins_jet_carbon_wall = ShotListFiles(jet,params['paths']['shot_list_dir'],['jenkins_CWall_clear.txt','jenkins_CFC_unint.txt'],'Subset of jet carbon wall data for Jenkins tests')
+        jenkins_jet_iterlike_wall = ShotListFiles(jet,params['paths']['shot_list_dir'],['jenkins_ILW_unint.txt','jenkins_BeWall_clear.txt'],'Subset of jet iter like wall data for Jenkins tests')
+
         jet_full = ShotListFiles(jet,params['paths']['shot_list_dir'],['ILW_unint.txt','BeWall_clear.txt','CWall_clear.txt','CFC_unint.txt'],'jet full data')
 
         d3d_10000 = ShotListFiles(d3d,params['paths']['shot_list_dir'],['d3d_clear_10000.txt','d3d_disrupt_10000.txt'],'d3d data 10000 ND and D shots')
         d3d_1000 = ShotListFiles(d3d,params['paths']['shot_list_dir'],['d3d_clear_1000.txt','d3d_disrupt_1000.txt'],'d3d data 1000 ND and D shots')
         d3d_100 = ShotListFiles(d3d,params['paths']['shot_list_dir'],['d3d_clear_100.txt','d3d_disrupt_100.txt'],'d3d data 100 ND and D shots')
         d3d_full = ShotListFiles(d3d,params['paths']['shot_list_dir'],['d3d_clear_data_avail.txt','d3d_disrupt_data_avail.txt'],'d3d data since shot 125500')
+        d3d_jenkins = ShotListFiles(d3d,params['paths']['shot_list_dir'],['jenkins_d3d_clear.txt','jenkins_d3d_disrupt.txt'],'Subset of d3d data for Jenkins test')
         d3d_jb_full = ShotListFiles(d3d,params['paths']['shot_list_dir'],['shotlist_JaysonBarr_clear.txt','shotlist_JaysonBarr_disrupt.txt'],'d3d shots since 160000-170000')
 
         nstx_full = ShotListFiles(nstx,params['paths']['shot_list_dir'],['disrupt_nstx.txt'],'nstx shots (all are disruptive')
@@ -94,6 +100,10 @@ def parameters(input_file):
         elif params['paths']['data'] == 'jet_mixed_data':
             params['paths']['shot_files'] = [jet_full]
             params['paths']['shot_files_test'] = []
+            params['paths']['use_signals_dict'] = jet_signals
+        elif params['paths']['data'] == 'jenkins_jet':
+            params['paths']['shot_files'] = [jenkins_jet_carbon_wall]
+            params['paths']['shot_files_test'] = [jenkins_jet_iterlike_wall]
             params['paths']['use_signals_dict'] = jet_signals
         elif params['paths']['data'] == 'd3d_data':
             params['paths']['shot_files'] = [d3d_full]
@@ -116,6 +126,12 @@ def parameters(input_file):
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = [] 
             params['paths']['use_signals_dict'] = d3d_signals
+        elif params['paths']['data'] == 'jenkins_d3d':
+            params['paths']['shot_files'] = [d3d_jenkins]
+            params['paths']['shot_files_test'] = []
+            params['paths']['use_signals_dict'] = {'q95':q95,'li':li,'ip':ip,'lm':lm,'betan':betan,'energy':energy,'dens':dens,'pradcore':pradcore,'pradedge':pradedge,'pin':pin,'torquein':torquein,'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr,
+'etemp_profile':etemp_profile ,'edens_profile':edens_profile}
+
 
         #cross-machine
         elif params['paths']['data'] == 'jet_to_d3d_data':
@@ -167,7 +183,7 @@ def parameters(input_file):
     return params
 
 def get_unique_signal_hash(signals):
-    return hash(tuple(sorted(signals)))
+    return int(hashlib.md5(''.join(tuple(map(lambda x: x.description, sorted(signals)))).encode('utf-8')).hexdigest(),16)
 
 #make sure 1D signals come last! This is necessary for model builder.
 def sort_by_channels(list_of_signals):
