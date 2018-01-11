@@ -150,6 +150,7 @@ def apply_bleed_in(conf,shot_list_train,shot_list_validate,shot_list_test):
     num = conf['data']['bleed_in']
     new_shots = []
     if num > 0:
+        shot_list_bleed = ShotList()
         print('applying bleed in with {} disruptive shots\n'.format(num))
         num_total = len(shot_list_test)
         num_d = shot_list_test.num_disruptive()
@@ -159,8 +160,7 @@ def apply_bleed_in(conf,shot_list_train,shot_list_validate,shot_list_test):
         num_sampled_nd = 0
         while num_sampled_d < num:
             s = shot_list_test.sample_shot()
-            shot_list_train.append(s)
-            shot_list_validate.append(s)
+            shot_list_bleed.append(s)
             if conf['data']['bleed_in_remove_from_test']:
                 shot_list_test.remove(s)
             if s.is_disruptive:
@@ -168,7 +168,20 @@ def apply_bleed_in(conf,shot_list_train,shot_list_validate,shot_list_test):
             else:
                 num_sampled_nd += 1
         print("Sampled {} shots, {} disruptive, {} nondisruptive".format(num_sampled_nd+num_sampled_d,num_sampled_d,num_sampled_nd))
+        print("Before adding: training shots: {} validation shots: {}".format(len(shot_list_train,shot_list_validate)))
         assert(num_sampled_d == num)
+        num_to_sample = len(shot_list_bleed)
+        if conf['data']['bleed_in_equalize_sets']:#add bleed-in shots to training and validation set repeatedly
+            for shot_list_curr in [shot_list_train,shot_list_validate]:
+                for i in range(len(shot_list_curr)):
+                    s = shot_list_bleed.sample_shot()
+                    shot_list_curr.append(s)
+        else: #add each shot only once
+            for s in shot_list_bleed:
+                shot_list_train.append(s)
+                shot_list_validate.append(s)
+        print("After adding: training shots: {} validation shots: {}".format(len(shot_list_train,shot_list_validate)))
+        print("Added bleed in shots to training and validation sets")
         # if num_d > 0:
         #     for i in range(num):
         #         s = shot_list_test.sample_single_class(True)
