@@ -150,28 +150,43 @@ def apply_bleed_in(conf,shot_list_train,shot_list_validate,shot_list_test):
     num = conf['data']['bleed_in']
     new_shots = []
     if num > 0:
-        print('applying bleed in with {} shots\n'.format(num))
+        print('applying bleed in with {} disruptive shots\n'.format(num))
         num_total = len(shot_list_test)
         num_d = shot_list_test.num_disruptive()
         num_nd = num_total - num_d
-        if num_d > 0:
-            for i in range(num):
-                s = shot_list_test.sample_single_class(True)
-                shot_list_train.append(s)
-                shot_list_validate.append(s)
-                if conf['data']['bleed_in_remove_from_test']:
-                    shot_list_test.remove(s)
-        else:
-            print('No disruptive shots in test set, omitting bleed in')
-        if num_nd > 0:
-            for i in range(num):
-                s = shot_list_test.sample_single_class(False)
-                shot_list_train.append(s)
-                shot_list_validate.append(s)
-                if conf['data']['bleed_in_remove_from_test']:
-                    shot_list_test.remove(s)
-        else:
-            print('No nondisruptive shots in test set, omitting bleed in')
+        assert(num_d >= num), "Not enough disruptive shots {} to cover bleed in {}".format(num_d,num)
+        num_sampled_d = 0
+        num_sampled_nd = 0
+        while num_sampled_d < num:
+            s = shot_list_test.sample_shot()
+            shot_list_train.append(s)
+            shot_list_validate.append(s)
+            if conf['data']['bleed_in_remove_from_test']:
+                shot_list_test.remove(s)
+            if s.is_disruptive:
+                num_sampled_d += 1
+            else:
+                num_sampled_nd += 1
+        print("Sampled {} shots, {} disruptive, {} nondisruptive".format(num_sampled_nd+num_sampled_d,num_sampled_d,num_sampled_nd))
+        assert(num_sampled_d == num)
+        # if num_d > 0:
+        #     for i in range(num):
+        #         s = shot_list_test.sample_single_class(True)
+        #         shot_list_train.append(s)
+        #         shot_list_validate.append(s)
+        #         if conf['data']['bleed_in_remove_from_test']:
+        #             shot_list_test.remove(s)
+        # else:
+        #     print('No disruptive shots in test set, omitting bleed in')
+        # if num_nd > 0:
+        #     for i in range(num):
+        #         s = shot_list_test.sample_single_class(False)
+        #         shot_list_train.append(s)
+        #         shot_list_validate.append(s)
+        #         if conf['data']['bleed_in_remove_from_test']:
+        #             shot_list_test.remove(s)
+        # else:
+        #     print('No nondisruptive shots in test set, omitting bleed in')
     return shot_list_train,shot_list_validate,shot_list_test
 
 

@@ -166,6 +166,10 @@ class ShotList(object):
         idx = np.random.choice(range(len(self.shots)),p=p)
         return self.shots[idx]
 
+    def sample_shot(self):
+        idx = np.random.choice(range(len(self.shots)))
+        return self.shots[idx]
+
     def sample_weighted(self):
         p = np.array([shot.weight for shot in self.shots])
         return self.sample_weighted_given_arr(p)
