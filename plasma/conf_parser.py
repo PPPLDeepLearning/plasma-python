@@ -6,6 +6,7 @@ import getpass
 import uuid
 import yaml
 
+import hashlib
 
 def parameters(input_file):
     """Parse yaml file of configuration parameters."""
@@ -69,12 +70,17 @@ def parameters(input_file):
         #shot lists
         jet_carbon_wall = ShotListFiles(jet,params['paths']['shot_list_dir'],['CWall_clear.txt','CFC_unint.txt'],'jet carbon wall data')
         jet_iterlike_wall = ShotListFiles(jet,params['paths']['shot_list_dir'],['ILW_unint.txt','BeWall_clear.txt'],'jet iter like wall data')
+
+        jenkins_jet_carbon_wall = ShotListFiles(jet,params['paths']['shot_list_dir'],['jenkins_CWall_clear.txt','jenkins_CFC_unint.txt'],'Subset of jet carbon wall data for Jenkins tests')
+        jenkins_jet_iterlike_wall = ShotListFiles(jet,params['paths']['shot_list_dir'],['jenkins_ILW_unint.txt','jenkins_BeWall_clear.txt'],'Subset of jet iter like wall data for Jenkins tests')
+
         jet_full = ShotListFiles(jet,params['paths']['shot_list_dir'],['ILW_unint.txt','BeWall_clear.txt','CWall_clear.txt','CFC_unint.txt'],'jet full data')
 
         d3d_10000 = ShotListFiles(d3d,params['paths']['shot_list_dir'],['d3d_clear_10000.txt','d3d_disrupt_10000.txt'],'d3d data 10000 ND and D shots')
         d3d_1000 = ShotListFiles(d3d,params['paths']['shot_list_dir'],['d3d_clear_1000.txt','d3d_disrupt_1000.txt'],'d3d data 1000 ND and D shots')
         d3d_100 = ShotListFiles(d3d,params['paths']['shot_list_dir'],['d3d_clear_100.txt','d3d_disrupt_100.txt'],'d3d data 100 ND and D shots')
         d3d_full = ShotListFiles(d3d,params['paths']['shot_list_dir'],['d3d_clear_data_avail.txt','d3d_disrupt_data_avail.txt'],'d3d data since shot 125500')
+        d3d_jenkins = ShotListFiles(d3d,params['paths']['shot_list_dir'],['jenkins_d3d_clear.txt','jenkins_d3d_disrupt.txt'],'Subset of d3d data for Jenkins test')
         d3d_jb_full = ShotListFiles(d3d,params['paths']['shot_list_dir'],['shotlist_JaysonBarr_clear.txt','shotlist_JaysonBarr_disrupt.txt'],'d3d shots since 160000-170000')
 
         nstx_full = ShotListFiles(nstx,params['paths']['shot_list_dir'],['disrupt_nstx.txt'],'nstx shots (all are disruptive')
@@ -83,6 +89,10 @@ def parameters(input_file):
             params['paths']['shot_files'] = [jet_carbon_wall]
             params['paths']['shot_files_test'] = [jet_iterlike_wall]
             params['paths']['use_signals_dict'] = jet_signals
+        elif params['paths']['data'] == 'jet_data_0D':
+            params['paths']['shot_files'] = [jet_carbon_wall]
+            params['paths']['shot_files_test'] = [jet_iterlike_wall]
+            params['paths']['use_signals_dict'] = jet_signals_0D
         elif params['paths']['data'] == 'jet_carbon_data':
             params['paths']['shot_files'] = [jet_carbon_wall]
             params['paths']['shot_files_test'] = []
@@ -90,6 +100,10 @@ def parameters(input_file):
         elif params['paths']['data'] == 'jet_mixed_data':
             params['paths']['shot_files'] = [jet_full]
             params['paths']['shot_files_test'] = []
+            params['paths']['use_signals_dict'] = jet_signals
+        elif params['paths']['data'] == 'jenkins_jet':
+            params['paths']['shot_files'] = [jenkins_jet_carbon_wall]
+            params['paths']['shot_files_test'] = [jenkins_jet_iterlike_wall]
             params['paths']['use_signals_dict'] = jet_signals
         elif params['paths']['data'] == 'd3d_data':
             params['paths']['shot_files'] = [d3d_full]
@@ -100,6 +114,10 @@ def parameters(input_file):
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = [] 
             params['paths']['use_signals_dict'] = {'ipdirect':ipdirect,'etemp_profile':etemp_profile ,'edens_profile':edens_profile}
+        elif params['paths']['data'] == 'd3d_data_all_profiles':
+            params['paths']['shot_files'] = [d3d_full]
+            params['paths']['shot_files_test'] = [] 
+            params['paths']['use_signals_dict'] = {'ipdirect':ipdirect,'etemp_profile':etemp_profile ,'edens_profile':edens_profile,'itemp_profile':itemp_profile,'zdens_profile':zdens_profile,'trot_profile':trot_profile,'pthm_profile':pthm_profile,'neut_profile':neut_profile,'q_profile':q_profile,'bootstrap_current_profile':bootstrap_current_profile,'q_psi_profile':q_psi_profile}
         elif params['paths']['data'] == 'd3d_data_0D':
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = [] 
@@ -108,6 +126,12 @@ def parameters(input_file):
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = [] 
             params['paths']['use_signals_dict'] = d3d_signals
+        elif params['paths']['data'] == 'jenkins_d3d':
+            params['paths']['shot_files'] = [d3d_jenkins]
+            params['paths']['shot_files_test'] = []
+            params['paths']['use_signals_dict'] = {'q95':q95,'li':li,'ip':ip,'lm':lm,'betan':betan,'energy':energy,'dens':dens,'pradcore':pradcore,'pradedge':pradedge,'pin':pin,'torquein':torquein,'ipdirect':ipdirect,'iptarget':iptarget,'iperr':iperr,
+'etemp_profile':etemp_profile ,'edens_profile':edens_profile}
+
 
         #cross-machine
         elif params['paths']['data'] == 'jet_to_d3d_data':
@@ -118,6 +142,17 @@ def parameters(input_file):
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = [jet_iterlike_wall]
             params['paths']['use_signals_dict'] = fully_defined_signals
+        elif params['paths']['data'] == 'jet_to_d3d_data_0D':
+            params['paths']['shot_files'] = [jet_carbon_wall]
+            params['paths']['shot_files_test'] = [d3d_full]
+            params['paths']['use_signals_dict'] = fully_defined_signals_0D
+        elif params['paths']['data'] == 'd3d_to_jet_data_0D':
+            params['paths']['shot_files'] = [d3d_full]
+            params['paths']['shot_files_test'] = [jet_iterlike_wall]
+            params['paths']['use_signals_dict'] = fully_defined_signals_0D
+
+
+
         else: 
             print("Unkown data set {}".format(params['paths']['data']))
             exit(1)
@@ -128,14 +163,13 @@ def parameters(input_file):
                     print("Signal {} is not fully defined for {} machine. Skipping...".format(sig,params['paths']['data'].split("_")[0]))
             params['paths']['specific_signals'] = list(filter(lambda x: x in params['paths']['use_signals_dict'].keys(), params['paths']['specific_signals']))
             selected_signals = {k: params['paths']['use_signals_dict'][k] for k in params['paths']['specific_signals']}
-            params['paths']['use_signals'] = list(selected_signals.values())
+            params['paths']['use_signals'] = sort_by_channels(list(selected_signals.values()))
 
-            selected_signals = {k: params['paths']['all_signals_dict'][k] for k in params['paths']['specific_signals']}
-            params['paths']['all_signals'] = list(selected_signals.values())
         else:
             #default case
-            params['paths']['use_signals'] = list(params['paths']['use_signals_dict'].values())
-            params['paths']['all_signals'] = list(params['paths']['all_signals_dict'].values())
+            params['paths']['use_signals'] = sort_by_channels(list(params['paths']['use_signals_dict'].values()))
+
+        params['paths']['all_signals'] = sort_by_channels(list(params['paths']['all_signals_dict'].values()))
 
         print("Selected signals (determines which signals training is run on):\n{}".format(params['paths']['use_signals']))
 
@@ -149,5 +183,9 @@ def parameters(input_file):
     return params
 
 def get_unique_signal_hash(signals):
-    return hash(tuple(sorted(signals)))
+    return int(hashlib.md5(''.join(tuple(map(lambda x: x.description, sorted(signals)))).encode('utf-8')).hexdigest(),16)
+
+#make sure 1D signals come last! This is necessary for model builder.
+def sort_by_channels(list_of_signals):
+    return sorted(list_of_signals,key = lambda x: x.num_channels)
 

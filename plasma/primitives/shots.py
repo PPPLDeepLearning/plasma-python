@@ -17,6 +17,7 @@ import random as rnd
 import numpy as np
 
 from plasma.utils.processing import train_test_split,cut_and_resample_signal
+from plasma.utils.downloading import makedirs_process_safe
 
 class ShotListFiles(object):
     def __init__(self,machine,prepath,paths,description=''):
@@ -163,6 +164,10 @@ class ShotList(object):
     def sample_weighted_given_arr(self,p):
         p = p/np.sum(p)
         idx = np.random.choice(range(len(self.shots)),p=p)
+        return self.shots[idx]
+
+    def sample_shot(self):
+        idx = np.random.choice(range(len(self.shots)))
         return self.shots[idx]
 
     def sample_weighted(self):
@@ -322,8 +327,8 @@ class Shot(object):
         return self.get_id_str().__eq__(other.get_id_str())
 
     def __hash__(self):
-        return self.get_id_str().__hash__()
-
+       import hashlib
+       return int(hashlib.md5(self.get_id_str().encode('utf-8')).hexdigest(),16)
 
     def __str__(self):
         string = 'number: {}\n'.format(self.number)
@@ -376,11 +381,11 @@ class Shot(object):
         self.valid = valid
         #cut and resample
         if self.valid:
-                self.cut_and_resample_signals(time_arrays,signal_arrays,t_min,t_max,conf)
+            self.cut_and_resample_signals(time_arrays,signal_arrays,t_min,t_max,conf)
 
     def get_signals_and_times_from_file(self,conf):
         valid = True
-        t_min = -1
+        t_min = -np.Inf
         t_max = np.Inf
         t_thresh = -1
         signal_arrays = []
@@ -401,15 +406,14 @@ class Shot(object):
                 signal_arrays.append(sig)
                 time_arrays.append(t)
                 if self.is_disruptive and self.t_disrupt > np.max(t):
-                    if self.t_disrupt > np.max(t) + signal.data_avail_tolerance:
+                    if self.t_disrupt > np.max(t) + signal.get_data_avail_tolerance(self.machine):
                         print('Shot {}: disruption event is not contained in valid time region of signal {} by {}s, omitting.'.format(self.number,signal,self.t_disrupt - np.max(t)))
                         valid = False 
                     else:
-                        t_max = np.max(t) + signal.data_avail_tolerance
+                        t_max = np.max(t) + signal.get_data_avail_tolerance(self.machine)
                 else:
                     t_max = min(t_max,np.max(t))
 
-        assert(t_max > t_min or not valid)
         #make sure the shot is long enough.
         dt = conf['data']['dt']
         if (t_max - t_min)/dt <= (2*conf['model']['length']+conf['data']['T_min_warn']):
@@ -419,6 +423,7 @@ class Shot(object):
         # if self.is_disruptive and self.t_disrupt > t_max+conf['data']['data_avail_tolerance']:
         #     print('Shot {}: disruption event is not contained in valid time region by {}s, omitting.'.format(self.number,self.t_disrupt - t_max))
         #     valid = False 
+        assert(t_max > t_min or not valid), "t max: {}, t_min: {}".format(t_max,t_min)
                 
         
         if self.is_disruptive:
@@ -455,14 +460,7 @@ class Shot(object):
         return ttd
 
     def save(self,prepath):
-        if not os.path.exists(prepath):
-            try: #can lead to race condition
-                os.makedirs(prepath)
-            except OSError as e:
-                if e.errno == errno.EEXIST:# File exists, and it's a directory, another process beat us to creating this dir, that's OK.
-                    pass
-                else:# Our target dir exists as a file, or different error, reraise the error!
-                    raise
+        makedirs_process_safe(prepath)
         save_path = self.get_save_path(prepath)
         np.savez(save_path,valid=self.valid,is_disruptive=self.is_disruptive,
             signals_dict=self.signals_dict,ttd=self.ttd)

@@ -43,12 +43,20 @@ linestyle="-"
 shots = analyzers[0].shot_list_test
 
 for shot in shots:
-    types = [analyzers[i].get_prediction_type_for_individual_shot(P_threshs[i],shot,mode='test') for i in range(len(analyzers))]
-    #if len(set(types)) > 1:
-    if types == ['TP','FN']:
-        print(shot.number)
-        print(types)
-        for i,analyzer in enumerate(analyzers):
-            analyzer.save_shot(shot,P_thresh_opt=P_threshs[i],extra_filename=['deep','shallow'][i])
+    if all([(shot in analyzer.shot_list_test or shot in analyzer.shot_list_train) for analyzer in analyzers]):
+        types = [analyzers[i].get_prediction_type_for_individual_shot(P_threshs[i],shot,mode='test') for i in range(len(analyzers))]
+        #if len(set(types)) > 1:
+        if types == ['TP','late']:
+            if shot in analyzers[1].shot_list_test:
+                print("TEST")
+            else:
+                print("TRAIN")
+            print(shot.number)
+            print(types)
+            for i,analyzer in enumerate(analyzers):
+                analyzer.save_shot(shot,P_thresh_opt=P_threshs[i],extra_filename=['1D','0D'][i])
+    else:
+        pass
+        #print("shot {} not in train or test shot list (must be in validation)".format(shot))
 
 

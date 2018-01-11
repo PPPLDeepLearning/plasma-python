@@ -1,30 +1,57 @@
 ## Tutorials
 
+### Login to Tigergpu
+
+First, login to TigerGPU cluster headnode via ssh:
+```
+ssh -XC <yourusername>@tigergpu.princeton.edu
+```
+
 ### Sample usage on Tigergpu
 
-First, create an isolated Anaconda environment and load CUDA drivers:
+Next, check out the source code from github:
 ```
-module load anaconda3
-module load cudatoolkit/8.0 cudnn/cuda-8.0/6.0 openmpi/cuda-8.0/intel-17.0/2.1.0/64 intel/17.0/64/17.0.2.174
-module load intel/17.0/64/17.0.4.196 intel-mkl/2017.3/4/64
-conda create --name my_env --file requirements-travis.txt
-source activate my_env
+git clone https://github.com/PPPLDeepLearning/plasma-python
+cd plasma-python
 ```
 
-Then install the plasma-python package:
+After that, create an isolated Anaconda environment and load CUDA drivers:
+```
+#cd plasma-python
+module load anaconda3/4.4.0
+conda create --name my_env --file requirements-travis.txt
+source activate my_env
+
+export OMPI_MCA_btl="tcp,self,sm"
+module load cudatoolkit/8.0
+module load cudnn/cuda-8.0/6.0
+module load openmpi/cuda-8.0/intel-17.0/2.1.0/64
+module load intel/17.0/64/17.0.4.196
+```
+
+and install the `plasma-python` package:
 
 ```bash
 #source activate my_env
-git clone https://github.com/PPPLDeepLearning/plasma-python
-cd plasma-python
 python setup.py install
 ```
 
 Where `my_env` should contain the Python packages as per `requirements-travis.txt` file.
 
+#### Common issue
+
+Common issue is Intel compiler mismatch in the `PATH` and what you use in the module. With the modules loaded as above,
+you should see something like this:
+```
+$ which mpicc
+/usr/local/openmpi/cuda-8.0/2.1.0/intel170/x86_64/bin/mpicc
+```
+
+If you source activate the Anaconda environment after loading the openmpi, you would pick the MPI from Anaconda, which is not good and could lead to errors. 
+
 #### Location of the data on Tigress
 
-The JET and D3D datasets containing multi-modal time series of sensory measurements leading up to deleterious events called plasma disruptions are located on /tigress filesystem on Princeton U clusters.
+The JET and D3D datasets containing multi-modal time series of sensory measurements leading up to deleterious events called plasma disruptions are located on `/tigress/FRNN` filesystem on Princeton U clusters.
 Fo convenience, create following symbolic links:
 
 ```bash
@@ -39,16 +66,22 @@ ln -s /tigress/FRNN/signal_data signal_data
 cd examples/
 python guarantee_preprocessed.py
 ```
-This will preprocess the data and save it in `/tigress/<netid>/processed_shots` and `/tigress/<netid>/normalization`
+This will preprocess the data and save it in `/tigress/<netid>/processed_shots`, `/tigress/<netid>/processed_shotlists` and `/tigress/<netid>/normalization`
 
+You would only have to run preprocessing once for each dataset. The dataset is specified in the config file `examples/conf.yaml`:
+```yaml
+paths:
+    data: jet_data_0D
+```    
+It take takes about 20 minutes to preprocess in parallel and can normally be done on the cluster headnode.
 
 #### Training and inference
 
-Use Slurm scheduler to perform batch or interactive analysis on Tiger cluster.
+Use Slurm scheduler to perform batch or interactive analysis on TigerGPU cluster.
 
 ##### Batch analysis
 
-For batch analysis, make sure to allocate 1 process per GPU:
+For batch analysis, make sure to allocate 1 MPI process per GPU. Save the following to slurm.cmd file (or make changes to the existing `examples/slurm.cmd`):
 
 ```bash
 #!/bin/bash
@@ -58,15 +91,20 @@ For batch analysis, make sure to allocate 1 process per GPU:
 #SBATCH --ntasks-per-socket=2
 #SBATCH --gres=gpu:4
 #SBATCH -c 4
+#SBATCH --mem-per-cpu=0
 
-module load anaconda3
+module load anaconda3/4.4.0
 source activate my_env
-module load cudatoolkit/8.0 cudnn/cuda-8.0/6.0 openmpi/cuda-8.0/intel-17.0/2.1.0/64 intel/17.0/64/17.0.2.174
-module load intel/17.0/64/17.0.4.196 intel-mkl/2017.3/4/64
+export OMPI_MCA_btl="tcp,self,sm"
+module load cudatoolkit/8.0
+module load cudnn/cuda-8.0/6.0
+module load openmpi/cuda-8.0/intel-17.0/2.1.0/64
+module load intel/17.0/64/17.0.4.196
+
 srun python mpi_learn.py
 
 ```
-where X is the number of nodes for distibuted training.
+where `X` is the number of nodes for distibuted training.
 
 Submit the job with:
 ```bash
@@ -82,11 +120,11 @@ Optionally, add an email notification option in the Slurm about the job completi
 
 ##### Interactive analysis
 
-Interactive option is preferred for debugging or running in the notebook, for all other case batch is preferred.
+Interactive option is preferred for **debugging** or running in the **notebook**, for all other case batch is preferred.
 The workflow is to request an interactive session:
 
 ```bash
-salloc -N [X] --ntasks-per-node=4 --ntasks-per-socket=2 --gres=gpu:4 -t 0-6:00
+salloc -N [X] --ntasks-per-node=4 --ntasks-per-socket=2 --gres=gpu:4 -c 4 --mem-per-cpu=0 -t 0-6:00
 ```
 where the number of GPUs is X * 4.
 
@@ -104,7 +142,7 @@ Currently, FRNN is capable of working with JET and D3D data as well as cross-mac
 ```yaml
 paths:
     ... 
-    data: 'jet_data'
+    data: 'jet_data_0D'
 ```
 use `d3d_data` for D3D signals, use `jet_to_d3d_data` ir `d3d_to_jet_data` for cross-machine regime.
     
@@ -115,6 +153,8 @@ paths:
     specific_signals: [q95,ip] 
 ```    
 if left empty `[]` will use all valid signals defined on a machine. Only use if need a custom set.
+
+Other parameters configured in the conf.yaml include batch size, learning rate, neural network topology and special conditions foir hyperparameter sweeps.
 
 ### Current signals and notations
 
