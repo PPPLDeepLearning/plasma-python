@@ -323,8 +323,8 @@ class Shot(object):
         return self.get_id_str().__eq__(other.get_id_str())
 
     def __hash__(self):
-        return self.get_id_str().__hash__()
-
+       import hashlib
+       return int(hashlib.md5(self.get_id_str().encode('utf-8')).hexdigest(),16)
 
     def __str__(self):
         string = 'number: {}\n'.format(self.number)

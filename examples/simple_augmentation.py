@@ -72,8 +72,7 @@ only_predict = len(sys.argv) > 1
 custom_path = None
 if only_predict:
     custom_path = sys.argv[1]
-shot_num = int(sys.argv[2])
-print("predicting using path {} on shot {}".format(custom_path,shot_num))
+print("predicting using path {}".format(custom_path))
 
 assert(only_predict)
 #####################################################
@@ -84,10 +83,6 @@ if task_index == 0: #make sure preprocessing has been run, and is saved as a fil
 comm.Barrier()
 shot_list_train,shot_list_validate,shot_list_test = guarantee_preprocessed(conf)
 
-shot_list = sum([l.filter_by_number([shot_num]) for l in [shot_list_train,shot_list_validate,shot_list_test]],ShotList())
-assert(len(shot_list) == 1)
-# for s in shot_list.shots:
-    # s.restore()
 
 def chunks(l, n):
     """Yield successive n-sized chunks from l."""
@@ -125,15 +120,6 @@ def get_importance_measure_given_y_prime(y_prime,metric):
     return 1.0-np.array(differences)#/np.max(differences)
 
 
-
-
-original_shot = shot_list[0]
-original_shot.augmentation_fn = None
-original_shot.restore(conf['paths']['processed_prepath'])
-
-#remove original shot
-
-
 print("normalization",end='')
 normalizer = Normalizer(conf)
 normalizer.train()
@@ -148,29 +134,27 @@ print("...done")
 loader.set_inference_mode(True)
 use_signals = copy.copy(conf['paths']['use_signals'])
 use_signals.append(None)
-importances = dict()
-y_prime = 0
-use_signals = [[s] for s in use_signals[:-3]] + [use_signals[-3:-1]] + [use_signals[-1]]
-print(use_signals)
-for sigs in use_signals:
-    t_range,measure,y_prime = get_importance_measure(original_shot,loader,custom_path,difference_metric,time_points=128,sig=sigs)
-    if sigs is None:
-        idx = None
-    else:
-        idx = tuple(sorted(sigs))
-    importances[idx] = (t_range,measure) 
-    
 
 
-if task_index == 0:
-    save_str = 'signal_influence_results_{}_'.format(shot_num) + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    result_base_path = conf['paths']['results_prepath']
-    if not os.path.exists(result_base_path):
-        os.makedirs(result_base_path)
-    np.savez(result_base_path+save_str,
-        original_shot=original_shot,importances=importances,y_prime=y_prime,conf = conf)
-    shot_list.make_light()
 
-sys.stdout.flush()
+for shot in shot_list_test:
+    shot.augmentation_fn = None# partial(hide_signal_data,t = 0,sigs_to_hide = sigs_to_hide)
+
+print("All signals:")
+y_prime,y_gold,disruptive,roc,loss = mpi_make_predictions_and_evaluate(conf,shot_list_test,loader,custom_path)
+print(roc)
+print(loss)
+
+#for sigs_to_hide in [[s] for s in use_signals[:-3]] + [use_signals[-3:-1]] + [use_signals[-1]]:
+for sigs_to_hide in [[s] for s in use_signals[:-3]] + [[s] for s in use_signals[-3:-1]] + [use_signals[-3:-1]]:# + [use_signals[-1]]:
+    for shot in shot_list_test:
+        shot.augmentation_fn = partial(hide_signal_data,t = 0,sigs_to_hide = sigs_to_hide)
+    print("Hiding: {}".format(sigs_to_hide))
+    y_prime,y_gold,disruptive,roc,loss = mpi_make_predictions_and_evaluate(conf,shot_list_test,loader,custom_path)
+    print(roc)
+    print(loss)
+
+
+
 if task_index == 0:
     print('finished.')

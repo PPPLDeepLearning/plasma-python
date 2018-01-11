@@ -1,3 +1,4 @@
+from __future__ import division
 import numpy as np
 import time
 import sys,os
@@ -121,8 +122,8 @@ class Signal(object):
 
 
     def fetch_data_basic(self,machine,shot_num,c,path=None):
-	if path is None:
-	    path = self.get_path(machine)
+        if path is None:
+            path = self.get_path(machine)
         success = False
         mapping = None
         try:
@@ -183,7 +184,8 @@ class Signal(object):
         return self.description.__lt__(other.description)
     
     def __hash__(self):
-        return self.description.__hash__()
+       import hashlib
+       return int(hashlib.md5(self.description.encode('utf-8')).hexdigest(),16)
 
     def __str__(self):
         return self.description
@@ -205,7 +207,7 @@ class ProfileSignal(Signal):
         if np.ndim(data) == 1:
             data = np.expand_dims(data,axis=0)
             #_ = data[0,0]
-        T = data.shape[0]/2 #time is stored twice, once for mapping and once for signal
+        T = data.shape[0]//2 #time is stored twice, once for mapping and once for signal
         mapping = data[:T,1:]
         remapping = np.linspace(self.mapping_range[0],self.mapping_range[1],self.num_channels)
         t = data[:T,0] 
@@ -224,8 +226,12 @@ class ProfileSignal(Signal):
         sig_interp = np.zeros((timesteps,self.num_channels))
         for i in range(timesteps):
             _,order = np.unique(mapping[i,:],return_index=True) #make sure the mapping is ordered and unique
-            f = UnivariateSpline(mapping[i,order],sig[i,order],s=0,k=1,ext=0)
-            sig_interp[i,:] = f(remapping)
+            if sig[i,order].shape[0] > 2:
+                f = UnivariateSpline(mapping[i,order],sig[i,order],s=0,k=1,ext=0)
+                sig_interp[i,:] = f(remapping)
+            else:
+                print('Signal {}, shot {} has not enough points for linear interpolation. dfitpack.error: (m>k) failed for hidden m: fpcurf0:m=1'.format(self.description,shot.number))
+                return None,None,False
 
         return t,sig_interp,True
 
@@ -283,7 +289,7 @@ class ChannelSignal(Signal):
 
     def fetch_data(self,machine,shot_num,c):
         time,data,mapping,success = self.fetch_data_basic(machine,shot_num,c)
-	mapping = None #we are not interested in the whole profile
+        mapping = None #we are not interested in the whole profile
         channel_num = self.get_channel_num(machine)
         if channel_num is not None and success:
             if np.ndim(data) != 2:
