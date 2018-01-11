@@ -168,7 +168,7 @@ def apply_bleed_in(conf,shot_list_train,shot_list_validate,shot_list_test):
             else:
                 num_sampled_nd += 1
         print("Sampled {} shots, {} disruptive, {} nondisruptive".format(num_sampled_nd+num_sampled_d,num_sampled_d,num_sampled_nd))
-        print("Before adding: training shots: {} validation shots: {}".format(len(shot_list_train,shot_list_validate)))
+        print("Before adding: training shots: {} validation shots: {}".format(len(shot_list_train),len(shot_list_validate)))
         assert(num_sampled_d == num)
         num_to_sample = len(shot_list_bleed)
         if conf['data']['bleed_in_equalize_sets']:#add bleed-in shots to training and validation set repeatedly
@@ -180,7 +180,7 @@ def apply_bleed_in(conf,shot_list_train,shot_list_validate,shot_list_test):
             for s in shot_list_bleed:
                 shot_list_train.append(s)
                 shot_list_validate.append(s)
-        print("After adding: training shots: {} validation shots: {}".format(len(shot_list_train,shot_list_validate)))
+        print("After adding: training shots: {} validation shots: {}".format(len(shot_list_train),len(shot_list_validate)))
         print("Added bleed in shots to training and validation sets")
         # if num_d > 0:
         #     for i in range(num):
