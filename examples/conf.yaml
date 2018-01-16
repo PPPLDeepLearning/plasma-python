@@ -53,6 +53,8 @@ data:
     floatx: 'float32'
 
 model:
+    use_bidirectional: false
+    use_batch_norm: false
     shallow: False
     shallow_model: 
         num_samples: 1000000 #1000000 #the number of samples to use for training
