@@ -153,7 +153,7 @@ def parameters(input_file):
 
         #cross-machine
         elif params['paths']['data'] == 'jet_to_d3d_data':
-            params['paths']['shot_files'] = [jet_carbon_wall]
+            params['paths']['shot_files'] = [jet_full]
             params['paths']['shot_files_test'] = [d3d_full]
             params['paths']['use_signals_dict'] = fully_defined_signals
         elif params['paths']['data'] == 'd3d_to_jet_data':
@@ -161,7 +161,7 @@ def parameters(input_file):
             params['paths']['shot_files_test'] = [jet_iterlike_wall]
             params['paths']['use_signals_dict'] = fully_defined_signals
         elif params['paths']['data'] == 'jet_to_d3d_data_0D':
-            params['paths']['shot_files'] = [jet_carbon_wall]
+            params['paths']['shot_files'] = [jet_full]
             params['paths']['shot_files_test'] = [d3d_full]
             params['paths']['use_signals_dict'] = fully_defined_signals_0D
         elif params['paths']['data'] == 'd3d_to_jet_data_0D':
