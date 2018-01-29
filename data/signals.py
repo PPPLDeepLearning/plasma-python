@@ -237,10 +237,15 @@ print(all_signals.values())
 
 fully_defined_signals = {sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if sig.is_defined_on_machines(all_machines)}
 fully_defined_signals_0D = {sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if ( sig.is_defined_on_machines(all_machines) and sig.num_channels == 1)  }
+fully_defined_signals_1D = {sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if ( sig.is_defined_on_machines(all_machines) and sig.num_channels > 1)  }
+
 d3d_signals = {sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if sig.is_defined_on_machine(d3d)}
+d3d_signals_0D = {sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if (sig.is_defined_on_machine(d3d) and sig.num_channels == 1)}
+d3d_signals_1D = {sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if (sig.is_defined_on_machine(d3d) and sig.num_channels > 1)}
+
 jet_signals = {sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if sig.is_defined_on_machine(jet)}
 jet_signals_0D = {sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if (sig.is_defined_on_machine(jet) and sig.num_channels == 1)}
-
+jet_signals_1D = {sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if (sig.is_defined_on_machine(jet) and sig.num_channels > 1)}
 
 #['pcechpwrf'] #Total ECH Power Not always on!
 ### 0D EFIT signals ###
