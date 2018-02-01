@@ -7,8 +7,8 @@ import plasma.conf
 
 tunables = []
 shallow = False
-num_nodes = 2
-num_trials = 50
+num_nodes = 1
+num_trials = 20
 
 t_warn = CategoricalHyperparam(['data','T_warning'],[0.256,1.024,10.024])
 cut_ends = CategoricalHyperparam(['data','cut_shot_ends'],[False,True])
@@ -34,14 +34,20 @@ else:
     lr_decay = CategoricalHyperparam(['model','lr_decay'],[0.97,0.985,1.0])
     fac = CategoricalHyperparam(['data','positive_example_penalty'],[1.0,4.0,16.0])
     target = CategoricalHyperparam(['target'],['maxhinge','hinge','ttdinv','ttd'])
-    batch_size = CategoricalHyperparam(['training','batch_size'],[64,256,1024])
-    dropout_prob = CategoricalHyperparam(['model','dropout_prob'],[0.1,0.3,0.5])
-    conv_filters = CategoricalHyperparam(['model','num_conv_filters'],[5,10])
+    #target = CategoricalHyperparam(['target'],['hinge','ttdinv','ttd'])
+    batch_size = CategoricalHyperparam(['training','batch_size'],[128,256])
+    dropout_prob = CategoricalHyperparam(['model','dropout_prob'],[0.01,0.05,0.1])
+    conv_filters = CategoricalHyperparam(['model','num_conv_filters'],[128,256])
     conv_layers = IntegerHyperparam(['model','num_conv_layers'],2,4)
-    rnn_layers = IntegerHyperparam(['model','rnn_layers'],1,4)
-    rnn_size = CategoricalHyperparam(['model','rnn_size'],[100,200,300])
-    tunables = [lr,lr_decay,fac,target,batch_size,dropout_prob]
-    tunables += [conv_filters,conv_layers,rnn_layers,rnn_size]
+    rnn_layers = IntegerHyperparam(['model','rnn_layers'],1,3)
+    rnn_size = CategoricalHyperparam(['model','rnn_size'],[128,256])
+    dense_size = CategoricalHyperparam(['model','dense_size'],[128,256])
+    extra_dense_input = CategoricalHyperparam(['model','extra_dense_input'],[False,True])
+    equalize_classes = CategoricalHyperparam(['data','equalize_classes'],[False,True])
+    #rnn_length = CategoricalHyperparam(['model','length'],[32,128])
+    #tunables = [lr,lr_decay,fac,target,batch_size,dropout_prob]
+    tunables = [lr,lr_decay,fac,target,batch_size,equalize_classes,dropout_prob]
+    tunables += [conv_filters,conv_layers,rnn_layers,rnn_size,dense_size,extra_dense_input]
 tunables += [cut_ends,t_warn]
 
 
