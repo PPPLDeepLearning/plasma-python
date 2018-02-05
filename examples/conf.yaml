@@ -10,15 +10,16 @@ paths:
     signal_prepath: '/signal_data/' #/signal_data/jet/
     shot_list_dir: '/shot_lists/'
     tensorboard_save_path: '/Graph/'
-    data: jet_data #'d3d_to_jet_data' #'d3d_to_jet_data' # 'jet_to_d3d_data' #jet_data
+    data: jet_to_d3d_data #'d3d_to_jet_data' #'d3d_to_jet_data' # 'jet_to_d3d_data' #jet_data
     specific_signals: [] #['q95','li','ip','betan','energy','lm','pradcore','pradedge','pradtot','pin','torquein','tmamp1','tmamp2','tmfreq1','tmfreq2','pechin','energydt','ipdirect','etemp_profile','edens_profile'] #if left empty will use all valid signals defined on a machine. Only use if need a custom set
     executable: "mpi_learn.py"
     shallow_executable: "learn.py"
 
 data:
-    bleed_in: 0 #how many shots from the test sit to use in training?
+    bleed_in: 5 #how many shots from the test sit to use in training?
+    bleed_in_repeat_fac: 10
     bleed_in_remove_from_test: True
-    bleed_in_equalize_sets: True
+    bleed_in_equalize_sets: False
     signal_to_augment: None #'plasma current' #or None
     augmentation_mode: 'none'
     augment_during_training: False
@@ -52,10 +53,10 @@ data:
     floatx: 'float32'
 
 model:
-    shallow: False
+    shallow: True
     shallow_model: 
         num_samples: 1000000 #1000000 #the number of samples to use for training
-        type: "mlp" #"xgboost" #"xgboost" #"random_forest" "xgboost"
+        type: "xgboost" #"xgboost" #"xgboost" #"random_forest" "xgboost"
         n_estimators: 100 #for random forest
         max_depth: 3 #for random forest and xgboost (def = 3)
         C: 1.0 #for svm
@@ -89,8 +90,8 @@ model:
     #have not found a difference yet
     optimizer: 'adam'
     clipnorm: 10.0
-    regularization: 0.0
-    dense_regularization: 0.01
+    regularization: 0.001
+    dense_regularization: 0.001
     #1e-4 is too high, 5e-7 is too low. 5e-5 seems best at 256 batch size, full dataset and ~10 epochs, and lr decay of 0.90. 1e-4 also works well if we decay a lot (i.e ~0.7 or more)
     lr: 0.00002 #0.00001 #0.0005 #for adam plots 0.0000001 #0.00005 #0.00005 #0.00005
     lr_decay: 0.97 #0.98 #0.9
