@@ -551,7 +551,7 @@ class PerformanceAnalyzer():
     def compute_tradeoffs_and_plot(self,mode,save_figure=True,plot_string='',linestyle="-"):
         correct_range, accuracy_range, fp_range,missed_range,early_alarm_range = self.get_metrics_vs_p_thresh(mode)
 
-        self.tradeoff_plot(accuracy_range,missed_range,fp_range,early_alarm_range,save_figure=save_figure,plot_string=plot_string,linestyle=linestyle)
+        return self.tradeoff_plot(accuracy_range,missed_range,fp_range,early_alarm_range,save_figure=save_figure,plot_string=plot_string,linestyle=linestyle)
 
     def get_prediction_type(self,TP,FP,FN,TN,early,late):
         if TP:
@@ -834,7 +834,9 @@ class PerformanceAnalyzer():
         plt.ylim([0,1])
         if save_figure:
             plt.savefig(title_str + '_roc.png',bbox_inches='tight',dpi=200)
+            np.savez(title_str + '_roc.npz',"P_thresh_range",P_thresh_range,"missed_range",missed_range,"fp_range",fp_range)
         print('ROC area ({}) is {}'.format(plot_string,self.roc_from_missed_fp(missed_range,fp_range)))
+        return P_thresh_range,missed_range,fp_range
 
     def get_pred_truth_disr_by_shot(self,shot):
         if shot in self.shot_list_test:
