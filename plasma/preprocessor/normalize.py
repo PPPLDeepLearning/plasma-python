@@ -411,6 +411,7 @@ def get_individual_shot_file(prepath,shot_num,ext='.txt'):
 
 def apply_positivity(shot):
     for (i,sig) in enumerate(shot.signals):
-        if sig.is_strictly_positive:
-            #print ('Applying positivity constraint to {} signal'.format(sig.description))
-            shot.signals_dict[sig]=np.clip(shot.signals_dict[sig],0,np.inf)
+        if hasattr(sig,"is_strictly_positive"): #backwards compatibility when this attribute didn't exist
+            if sig.is_strictly_positive:
+                #print ('Applying positivity constraint to {} signal'.format(sig.description))
+                shot.signals_dict[sig]=np.clip(shot.signals_dict[sig],0,np.inf)
