@@ -12,7 +12,7 @@ from scipy import stats
 
 from plasma.preprocessor.normalize import VarNormalizer as Normalizer 
 from plasma.conf import conf
-from plasma.primitives.shots import Shot
+from plasma.primitives.shots import Shot,ShotList
 
 class PerformanceAnalyzer():
     def __init__(self,results_dir=None,shots_dir=None,i = 0,T_min_warn = None,T_max_warn = None, verbose = False,pred_ttd=False,conf=None):
@@ -342,8 +342,8 @@ class PerformanceAnalyzer():
         self.pred_test = dat['y_prime_test']
         self.truth_test = dat['y_gold_test']
         self.disruptive_test = dat['disruptive_test']
-        self.shot_list_test = dat['shot_list_test'][()]
-        self.shot_list_train = dat['shot_list_train'][()]
+        self.shot_list_test = ShotList(dat['shot_list_test'][()])
+        self.shot_list_train = ShotList(dat['shot_list_train'][()])
         self.saved_conf = dat['conf'][()]
         self.conf['data']['T_warning'] = self.saved_conf['data']['T_warning'] #all files must agree on T_warning due to output of truth vs. normalized shot ttd.
         for mode in ['test','train']:
