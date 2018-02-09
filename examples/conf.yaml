@@ -48,12 +48,15 @@ data:
     window_size: 10
     #TODO optimize
     normalizer: 'var'
+    norm_stat_range: 100.0
     equalize_classes: False
     # shallow_sample_prob: 0.01 #the fraction of samples with which to train the shallow model
     floatx: 'float32'
 
 model:
-    shallow: True
+    use_bidirectional: false
+    use_batch_norm: false
+    shallow: False
     shallow_model: 
         num_samples: 1000000 #1000000 #the number of samples to use for training
         type: "xgboost" #"xgboost" #"xgboost" #"random_forest" "xgboost"

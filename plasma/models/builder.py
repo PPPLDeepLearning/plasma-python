@@ -2,8 +2,8 @@ from __future__ import division
 import keras
 from keras.models import Sequential, Model
 from keras.layers import Input
-from keras.layers.core import Dense, Activation, Dropout, Lambda, Reshape, Flatten, Permute
-from keras.layers.recurrent import LSTM, SimpleRNN
+from keras.layers.core import Dense, Activation, Dropout, Lambda, Reshape, Flatten, Permute, RepeatVector
+from keras.layers import LSTM, SimpleRNN, Bidirectional, BatchNormalization
 from keras.layers.convolutional import Convolution1D
 from keras.layers.pooling import MaxPooling1D
 from keras.utils.data_utils import get_file
@@ -11,7 +11,6 @@ from keras.layers.wrappers import TimeDistributed
 from keras.layers.merge import Concatenate
 from keras.callbacks import Callback
 from keras.regularizers import l1,l2,l1_l2
-
 
 import keras.backend as K
 
@@ -73,10 +72,12 @@ class ModelBuilder(object):
     def build_model(self,predict,custom_batch_size=None):
         conf = self.conf
         model_conf = conf['model']
+        use_bidirectional = model_conf['use_bidirectional']
         rnn_size = model_conf['rnn_size']
         rnn_type = model_conf['rnn_type']
         regularization = model_conf['regularization']
         dense_regularization = model_conf['dense_regularization']
+        use_batch_norm = model_conf['use_batch_norm']
 
         dropout_prob = model_conf['dropout_prob']
         length = model_conf['length']
@@ -118,6 +119,7 @@ class ModelBuilder(object):
         batch_shape_non_temporal=(batch_size,num_signals)
 
         indices_0d,indices_1d,num_0D,num_1D = self.get_0D_1D_indices()
+
         def slicer(x,indices):
             return x[:,indices]
 
@@ -130,10 +132,6 @@ class ModelBuilder(object):
         pre_rnn_input = Input(shape=(num_signals,))
 
         if num_1D > 0:
-            #pre_rnn_0D = Lambda(lambda x: slicer(x,indices_0d),lambda s: slicer_output_shape(s,indices_0d))(pre_rnn_input)
-            #pre_rnn_1D = Lambda(lambda x: slicer(x,indices_1d),lambda s: slicer_output_shape(s,indices_1d))(pre_rnn_input)
-            #idx0D_tensor = K.variable(indices_0d)
-            #idx1D_tensor = K.variable(indices_1d)
             pre_rnn_1D = Lambda(lambda x: x[:,len(indices_0d):],output_shape=(len(indices_1d),))(pre_rnn_input)
             pre_rnn_0D = Lambda(lambda x: x[:,:len(indices_0d)],output_shape=(len(indices_0d),))(pre_rnn_input)# slicer(x,indices_0d),lambda s: slicer_output_shape(s,indices_0d))(pre_rnn_input)
             pre_rnn_1D = Reshape((num_1D,len(indices_1d)//num_1D)) (pre_rnn_1D)
@@ -141,12 +139,40 @@ class ModelBuilder(object):
             
             for i in range(model_conf['num_conv_layers']):
                 div_fac = 2**i
-                pre_rnn_1D = Convolution1D(num_conv_filters//div_fac,size_conv_filters,padding='valid',activation='relu') (pre_rnn_1D)
-                pre_rnn_1D = Convolution1D(num_conv_filters//div_fac,1,padding='valid',activation='relu') (pre_rnn_1D)
+                '''The first conv layer learns `num_conv_filters//div_fac` filters (aka kernels), 
+                each of size `(size_conv_filters, num1D)``. Its output will have shape 
+                (None, len(indices_1d)//num_1D - size_conv_filters + 1, num_conv_filters//div_fac),
+                i.e., for each position in the input spatial series (direction along radius), 
+                the activation of each filter at that position.'''
+
+                '''For i=1 first conv layer would get:
+                (None, (len(indices_1d)//num_1D - size_conv_filters + 1)/pool_size-size_conv_filters+1,num_conv_filters//div_fac)'''
+                pre_rnn_1D = Convolution1D(num_conv_filters//div_fac,size_conv_filters,padding='valid') (pre_rnn_1D)
+                if use_batch_norm:  pre_rnn_1D = BatchNormalization()(pre_rnn_1D)
+                pre_rnn_1D = Activation('relu')(pre_rnn_1D)
+
+                '''The output of the second conv layer will have shape 
+                (None, len(indices_1d)//num_1D - size_conv_filters + 1, num_conv_filters//div_fac),
+                i.e., for each position in the input spatial series (direction along radius), 
+                the activation of each filter at that position.
+
+                for i=1 second layer would output
+                (None, (len(indices_1d)//num_1D - size_conv_filters + 1)/pool_size-size_conv_filters+1,num_conv_filters//div_fac)'''  
+                pre_rnn_1D = Convolution1D(num_conv_filters//div_fac,1,padding='valid') (pre_rnn_1D)
+                if use_batch_norm: pre_rnn_1D = BatchNormalization()(pre_rnn_1D)
+                pre_rnn_1D = Activation('relu')(pre_rnn_1D)
+                '''Outputs (None, (len(indices_1d)//num_1D - size_conv_filters + 1)/pool_size, num_conv_filters//div_fac)
+
+                for i=1 pooling layer would output:
+                (None,((len(indices_1d)//num_1D- size_conv_filters + 1)/pool_size-size_conv_filters+1)/pool_size,num_conv_filters//div_fac)'''
                 pre_rnn_1D = MaxPooling1D(pool_size) (pre_rnn_1D)
             pre_rnn_1D = Flatten() (pre_rnn_1D)
-            pre_rnn_1D = Dense(dense_size,activation='relu',kernel_regularizer=l2(dense_regularization),bias_regularizer=l2(dense_regularization),activity_regularizer=l2(dense_regularization)) (pre_rnn_1D)
-            pre_rnn_1D = Dense(dense_size//4,activation='relu',kernel_regularizer=l2(dense_regularization),bias_regularizer=l2(dense_regularization),activity_regularizer=l2(dense_regularization)) (pre_rnn_1D)
+            pre_rnn_1D = Dense(dense_size,kernel_regularizer=l2(dense_regularization),bias_regularizer=l2(dense_regularization),activity_regularizer=l2(dense_regularization)) (pre_rnn_1D)
+            if use_batch_norm: pre_rnn_1D = BatchNormalization()(pre_rnn_1D)
+            pre_rnn_1D = Activation('relu')(pre_rnn_1D)
+            pre_rnn_1D = Dense(dense_size//4,kernel_regularizer=l2(dense_regularization),bias_regularizer=l2(dense_regularization),activity_regularizer=l2(dense_regularization)) (pre_rnn_1D)
+            if use_batch_norm: pre_rnn_1D = BatchNormalization()(pre_rnn_1D)
+            pre_rnn_1D = Activation('relu')(pre_rnn_1D)
             pre_rnn = Concatenate() ([pre_rnn_0D,pre_rnn_1D])
         else:
             pre_rnn = pre_rnn_input        
@@ -157,33 +183,22 @@ class ModelBuilder(object):
             pre_rnn = Dense(dense_size//4,activation='relu',kernel_regularizer=l2(dense_regularization),bias_regularizer=l2(dense_regularization),activity_regularizer=l2(dense_regularization)) (pre_rnn)
         
         pre_rnn_model = Model(inputs = pre_rnn_input,outputs=pre_rnn)
+        pre_rnn_model.summary()
         x_input = Input(batch_shape = batch_input_shape)
         x_in = TimeDistributed(pre_rnn_model) (x_input)
 
-#        x_input = Input(batch_shape=batch_input_shape)
-#        if num_1D > 0:
-#            x_0D = Lambda(lambda x: slicer(x,indices_0d),lambda s: slicer_output_shape(s,indices_0d)) (x_input)
-#            x_1D = Lambda(lambda x: slicer(x,indices_1d),lambda s: slicer_output_shape(s,indices_1d)) (x_input)
-#
-#            x_1D = TimeDistributed(Reshape((num_1D,len(indices_1d)/num_1D))) (x_1D)
-#            for i in range(model_conf['num_conv_layers']):
-#                x_1D = TimeDistributed(Conv1D(num_conv_filters,size_conv_filters,activation='relu')) (x_1D)
-#                x_1D = TimeDistributed(MaxPooling1D(pool_size)) (x_1D)
-#            x_1D = TimeDistributed(Flatten()) (x_1D)
-#            x_in = TimeDistributed(Concatenate) ([x_0D,x_1D])
-#
-#        else:
-#            x_in = x_input
-        #x_in = TimeDistributed(Dense(100,activation='tanh')) (x_in)
-        #x_in = TimeDistributed(Dense(30,activation='tanh')) (x_in)
-        #x_in = TimeDistributed(Dense(2*(num_0D+num_1D)),activation='relu') (x_in)
-        # x = TimeDistributed(Dense(2*(num_0D+num_1D)))
- #               model.add(TimeDistributed(Dense(num_density_channels,bias=True),batch_input_shape=batch_input_shape))
-        for _ in range(model_conf['rnn_layers']):
-            x_in = rnn_model(rnn_size, return_sequences=return_sequences,#batch_input_shape=batch_input_shape,
-             stateful=stateful,kernel_regularizer=l2(regularization),recurrent_regularizer=l2(regularization),
-             bias_regularizer=l2(regularization),dropout=dropout_prob,recurrent_dropout=dropout_prob) (x_in)
-            x_in = Dropout(dropout_prob) (x_in)
+        if use_bidirectional:
+            for _ in range(model_conf['rnn_layers']):
+                x_in = Bidirectional(rnn_model(rnn_size, return_sequences=return_sequences,
+                 stateful=stateful,kernel_regularizer=l2(regularization),recurrent_regularizer=l2(regularization),
+                 bias_regularizer=l2(regularization),dropout=dropout_prob,recurrent_dropout=dropout_prob)) (x_in)
+                x_in = Dropout(dropout_prob) (x_in)
+        else:
+            for _ in range(model_conf['rnn_layers']):
+                x_in = rnn_model(rnn_size, return_sequences=return_sequences,#batch_input_shape=batch_input_shape,
+                 stateful=stateful,kernel_regularizer=l2(regularization),recurrent_regularizer=l2(regularization),
+                 bias_regularizer=l2(regularization),dropout=dropout_prob,recurrent_dropout=dropout_prob) (x_in)
+                x_in = Dropout(dropout_prob) (x_in)
         if return_sequences:
             #x_out = TimeDistributed(Dense(100,activation='tanh')) (x_in)
             x_out = TimeDistributed(Dense(1,activation=output_activation)) (x_in)
