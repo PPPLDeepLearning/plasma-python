@@ -840,7 +840,6 @@ class PerformanceAnalyzer():
         plt.ylim([0,1])
         if save_figure:
             plt.savefig(title_str + '_roc.png',bbox_inches='tight',dpi=200)
-            #np.savez(title_str + '_roc.npz',"P_thresh_range",P_thresh_range,"missed_range",missed_range,"fp_range",fp_range)
         print('ROC area ({}) is {}'.format(plot_string,self.roc_from_missed_fp(missed_range,fp_range)))
         return P_thresh_range,missed_range,fp_range
 

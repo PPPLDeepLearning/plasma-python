@@ -43,6 +43,7 @@ class Normalizer(object):
         self.remapper = conf['data']['target'].remapper
         self.machines = set()
         self.inference_mode = False
+        self.bound = self.conf['data']['norm_stat_range']
 
     @abc.abstractmethod
     def __str__(self):
@@ -192,6 +193,7 @@ class MeanVarNormalizer(Normalizer):
         Normalizer.__init__(self,conf)
         self.means = dict()
         self.stds = dict()
+        self.bound = self.conf['data']['norm_stat_range']
 
     def __str__(self):
         s = ''
@@ -246,6 +248,7 @@ class MeanVarNormalizer(Normalizer):
                 if stds_curr == 0.0:
                     stds_curr = 1.0
                 shot.signals_dict[sig] = (shot.signals_dict[sig] - means[i])/stds_curr
+                shot.signals_dict[sig] = np.clip(shot.signals_dict[sig],-self.bound,self.bound)
 
         shot.ttd = self.remapper(shot.ttd,self.conf['data']['T_warning'])
         self.cut_end_of_shot(shot)
@@ -288,6 +291,7 @@ class VarNormalizer(MeanVarNormalizer):
                 if stds_curr == 0.0:
                     stds_curr = 1.0
                 shot.signals_dict[sig] = (shot.signals_dict[sig])/stds_curr
+                shot.signals_dict[sig] = np.clip(shot.signals_dict[sig],-self.bound,self.bound)
         shot.ttd = self.remapper(shot.ttd,self.conf['data']['T_warning'])
         self.cut_end_of_shot(shot)
 
@@ -312,6 +316,7 @@ class AveragingVarNormalizer(VarNormalizer):
         for (i,sig) in enumerate(shot.signals):
             if sig.normalize:
                 shot.signals_dict[sig] = apply_along_axis(lambda m : correlate(m,window,'valid'),axis=0,arr=shot.signals_dict[sig])
+                shot.signals_dict[sig] = np.clip(shot.signals_dict[sig],-self.bound,self.bound)
         shot.ttd = shot.ttd[-shot.signals.shape[0]:]
 
     def __str__(self):
@@ -330,6 +335,7 @@ class MinMaxNormalizer(Normalizer):
         Normalizer.__init__(self,conf)
         self.minimums = None
         self.maximums = None
+        self.bound = self.conf['data']['norm_stat_range']
 
 
     def __str__(self):
@@ -379,6 +385,7 @@ class MinMaxNormalizer(Normalizer):
         for (i,sig) in enumerate(shot.signals):
             if sig.normalize:
                 shot.signals_dict[sig] = (shot.signals_dict[sig] - self.minimums[m])/(self.maximums[m] - self.minimums[m])
+                shot.signals_dict[sig] = np.clip(shot.signals_dict[sig],-self.bound,self.bound)
         shot.ttd = self.remapper(shot.ttd,self.conf['data']['T_warning'])
         self.cut_end_of_shot(shot)
         # self.apply_positivity_mask(shot)
