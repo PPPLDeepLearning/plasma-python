@@ -86,6 +86,9 @@ normalizer.train()
 loader = Loader(conf,normalizer)
 print("...done")
 
+#ensure training has a separate random seed for every worker
+np.random.seed(task_index)
+random.seed(task_index)
 if not only_predict:
     mpi_train(conf,shot_list_train,shot_list_validate,loader)
 

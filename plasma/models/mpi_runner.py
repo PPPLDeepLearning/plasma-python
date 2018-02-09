@@ -20,6 +20,7 @@ import sys
 import time
 import datetime
 import numpy as np
+import random
 
 from functools import partial
 import socket
@@ -170,7 +171,8 @@ class Averager(object):
 
 class MPIModel():
   def __init__(self,model,optimizer,comm,batch_iterator,batch_size,num_replicas=None,warmup_steps=1000,lr=0.01,num_batches_minimum=100):
-    # random.seed(task_index)
+    random.seed(task_index)
+    np.random.seed(task_index)
     self.epoch = 0
     self.num_so_far = 0
     self.num_so_far_accum = 0
@@ -640,6 +642,7 @@ def mpi_make_predictions_and_evaluate(conf,shot_list,loader,custom_path=None):
 
 
 def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=None):   
+
     loader.set_inference_mode(False)
     conf['num_workers'] = comm.Get_size()
 
