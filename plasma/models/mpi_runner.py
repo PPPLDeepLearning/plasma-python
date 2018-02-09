@@ -173,6 +173,7 @@ class MPIModel():
   def __init__(self,model,optimizer,comm,batch_iterator,batch_size,num_replicas=None,warmup_steps=1000,lr=0.01,num_batches_minimum=100):
     random.seed(task_index)
     np.random.seed(task_index)
+    self.start_time = time.time()
     self.epoch = 0
     self.num_so_far = 0
     self.num_so_far_accum = 0
@@ -468,7 +469,7 @@ class MPIModel():
         loss_averager.add_val(curr_loss)
         ave_loss = loss_averager.get_val()
         eta = self.estimate_remaining_time(t0 - t_start,self.num_so_far-self.epoch*num_total,num_total)
-        write_str = '\r[{}] step: {} [ETA: {:.2f}s] [{:.2f}/{}], loss: {:.5f} [{:.5f}] | '.format(self.task_index,step,eta,1.0*self.num_so_far,num_total,ave_loss,curr_loss)
+        write_str = '\r[{}] step: {} [ETA: {:.2f}s] [{:.2f}/{}], loss: {:.5f} [{:.5f}] | walltime: {:.4f} | '.format(self.task_index,step,eta,1.0*self.num_so_far,num_total,ave_loss,curr_loss,time.time()-self.start_time)
         print_unique(write_str + write_str_0)
         step += 1
       else:
