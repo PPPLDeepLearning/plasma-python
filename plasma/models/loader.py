@@ -88,10 +88,15 @@ class Loader(object):
                         yield X[start:end],y[start:end],reset_states_now,num_so_far,num_total
             epoch += 1
 
-    def fill_training_buffer(self,Xbuff,Ybuff,end_indices,shot):
+    def fill_training_buffer(self,Xbuff,Ybuff,end_indices,shot,is_first_fill=False):
         sig,res = self.get_signal_result_from_shot(shot)
-        sig_len = res.shape[0]
         length = self.conf['model']['length']
+        if is_first_fill:#cut signal to random position
+            cut_idx = np.random.randint(res.shape[0]-length+1)
+            sig = sig[cut_idx:]
+            res = res[cut_idx:]
+
+        sig_len = res.shape[0]
         sig_len = (sig_len // length)*length #make divisible by lenth
         assert(sig_len > 0)
         batch_idx = np.where(end_indices == 0)[0][0]
@@ -157,8 +162,10 @@ class Loader(object):
         num_total = len(shot_list)
         num_so_far = 0
         returned = False
+        num_steps = 0
         warmup_steps = self.conf['training']['batch_generator_warmup_steps']
-        is_warmup_period = warmup_steps > 0
+        is_warmup_period = num_steps < warmup_steps 
+        is_first_fill = num_steps < batch_size
         while True:
             # the list of all shots
             shot_list.shuffle() 
@@ -174,11 +181,12 @@ class Loader(object):
                     X,Y = self.return_from_training_buffer(Xbuff,Ybuff,end_indices)
                     yield X,Y,batches_to_reset,num_so_far,num_total,is_warmup_period
                     returned = True
-                    warmup_steps -= 1
-                    is_warmup_period = warmup_steps > 0
+                    num_steps += 1
+                    is_warmup_period = num_steps < warmup_steps
+                    is_first_fill = num_steps < batch_size
                     batches_to_reset[:] = False
 
-                Xbuff,Ybuff,batch_idx = self.fill_training_buffer(Xbuff,Ybuff,end_indices,shot)
+                Xbuff,Ybuff,batch_idx = self.fill_training_buffer(Xbuff,Ybuff,end_indices,shot,is_first_fill)
                 batches_to_reset[batch_idx] = True
                 if returned and not is_warmup_period:
                     num_so_far += 1

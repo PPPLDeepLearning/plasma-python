@@ -146,7 +146,7 @@ class Preprocessor(object):
 
 
 def apply_bleed_in(conf,shot_list_train,shot_list_validate,shot_list_test):
-    np.random.seed(1)
+    np.random.seed(2)
     num = conf['data']['bleed_in']
     new_shots = []
     if num > 0:
@@ -170,13 +170,22 @@ def apply_bleed_in(conf,shot_list_train,shot_list_validate,shot_list_test):
         print("Sampled {} shots, {} disruptive, {} nondisruptive".format(num_sampled_nd+num_sampled_d,num_sampled_d,num_sampled_nd))
         print("Before adding: training shots: {} validation shots: {}".format(len(shot_list_train),len(shot_list_validate)))
         assert(num_sampled_d == num)
-        num_to_sample = len(shot_list_bleed)
         if conf['data']['bleed_in_equalize_sets']:#add bleed-in shots to training and validation set repeatedly
+            print("Applying equalized bleed in")
             for shot_list_curr in [shot_list_train,shot_list_validate]:
                 for i in range(len(shot_list_curr)):
                     s = shot_list_bleed.sample_shot()
                     shot_list_curr.append(s)
+        elif conf['data']['bleed_in_repeat_fac'] > 1:
+            repeat_fac = conf['data']['bleed_in_repeat_fac']
+            print("Applying bleed in with repeat factor {}".format(repeat_fac))
+            num_to_sample = int(round(repeat_fac*len(shot_list_bleed)))
+            for i in range(num_to_sample):
+                s = shot_list_bleed.sample_shot()
+                shot_list_train.append(s)
+                shot_list_validate.append(s)
         else: #add each shot only once
+            print("Applying bleed in without repetition")
             for s in shot_list_bleed:
                 shot_list_train.append(s)
                 shot_list_validate.append(s)
