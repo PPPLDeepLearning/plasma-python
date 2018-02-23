@@ -54,6 +54,7 @@ data:
     floatx: 'float32'
 
 model:
+    loss_scale_factor: 1.0
     use_bidirectional: false
     use_batch_norm: false
     shallow: False
