@@ -188,12 +188,11 @@ class ModelBuilder(object):
         x_input = Input(batch_shape = batch_input_shape)
         x_in = TimeDistributed(pre_rnn_model) (x_input)
 
-        else:
-            for _ in range(model_conf['rnn_layers']):
-                x_in = rnn_model(rnn_size, return_sequences=return_sequences,#batch_input_shape=batch_input_shape,
-                 stateful=stateful,kernel_regularizer=l2(regularization),recurrent_regularizer=l2(regularization),
-                 bias_regularizer=l2(regularization),dropout=dropout_prob,recurrent_dropout=dropout_prob) (x_in)
-                x_in = Dropout(dropout_prob) (x_in)
+        for _ in range(model_conf['rnn_layers']):
+            x_in = rnn_model(rnn_size, return_sequences=return_sequences,#batch_input_shape=batch_input_shape,
+             stateful=stateful,kernel_regularizer=l2(regularization),recurrent_regularizer=l2(regularization),
+             bias_regularizer=l2(regularization),dropout=dropout_prob,recurrent_dropout=dropout_prob) (x_in)
+            x_in = Dropout(dropout_prob) (x_in)
         if return_sequences:
             #x_out = TimeDistributed(Dense(100,activation='tanh')) (x_in)
             x_out = TimeDistributed(Dense(1,activation=output_activation)) (x_in)
