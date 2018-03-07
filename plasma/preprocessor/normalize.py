@@ -43,7 +43,9 @@ class Normalizer(object):
         self.remapper = conf['data']['target'].remapper
         self.machines = set()
         self.inference_mode = False
-        self.bound = self.conf['data']['norm_stat_range']
+        self.bound = np.Inf
+        if 'norm_stat_range' in self.conf['data']:
+            self.bound = self.conf['data']['norm_stat_range']
 
     @abc.abstractmethod
     def __str__(self):
@@ -193,7 +195,9 @@ class MeanVarNormalizer(Normalizer):
         Normalizer.__init__(self,conf)
         self.means = dict()
         self.stds = dict()
-        self.bound = self.conf['data']['norm_stat_range']
+        self.bound = np.Inf
+        if 'norm_stat_range' in self.conf['data']:
+            self.bound = self.conf['data']['norm_stat_range']
 
     def __str__(self):
         s = ''
@@ -335,7 +339,9 @@ class MinMaxNormalizer(Normalizer):
         Normalizer.__init__(self,conf)
         self.minimums = None
         self.maximums = None
-        self.bound = self.conf['data']['norm_stat_range']
+        self.bound = np.Inf
+        if 'norm_stat_range' in self.conf['data']:
+            self.bound = self.conf['data']['norm_stat_range']
 
 
     def __str__(self):
