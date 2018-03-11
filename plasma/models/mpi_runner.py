@@ -185,6 +185,7 @@ class MPIModel():
     self.num_workers = comm.Get_size()
     self.task_index = comm.Get_rank()
     self.history = cbks.History()
+    self.model.stop_training = False
     if num_replicas is None or num_replicas < 1 or num_replicas > self.num_workers:
         self.num_replicas = self.num_workers
     else:
@@ -736,7 +737,6 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
         epoch_logs['train_loss'] = ave_loss
         best_so_far = cmp_fn(epoch_logs[conf['callbacks']['monitor']],best_so_far)
 
-        stop_training = False
         if task_index == 0:
             print('=========Summary======== for epoch{}'.format(step))
             print('Training Loss numpy: {:.3e}'.format(ave_loss))
@@ -747,8 +747,6 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
                 print('Training ROC: {:.4f}'.format(roc_area_train))
 
             callbacks.on_epoch_end(int(round(e)), epoch_logs)
-            if hasattr(mpi_model.model,'stop_training'):
-                stop_training = mpi_model.model.stop_training
             if best_so_far != epoch_logs[conf['callbacks']['monitor']]: #only save model weights if quantity we are tracking is improving
                 print("Not saving model weights")
                 specific_builder.delete_model_weights(train_model,int(round(e)))
@@ -759,7 +757,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
                 val_steps = 1
                 tensorboard.on_epoch_end(val_generator,val_steps,int(round(e)),epoch_logs)
 
-        stop_training = comm.bcast(stop_training,root=0)
+        stop_training = comm.bcast(mpi_model.model.stop_training,root=0)
         if stop_training:
             print("Stopping training due to early stopping")
             break
