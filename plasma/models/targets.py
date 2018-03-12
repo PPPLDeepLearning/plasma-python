@@ -5,7 +5,7 @@ from keras.losses import hinge, squared_hinge, mean_absolute_percentage_error
 from plasma.utils.evaluation import mae_np,mse_np,binary_crossentropy_np,hinge_np,squared_hinge_np
 import keras.backend as K
 
-import plasma.conf
+import plasma.conf as conf
 
 #Requirement: larger value must mean disruption more likely.
 class Target(object):
