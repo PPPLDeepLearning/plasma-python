@@ -45,7 +45,7 @@ def parameters(input_file):
         if params['model']['shallow'] or params['target'] == 'hinge':
             params['data']['target'] = HingeTarget
         elif params['target'] == 'maxhinge':
-            t.MaxHingeTarget.fac = params['data']['positive_example_penalty']
+            MaxHingeTarget.fac = params['data']['positive_example_penalty']
             params['data']['target'] = MaxHingeTarget
         elif params['target'] == 'binary':
             params['data']['target'] = BinaryTarget
