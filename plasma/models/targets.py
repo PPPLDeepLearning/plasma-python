@@ -5,8 +5,6 @@ from keras.losses import hinge, squared_hinge, mean_absolute_percentage_error
 from plasma.utils.evaluation import mae_np,mse_np,binary_crossentropy_np,hinge_np,squared_hinge_np
 import keras.backend as K
 
-import plasma.conf
-
 #Requirement: larger value must mean disruption more likely.
 class Target(object):
     activation = 'linear'
@@ -14,7 +12,8 @@ class Target(object):
 
     @abc.abstractmethod
     def loss_np(y_true,y_pred):
-        return plasma.conf['model']['loss_scale_factor']*mse_np(y_true,y_pred)
+        from plasma.conf import conf
+        return conf['model']['loss_scale_factor']*mse_np(y_true,y_pred)
 
     @abc.abstractmethod
     def remapper(ttd,T_warning):
@@ -31,7 +30,8 @@ class BinaryTarget(Target):
 
     @staticmethod
     def loss_np(y_true,y_pred):
-        return plasma.conf['model']['loss_scale_factor']*binary_crossentropy_np(y_true,y_pred)
+        from plasma.conf import conf 
+        return conf['model']['loss_scale_factor']*binary_crossentropy_np(y_true,y_pred)
 
     @staticmethod
     def remapper(ttd,T_warning,as_array_of_shots=True):
@@ -53,7 +53,8 @@ class TTDTarget(Target):
 
     @staticmethod
     def loss_np(y_true,y_pred):
-        return plasma.conf['model']['loss_scale_factor']*mse_np(y_true,y_pred)
+        from plasma.conf import conf 
+        return conf['model']['loss_scale_factor']*mse_np(y_true,y_pred)
 
     @staticmethod
     def remapper(ttd,T_warning):
@@ -94,7 +95,8 @@ class TTDLinearTarget(Target):
 
     @staticmethod
     def loss_np(y_true,y_pred):
-        return plasma.conf['model']['loss_scale_factor']*mse_np(y_true,y_pred)
+        from plasma.conf import conf
+        return conf['model']['loss_scale_factor']*mse_np(y_true,y_pred)
     
 
     @staticmethod
@@ -118,6 +120,7 @@ class MaxHingeTarget(Target):
 
     @staticmethod
     def loss(y_true, y_pred):
+        from plasma.conf import conf
         fac = MaxHingeTarget.fac
         #overall_fac = np.prod(np.array(K.shape(y_pred)[1:]).astype(np.float32))
         overall_fac = K.prod(K.cast(K.shape(y_pred)[1:],K.floatx()))
@@ -129,10 +132,11 @@ class MaxHingeTarget(Target):
         weight_mask = K.cast(K.greater(weight_mask,0.0),K.floatx()) #positive label!
         weight_mask = fac*weight_mask + (1 - weight_mask)
         #return weight_mask*squared_hinge(y_true,y_pred1)
-        return plasma.conf['model']['loss_scale_factor']*overall_fac*weight_mask*hinge(y_true,y_pred1)
+        return conf['model']['loss_scale_factor']*overall_fac*weight_mask*hinge(y_true,y_pred1)
 
     @staticmethod
     def loss_np(y_true, y_pred):
+        from plasma.conf import conf
         fac = MaxHingeTarget.fac
         #print(y_pred.shape)
         overall_fac = np.prod(np.array(y_pred.shape).astype(np.float32))
@@ -145,7 +149,7 @@ class MaxHingeTarget(Target):
         weight_mask = np.greater(y_true,0.0).astype(np.float32) #positive label!
         weight_mask = fac*weight_mask + (1 - weight_mask)
         #return np.mean(weight_mask*np.square(np.maximum(1. - y_true * y_pred, 0.)))#, axis=-1) only during training, here we want to completely sum up over all instances
-        return plasma.conf['model']['loss_scale_factor']*np.mean(overall_fac*weight_mask*np.maximum(1. - y_true * y_pred, 0.))#, axis=-1) only during training, here we want to completely sum up over all instances
+        return conf['model']['loss_scale_factor']*np.mean(overall_fac*weight_mask*np.maximum(1. - y_true * y_pred, 0.))#, axis=-1) only during training, here we want to completely sum up over all instances
 
 
     # def _loss_tensor_old(y_true, y_pred):
@@ -175,7 +179,8 @@ class HingeTarget(Target):
     
     @staticmethod
     def loss_np(y_true, y_pred):
-        return plasma.conf['model']['loss_scale_factor']*hinge_np(y_true,y_pred)
+        from plasma.conf import conf
+        return conf['model']['loss_scale_factor']*hinge_np(y_true,y_pred)
         #return squared_hinge_np(y_true,y_pred)
         
     @staticmethod

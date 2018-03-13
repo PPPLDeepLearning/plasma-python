@@ -1,4 +1,3 @@
-import plasma.models.targets as t
 from plasma.primitives.shots import ShotListFiles
 from data.signals import *
 
@@ -10,6 +9,7 @@ import hashlib
 
 def parameters(input_file):
     """Parse yaml file of configuration parameters."""
+    from plasma.models.targets import HingeTarget, MaxHingeTarget, BinaryTarget, TTDTarget, TTDInvTarget, TTDLinearTarget
 
     with open(input_file, 'r') as yaml_file:
         params = yaml.load(yaml_file)
@@ -43,18 +43,18 @@ def parameters(input_file):
 
         #ensure shallow model has +1 -1 target.
         if params['model']['shallow'] or params['target'] == 'hinge':
-            params['data']['target'] = t.HingeTarget
+            params['data']['target'] = HingeTarget
         elif params['target'] == 'maxhinge':
-            t.MaxHingeTarget.fac = params['data']['positive_example_penalty']
-            params['data']['target'] = t.MaxHingeTarget
+            MaxHingeTarget.fac = params['data']['positive_example_penalty']
+            params['data']['target'] = MaxHingeTarget
         elif params['target'] == 'binary':
-            params['data']['target'] = t.BinaryTarget
+            params['data']['target'] = BinaryTarget
         elif params['target'] == 'ttd':
-            params['data']['target'] = t.TTDTarget
+            params['data']['target'] = TTDTarget
         elif params['target'] == 'ttdinv':
-            params['data']['target'] = t.TTDInvTarget
+            params['data']['target'] = TTDInvTarget
         elif params['target'] == 'ttdlinear':
-            params['data']['target'] = t.TTDLinearTarget
+            params['data']['target'] = TTDLinearTarget
         else:
             print('Unkown type of target. Exiting')
             exit(1)
