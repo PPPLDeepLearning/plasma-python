@@ -188,8 +188,11 @@ class PerformanceAnalyzer():
                         d_early_thresholds.append(-np.inf)
                 else:
                         d_early_thresholds.append(np.max(pred[early_indices]))
-                        
-                d_correct_thresholds.append(np.max(pred[correct_indices]))
+
+                if np.sum(correct_indices) == 0:
+                    d_correct_thresholds.append(-np.inf)
+                else:
+                    d_correct_thresholds.append(np.max(pred[correct_indices]))
             else:
                 nd_thresholds.append(np.max(pred))
         return np.array(d_early_thresholds), np.array(d_correct_thresholds),np.array(d_late_thresholds), np.array(nd_thresholds)
