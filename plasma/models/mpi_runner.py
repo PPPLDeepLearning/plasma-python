@@ -23,6 +23,7 @@ import numpy as np
 import random
 
 from functools import partial
+from copy import deepcopy
 import socket
 sys.setrecursionlimit(10000)
 import getpass
@@ -642,7 +643,7 @@ def mpi_make_predictions_and_evaluate(conf,shot_list,loader,custom_path=None):
     return y_prime,y_gold,disruptive,roc_area,loss
 
 
-def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=None):   
+def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=None,shot_list_test=None):   
 
     loader.set_inference_mode(False)
     conf['num_workers'] = comm.Get_size()
@@ -730,6 +731,17 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
             mpi_model.batch_iterator_func.__exit__()
             mpi_model.num_so_far_accum = mpi_model.num_so_far_indiv
             mpi_model.set_batch_iterator_func()
+        if 'monitor_test' in conf['callbacks'].keys() and conf['callbacks']['monitor_test']:
+            conf_curr = deepcopy(conf)
+            T_min_warn_orig = conf['data']['T_min_warn']
+            for T_min_curr in conf_curr['callbacks']['monitor_times']:
+                conf_curr['data']['T_min_warn'] = T_min_curr 
+                assert(conf['data']['T_min_warn'] == T_min_warn_orig)
+                if shot_list_test is not None:
+                    _,_,_,roc_area_t,_ = mpi_make_predictions_and_evaluate(conf_curr,shot_list_test,loader)
+                    epoch_logs['test_roc_{}'.format(T_min_curr)] = roc_area_t
+                _,_,_,roc_area_v,_ = mpi_make_predictions_and_evaluate(conf_curr,shot_list_validate,loader)
+                epoch_logs['val_roc_{}'.format(T_min_curr)] = roc_area_v
         epoch_logs['val_roc'] = roc_area 
         epoch_logs['val_loss'] = loss
         epoch_logs['train_loss'] = ave_loss
