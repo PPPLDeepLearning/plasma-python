@@ -27,6 +27,7 @@ import os
 import errno
 
 import dill,hashlib
+from copy import deepcopy
 
 # import gadata
 
