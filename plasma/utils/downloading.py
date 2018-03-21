@@ -26,6 +26,8 @@ from multiprocessing import Queue
 import os
 import errno
 
+import dill,hashlib
+
 # import gadata
 
 # from plasma.primitives.shots import ShotList
@@ -33,6 +35,26 @@ import errno
 #from signals import *
 
 #print("Importing numpy version"+np.__version__)
+
+def general_object_hash(o):
+    """Makes a hash from a dictionary, list, tuple or set to any level, that contains
+       only other hashable types (including any lists, tuples, sets, and
+       dictionaries). Relies on dill for serialization"""
+         
+    if isinstance(o, (set, tuple, list)):
+        return tuple([make_hash(e) for e in o])    
+         
+    elif not isinstance(o, dict):
+        return myhash(o)
+    
+    new_o = deepcopy(o)
+    for k, v in new_o.items():
+        new_o[k] = make_hash(v)
+ 
+    return myhash(tuple(frozenset(sorted(new_o.items()))))
+
+def myhash(x):
+    return int(hashlib.md5((dill.dumps(x).decode('unicode_escape')).encode('utf-8')).hexdigest(),16)
 
 
 def get_missing_value_array():

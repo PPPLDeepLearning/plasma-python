@@ -731,6 +731,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
             mpi_model.batch_iterator_func.__exit__()
             mpi_model.num_so_far_accum = mpi_model.num_so_far_indiv
             mpi_model.set_batch_iterator_func()
+
         if 'monitor_test' in conf['callbacks'].keys() and conf['callbacks']['monitor_test']:
             conf_curr = deepcopy(conf)
             T_min_warn_orig = conf['data']['T_min_warn']

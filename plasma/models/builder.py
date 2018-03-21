@@ -19,7 +19,7 @@ import re
 import os,sys
 import numpy as np
 from copy import deepcopy
-from plasma.utils.downloading import makedirs_process_safe
+from plasma.utils.downloading import makedirs_process_safe,general_object_hash
 
 import hashlib
 
@@ -31,17 +31,21 @@ class LossHistory(Callback):
         self.losses.append(logs.get('loss'))
 
 
+
 class ModelBuilder(object):
     def __init__(self,conf):
         self.conf = conf
 
     def get_unique_id(self):
-        num_epochs = self.conf['training']['num_epochs']
+        #num_epochs = self.conf['training']['num_epochs']
         this_conf = deepcopy(self.conf)
-        #don't make hash dependent on number of epochs.
+        #don't make hash dependent on number of epochs or T_min_warn as those can be modified
         this_conf['training']['num_epochs'] = 0
-        unique_id = int(hashlib.md5((dill.dumps(this_conf).decode('unicode_escape')).encode('utf-8')).hexdigest(),16)
+        this_conf['data']['T_min_warn'] = 30
+        #unique_id = int(hashlib.md5((dill.dumps(this_conf).decode('unicode_escape')).encode('utf-8')).hexdigest(),16)
+        unique_id = general_object_hash(this_conf)
         return unique_id
+
 
     def get_0D_1D_indices(self):
         #make sure all 1D indices are contiguous in the end!
@@ -270,6 +274,8 @@ class ModelBuilder(object):
         self.ensure_save_directory()
         unique_id = self.get_unique_id()
         filenames = os.listdir(self.conf['paths']['model_save_path'])
+        print("All saved files with id {} and path {}".format(unique_id,self.conf['paths']['model_save_path']))
+        print(filenames)
         epochs = []
         for file in filenames:
             curr_id,epoch = self.extract_id_and_epoch_from_filename(file)
