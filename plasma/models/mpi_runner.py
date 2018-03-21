@@ -740,9 +740,11 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
                 assert(conf['data']['T_min_warn'] == T_min_warn_orig)
                 if shot_list_test is not None:
                     _,_,_,roc_area_t,_ = mpi_make_predictions_and_evaluate(conf_curr,shot_list_test,loader)
-                    epoch_logs['test_roc_{}'.format(T_min_curr)] = roc_area_t
+                    print_unique('epoch {}, test_roc_{} = {}'.format(int(round(e)),T_min_curr,roc_area_t))
+                    #epoch_logs['test_roc_{}'.format(T_min_curr)] = roc_area_t
                 _,_,_,roc_area_v,_ = mpi_make_predictions_and_evaluate(conf_curr,shot_list_validate,loader)
-                epoch_logs['val_roc_{}'.format(T_min_curr)] = roc_area_v
+                print_unique('epoch {}, val_roc_{} = {}'.format(int(round(e)),T_min_curr,roc_area_v))
+                #epoch_logs['val_roc_{}'.format(T_min_curr)] = roc_area_v
         epoch_logs['val_roc'] = roc_area 
         epoch_logs['val_loss'] = loss
         epoch_logs['train_loss'] = ave_loss
