@@ -97,6 +97,14 @@ def parameters(input_file):
             params['paths']['shot_files'] = [jet_carbon_wall]
             params['paths']['shot_files_test'] = [jet_iterlike_wall]
             params['paths']['use_signals_dict'] = jet_signals_1D
+        elif params['paths']['data'] == 'jet_data_temp_profile':
+            params['paths']['shot_files'] = [jet_carbon_wall]
+            params['paths']['shot_files_test'] = [jet_iterlike_wall]
+            params['paths']['use_signals_dict'] = {'etemp_profile' : etemp_profile}
+        elif params['paths']['data'] == 'jet_data_dens_profile':
+            params['paths']['shot_files'] = [jet_carbon_wall]
+            params['paths']['shot_files_test'] = [jet_iterlike_wall]
+            params['paths']['use_signals_dict'] = {'edens_profile' : edens_profile}
         elif params['paths']['data'] == 'jet_carbon_data':
             params['paths']['shot_files'] = [jet_carbon_wall]
             params['paths']['shot_files_test'] = []
@@ -154,6 +162,14 @@ def parameters(input_file):
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = []
             params['paths']['use_signals_dict'] = fully_defined_signals_0D
+        elif params['paths']['data'] == 'd3d_data_temp_profile': #jet data but with fully defined signals
+            params['paths']['shot_files'] = [d3d_full]
+            params['paths']['shot_files_test'] = []
+            params['paths']['use_signals_dict'] = {'etemp_profile' : etemp_profile}#fully_defined_signals_0D
+        elif params['paths']['data'] == 'd3d_data_dens_profile': #jet data but with fully defined signals
+            params['paths']['shot_files'] = [d3d_full]
+            params['paths']['shot_files_test'] = []
+            params['paths']['use_signals_dict'] = {'edens_profile' : edens_profile}#fully_defined_signals_0D
 
         #cross-machine
         elif params['paths']['data'] == 'jet_to_d3d_data':
