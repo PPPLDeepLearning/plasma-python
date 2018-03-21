@@ -274,8 +274,6 @@ class ModelBuilder(object):
         self.ensure_save_directory()
         unique_id = self.get_unique_id()
         filenames = os.listdir(self.conf['paths']['model_save_path'])
-        print("All saved files with id {} and path {}".format(unique_id,self.conf['paths']['model_save_path']))
-        print(filenames)
         epochs = []
         for file in filenames:
             curr_id,epoch = self.extract_id_and_epoch_from_filename(file)
