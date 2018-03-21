@@ -43,14 +43,14 @@ def general_object_hash(o):
        dictionaries). Relies on dill for serialization"""
          
     if isinstance(o, (set, tuple, list)):
-        return tuple([make_hash(e) for e in o])    
+        return tuple([general_object_hash(e) for e in o])    
          
     elif not isinstance(o, dict):
         return myhash(o)
     
     new_o = deepcopy(o)
     for k, v in new_o.items():
-        new_o[k] = make_hash(v)
+        new_o[k] = general_object_hash(v)
  
     return myhash(tuple(frozenset(sorted(new_o.items()))))
 
