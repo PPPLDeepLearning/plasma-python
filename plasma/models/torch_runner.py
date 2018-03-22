@@ -45,7 +45,7 @@ class FTCN(nn.Module):
                  num_channels_tcn,kernel_size_temporal,dropout=0.1):
         super(FTCN, self).__init__()
         self.lin = InputBlock(n_scalars, n_profiles,profile_size, layer_sizes_spatial, kernel_size_spatial, linear_size, dropout)
-        self.input_layer = TimeDistributed(lin,batch_first=True)
+        self.input_layer = TimeDistributed(self.lin,batch_first=True)
         self.tcn = TCN(linear_size, output_size, num_channels_tcn , kernel_size_temporal, dropout)
         self.model = nn.Sequential(self.input_layer,self.tcn)
     
@@ -102,8 +102,8 @@ class InputBlock(nn.Module):
             if self.n_scalars == 0:
                 x_profiles = x
             else:
-                x_scalars = x[:,:n_scalars]
-                x_profiles = x[:,n_scalars:]
+                x_scalars = x[:,:self.n_scalars]
+                x_profiles = x[:,self.n_scalars:]
             x_profiles = x_profiles.contiguous().view(x.size(0),self.n_profiles,self.profile_size)
             profile_features = self.net(x_profiles).view(x.size(0),-1)
             if self.n_scalars == 0:
@@ -271,18 +271,18 @@ def build_torch_model(conf):
 # dim = 10
 
     # lin = nn.Linear(input_size,intermediate_dim)
-    n_scalars, n_profile, profile_size = get_signal_dimensions(conf)
+    n_scalars, n_profiles, profile_size = get_signal_dimensions(conf)
     dim = n_scalars+n_profiles*profile_size
     input_size = dim
     output_size = 1
     # intermediate_dim = 15
 
-    layer_sizes_spatial = [40,20,20]
+    layer_sizes_spatial = [6,3,3]#[40,20,20]
     kernel_size_spatial = 3
-    linear_size = 10
+    linear_size = 5
 
-    num_channels_tcn = [3]*5
-    kernel_size_temporal = 3
+    num_channels_tcn = [10,5,3,3]#[3]*5
+    kernel_size_temporal = 3 #3
     model = FTCN(n_scalars,n_profiles,profile_size,layer_sizes_spatial,
              kernel_size_spatial,linear_size,output_size,num_channels_tcn,
              kernel_size_temporal,dropout)
@@ -300,16 +300,68 @@ def get_signal_dimensions(conf):
         num_channels = sig.num_channels
         if num_channels > 1:
             profile_size = num_channels
-            num_1D += 1
+            n_profiles += 1
             is_1D_region = True
         else:
             assert(not is_1D_region), "make sure all use_signals are ordered such that 1D signals come last!"
             assert(num_channels == 1)
-            num_0D += 1
+            n_scalars += 1
             is_1D_region = False
     return n_scalars,n_profiles,profile_size 
 
-def train_epoch(model,data_gen,loss_fn):
+def apply_model_to_np(model,x):
+    #     return model(Variable(torch.from_numpy(x).float()).unsqueeze(0)).squeeze(0).data.numpy()
+    return model(Variable(torch.from_numpy(x).float())).data.numpy()
+
+
+
+def make_predictions(conf,shot_list,loader,custom_path=None):
+    generator = loader.inference_batch_generator_full_shot(shot_list)
+    inference_model = build_torch_model(conf)
+
+    if custom_path == None:
+        model_path = get_model_path(conf)
+    else:
+        model_path = custom_path
+    inference_model.load_state_dict(torch.load(model_path))
+    #shot_list = shot_list.random_sublist(10)
+
+    y_prime = []
+    y_gold = []
+    disruptive = []
+    num_shots = len(shot_list)
+
+    pbar =  Progbar(num_shots)
+    while True:
+        x,y,mask,disr,lengths,num_so_far,num_total = next(generator)
+        #x, y, mask = Variable(torch.from_numpy(x_).float()), Variable(torch.from_numpy(y_).float()),Variable(torch.from_numpy(mask_).byte())
+        output = apply_model_to_np(inference_model,x)
+        for batch_idx in range(x.shape[0]):
+            curr_length = lengths[batch_idx]
+            y_prime += [output[batch_idx,:curr_length,0]]
+            y_gold += [y[batch_idx,:curr_length,0]]
+            disruptive += [disr[batch_idx]]
+            pbar.add(1.0)
+        if len(disruptive) >= num_shots:
+            y_prime = y_prime[:num_shots]
+            y_gold = y_gold[:num_shots]
+            disruptive = disruptive[:num_shots]
+            break
+    return y_prime,y_gold,disruptive
+
+def make_predictions_and_evaluate_gpu(conf,shot_list,loader,custom_path = None):
+    y_prime,y_gold,disruptive = make_predictions(conf,shot_list,loader,custom_path)
+    analyzer = PerformanceAnalyzer(conf=conf)
+    roc_area = analyzer.get_roc_area(y_prime,y_gold,disruptive)
+    loss = get_loss_from_list(y_prime,y_gold,conf['data']['target'])
+    return y_prime,y_gold,disruptive,roc_area,loss
+
+
+def get_model_path(conf):
+    return conf['paths']['model_save_path'] + 'torch/' + model_filename #save_prepath + model_filename
+
+
+def train_epoch(model,data_gen,optimizer,loss_fn):
     loss = 0
     total_loss = 0
     num_so_far = 0
@@ -335,17 +387,19 @@ def train_epoch(model,data_gen,loss_fn):
         loss.backward()
         optimizer.step()
         step += 1
+        print("[{}]  [{}/{}] loss: {:.3f}, ave_loss: {:.3f}".format(step,num_so_far-num_so_far_start,num_total,loss.data[0],total_loss/step))
         if num_so_far-num_so_far_start >= num_total:
             break
-        x_,y_,mask_,num_so_far_start,num_total = next(data_gen)
-    return step,loss,total_loss,num_so_far,1.0*num_so_far/num_total
+        x_,y_,mask_,num_so_far,num_total = next(data_gen)
+    return step,loss.data[0],total_loss,num_so_far,1.0*num_so_far/num_total
 
 
 def train(conf,shot_list_train,shot_list_validate,loader):
 
     np.random.seed(1)
 
-    data_gen = ProcessGenerator(partial(loader.training_batch_generator_full_shot_partial_reset,shot_list=shot_list_train))
+    #data_gen = ProcessGenerator(partial(loader.training_batch_generator_full_shot_partial_reset,shot_list=shot_list_train)())
+    data_gen = partial(loader.training_batch_generator_full_shot_partial_reset,shot_list=shot_list_train)()
 
     print('validate: {} shots, {} disruptive'.format(len(shot_list_validate),shot_list_validate.num_disruptive()))
     print('training: {} shots, {} disruptive'.format(len(shot_list_train),shot_list_train.num_disruptive()))
@@ -358,6 +412,7 @@ def train(conf,shot_list_train,shot_list_validate,loader):
     # e = specific_builder.load_model_weights(train_model)
 
     num_epochs = conf['training']['num_epochs']
+    patience = conf['callbacks']['patience']
     lr_decay = conf['model']['lr_decay']
     batch_size = conf['training']['batch_size']
     lr = conf['model']['lr']
@@ -385,23 +440,25 @@ def train(conf,shot_list_train,shot_list_validate,loader):
     else:
         best_so_far = np.inf
         cmp_fn = min
-    optimizer = opt.Adam(model.parameters(),lr = lr)
-    model.train()
+    optimizer = opt.Adam(train_model.parameters(),lr = lr)
+    scheduler = opt.lr_scheduler.ExponentialLR(optimizer,lr_decay)
+    train_model.train()
     not_updated = 0
     total_loss = 0
     count = 0
-    loss_fn = nn.MSELoss(size_average=False)
-    model_path = conf['paths']['model_save_path'] + model_filename #save_prepath + model_filename
-    makedirs_process_safe(conf['paths']['model_save_path'])
+    loss_fn = nn.MSELoss(size_average=True)
+    model_path = get_model_path(conf)
+    makedirs_process_safe(os.path.dirname(model_path))
     while e < num_epochs-1:
-        print_unique('\nEpoch {}/{}'.format(e,num_epochs))
-        (step,ave_loss,curr_loss,num_so_far,effective_epochs) = train_epoch(model,data_gen,loss_fn)
+        scheduler.step()
+        print('\nEpoch {}/{}'.format(e,num_epochs))
+        (step,ave_loss,curr_loss,num_so_far,effective_epochs) = train_epoch(train_model,data_gen,optimizer,loss_fn)
         e = effective_epochs
         loader.verbose=False #True during the first iteration
         # if task_index == 0: 
             # specific_builder.save_model_weights(train_model,int(round(e)))
-        model.save_state_dict(model_path)
-        _,_,_,roc_area,loss = mpi_make_predictions_and_evaluate(conf,shot_list_validate,loader)
+        torch.save(train_model.state_dict(),model_path)
+        _,_,_,roc_area,loss = make_predictions_and_evaluate_gpu(conf,shot_list_validate,loader)
 
         best_so_far = cmp_fn(roc_area,best_so_far)
 
@@ -411,54 +468,13 @@ def train(conf,shot_list_train,shot_list_validate,loader):
         print('Validation Loss: {:.3e}'.format(loss))
         print('Validation ROC: {:.4f}'.format(roc_area))
 
-        if best_so_far != epoch_logs[conf['callbacks']['monitor']]: #only save model weights if quantity we are tracking is improving
+        if best_so_far != roc_area: #only save model weights if quantity we are tracking is improving
             print("No improvement, still saving model")
             not_updated += 1
         else:
             print("Saving model")
-            model.save_state_dict(model_path)
             # specific_builder.delete_model_weights(train_model,int(round(e)))
         if not_updated > patience:
             print("Stopping training due to early stopping")
             break
-
-def make_predictions(conf,shot_list,loader,custom_path=None):
-    generator = loader.inference_batch_generator_full_shot(shot_list)
-    inference_model = build_torch_model(conf)
-
-    if custom_path == None:
-        model_path = conf['paths']['model_save_path'] + model_filename#save_prepath + model_filename
-    else:
-        model_path = custom_path
-    inference_model.load_state_dict(model_path)
-    #shot_list = shot_list.random_sublist(10)
-
-    y_prime = []
-    y_gold = []
-    disruptive = []
-    num_shots = len(shot_list)
-
-    pbar =  Progbar(num_shots)
-    while True:
-        x_,y_,mask_,disr_,num_so_far,num_total = next(generator)
-        x, y, mask = Variable(torch.from_numpy(x_).float()), Variable(torch.from_numpy(y_).float()),Variable(torch.from_numpy(mask_).byte())
-        output = model(x)
-        for batch_idx in range(x.shape[0])
-            y_prime[batch_idx] += [output[batch_idx,:,:]]
-            y_gold += [y_[batch_idx,:,:]]
-            disruptive += [disr[batch_idx]]
-            pbar.add(1.0)
-        if len(disruptive) >= num_shots:
-            y_prime = y_prime[:num_shots]
-            y_gold = y_gold[:num_shots]
-            disruptive = disruptive[:num_shots]
-            break
-    return y_prime,y_gold,disruptive
-
-def make_predictions_and_evaluate_gpu(conf,shot_list,loader,custom_path = None):
-    y_prime,y_gold,disruptive = make_predictions(conf,shot_list,loader,custom_path)
-    analyzer = PerformanceAnalyzer(conf=conf)
-    roc_area = analyzer.get_roc_area(y_prime,y_gold,disruptive)
-    loss = get_loss_from_list(y_prime,y_gold,conf['data']['target'])
-    return y_prime,y_gold,disruptive,roc_area,loss
 

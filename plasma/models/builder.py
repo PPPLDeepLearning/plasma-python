@@ -273,7 +273,8 @@ class ModelBuilder(object):
     def get_all_saved_files(self):
         self.ensure_save_directory()
         unique_id = self.get_unique_id()
-        filenames = os.listdir(self.conf['paths']['model_save_path'])
+        path = self.conf['paths']['model_save_path']
+        filenames = [name for name in os.listdir(path) if os.path.isfile(os.path.join(path, name))]
         epochs = []
         for file in filenames:
             curr_id,epoch = self.extract_id_and_epoch_from_filename(file)

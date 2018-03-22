@@ -123,11 +123,13 @@ class Loader(object):
         buff[:,:-length,:] = buff[:,length:,:]
 
 
-    def resize_buffer(self,buff,new_length):
+    def resize_buffer(self,buff,new_length,dtype=None):
+        if dtype == None:
+            dtype = self.conf['data']['floatx']
         old_length = buff.shape[1]
         batch_size = buff.shape[0]
         num_signals = buff.shape[2]
-        new_buff = np.empty((batch_size,new_length,num_signals),dtype=self.conf['data']['floatx'])
+        new_buff = np.zeros((batch_size,new_length,num_signals),dtype=dtype)
         new_buff[:,:old_length,:] = buff
         #print("Resizing buffer to new length {}".format(new_length))
         return new_buff
@@ -149,18 +151,20 @@ class Loader(object):
           - reset_states_now: boolean flag indicating when to reset state during stateful RNN training
           - num_so_far,num_total: number of samples generated so far and the total dataset size as per shot_list
         """
-        batch_size = self.conf['training']['pred_batch_size']
+        batch_size = self.conf['model']['pred_batch_size']
         sig,res = self.get_signal_result_from_shot(shot_list.shots[0])
-        Xbuff = np.empty((batch_size,) + sig.shape,dtype=self.conf['data']['floatx'])
-        Ybuff = np.empty((batch_size,) + res.shape,dtype=self.conf['data']['floatx'])
-        Maskbuff = np.empty((batch_size,) + res.shape,dtype=self.conf['data']['floatx'])
-        disr = np.empty(batch_size,dtype=bool)
+        Xbuff = np.zeros((batch_size,) + sig.shape,dtype=self.conf['data']['floatx'])
+        Ybuff = np.zeros((batch_size,) + res.shape,dtype=self.conf['data']['floatx'])
+        Maskbuff = np.zeros((batch_size,) + res.shape,dtype=self.conf['data']['floatx'])
+        disr = np.zeros(batch_size,dtype=bool)
+        lengths = np.zeros(batch_size,dtype=int)
         # epoch = 0
         num_total = len(shot_list)
         num_so_far = 0
         returned = False
         num_steps = 0
         batch_idx = 0
+        np.seterr(all='raise')
         # warmup_steps = self.conf['training']['batch_generator_warmup_steps']
         # is_warmup_period = num_steps < warmup_steps 
         # is_first_fill = num_steps < batch_size
@@ -178,15 +182,29 @@ class Loader(object):
                     Maskbuff = self.resize_buffer(Maskbuff,sig_len)
                     Maskbuff[:,old_len:,:] = 0.0
 
-                Xbuff[batch_idx,:,:] = sig
-                Ybuff[batch_idx,:,:] = res
+                Xbuff[batch_idx,:,:] = 0.0
+                Ybuff[batch_idx,:,:] = 0.0
+                Maskbuff[batch_idx,:,:] = 0.0
+                Xbuff[batch_idx,:sig_len,:] = sig
+                Ybuff[batch_idx,:sig_len,:] = res
                 Maskbuff[batch_idx,:sig_len,:] = 1.0
-                Maskbuff[batch_idx,sig_len:,:] = 0.0
                 disr[batch_idx] = shot.is_disruptive_shot()
+                lengths[batch_idx] = res.shape[0]
                 batch_idx += 1
                 if batch_idx == batch_size:
                     num_so_far += batch_size
-                    yield 1.0*Xbuff,1.0*Ybuff,1.0*Maskbuff,disr & True,num_so_far,num_total
+                    x1 = 1.0*Xbuff
+                    try:
+                        x2 = 1.0*Ybuff
+                    except:
+                        print(Ybuff[:100])
+                        print(Ybuff[-100:])
+                        print(Ybuff)
+                    x3 = 1.0*Maskbuff
+                    x4 = disr & True
+                    x5 = 1*lengths
+                    
+                    yield x1,x2,x3,x4,x5,num_so_far,num_total
                     batch_idx = 0
 
 
@@ -236,10 +254,13 @@ class Loader(object):
                     Maskbuff = self.resize_buffer(Maskbuff,sig_len)
                     Maskbuff[:,old_len:,:] = 0.0
 
-                Xbuff[batch_idx,:,:] = sig
-                Ybuff[batch_idx,:,:] = res
+                Xbuff[batch_idx,:,:] = 0.0
+                Ybuff[batch_idx,:,:] = 0.0
+                Maskbuff[batch_idx,:,:] = 0.0
+
+                Xbuff[batch_idx,:sig_len,:] = sig
+                Ybuff[batch_idx,:sig_len,:] = res
                 Maskbuff[batch_idx,:sig_len,:] = 1.0
-                Maskbuff[batch_idx,sig_len:,:] = 0.0
                 batch_idx += 1
                 if batch_idx == batch_size:
                     num_so_far += batch_size
@@ -735,8 +756,10 @@ class ProcessGenerator(object):
         
     def fill_batch_queue(self):
         print("Starting process to fetch data")
+        count = 0
         while True:
             self.queue.put(next(self.generator),True) 
+            count += 1
 
     def __next__(self):
         return self.queue.get(True)
