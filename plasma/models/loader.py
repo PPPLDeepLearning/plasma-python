@@ -133,7 +133,128 @@ class Loader(object):
         return new_buff
 
 
+    def inference_batch_generator_full_shot(self,shot_list):
+        """
+        The method implements a training batch generator as a Python generator with a while-loop.
+        It iterates indefinitely over the data set and returns one mini-batch of data at a time.
 
+        NOTE: Can be inefficient during distributed training because one process loading data will
+        cause all other processes to stall.
+
+        Argument list: 
+          - shot_list:
+
+        Returns:  
+          - One mini-batch of data and label as a Numpy array: X[start:end],y[start:end]
+          - reset_states_now: boolean flag indicating when to reset state during stateful RNN training
+          - num_so_far,num_total: number of samples generated so far and the total dataset size as per shot_list
+        """
+        batch_size = self.conf['training']['pred_batch_size']
+        sig,res = self.get_signal_result_from_shot(shot_list.shots[0])
+        Xbuff = np.empty((batch_size,) + sig.shape,dtype=self.conf['data']['floatx'])
+        Ybuff = np.empty((batch_size,) + res.shape,dtype=self.conf['data']['floatx'])
+        Maskbuff = np.empty((batch_size,) + res.shape,dtype=self.conf['data']['floatx'])
+        disr = np.empty(batch_size,dtype=bool)
+        # epoch = 0
+        num_total = len(shot_list)
+        num_so_far = 0
+        returned = False
+        num_steps = 0
+        batch_idx = 0
+        # warmup_steps = self.conf['training']['batch_generator_warmup_steps']
+        # is_warmup_period = num_steps < warmup_steps 
+        # is_first_fill = num_steps < batch_size
+        while True:
+            # the list of all shots
+            # shot_list.shuffle() 
+            for i in range(num_total):
+                shot = shot_list.shots[i]
+                sig,res = self.get_signal_result_from_shot(shot)
+                sig_len = res.shape[0]
+                if sig_len > Xbuff.shape[1]: #resize buffer if needed
+                    old_len = Xbuff.shape[1]
+                    Xbuff = self.resize_buffer(Xbuff,sig_len)
+                    Ybuff = self.resize_buffer(Ybuff,sig_len)
+                    Maskbuff = self.resize_buffer(Maskbuff,sig_len)
+                    Maskbuff[:,old_len:,:] = 0.0
+
+                Xbuff[batch_idx,:,:] = sig
+                Ybuff[batch_idx,:,:] = res
+                Maskbuff[batch_idx,:sig_len,:] = 1.0
+                Maskbuff[batch_idx,sig_len:,:] = 0.0
+                disr[batch_idx] = shot.is_disruptive_shot()
+                batch_idx += 1
+                if batch_idx == batch_size:
+                    num_so_far += batch_size
+                    yield 1.0*Xbuff,1.0*Ybuff,1.0*Maskbuff,disr & True,num_so_far,num_total
+                    batch_idx = 0
+
+
+
+
+    def training_batch_generator_full_shot_partial_reset(self,shot_list):
+        """
+        The method implements a training batch generator as a Python generator with a while-loop.
+        It iterates indefinitely over the data set and returns one mini-batch of data at a time.
+
+        NOTE: Can be inefficient during distributed training because one process loading data will
+        cause all other processes to stall.
+
+        Argument list: 
+          - shot_list:
+
+        Returns:  
+          - One mini-batch of data and label as a Numpy array: X[start:end],y[start:end]
+          - reset_states_now: boolean flag indicating when to reset state during stateful RNN training
+          - num_so_far,num_total: number of samples generated so far and the total dataset size as per shot_list
+        """
+        batch_size = self.conf['training']['batch_size']
+        sig,res = self.get_signal_result_from_shot(shot_list.shots[0])
+        Xbuff = np.empty((batch_size,) + sig.shape,dtype=self.conf['data']['floatx'])
+        Ybuff = np.empty((batch_size,) + res.shape,dtype=self.conf['data']['floatx'])
+        Maskbuff = np.empty((batch_size,) + res.shape,dtype=self.conf['data']['floatx'])
+        # epoch = 0
+        num_total = len(shot_list)
+        num_so_far = 0
+        returned = False
+        num_steps = 0
+        batch_idx = 0
+        # warmup_steps = self.conf['training']['batch_generator_warmup_steps']
+        # is_warmup_period = num_steps < warmup_steps 
+        # is_first_fill = num_steps < batch_size
+        while True:
+            # the list of all shots
+            shot_list.shuffle() 
+            for i in range(num_total):
+                shot = self.sample_shot_from_list_given_index(shot_list,i)
+                sig,res = self.get_signal_result_from_shot(shot)
+                sig_len = res.shape[0]
+                if sig_len > Xbuff.shape[1]: #resize buffer if needed
+                    old_len = Xbuff.shape[1]
+                    Xbuff = self.resize_buffer(Xbuff,sig_len)
+                    Ybuff = self.resize_buffer(Ybuff,sig_len)
+                    Maskbuff = self.resize_buffer(Maskbuff,sig_len)
+                    Maskbuff[:,old_len:,:] = 0.0
+
+                Xbuff[batch_idx,:,:] = sig
+                Ybuff[batch_idx,:,:] = res
+                Maskbuff[batch_idx,:sig_len,:] = 1.0
+                Maskbuff[batch_idx,sig_len:,:] = 0.0
+                batch_idx += 1
+                if batch_idx == batch_size:
+                    num_so_far += batch_size
+                    yield 1.0*Xbuff,1.0*Ybuff,1.0*Maskbuff,num_so_far,num_total
+                    batch_idx = 0
+
+    def sample_shot_from_list_given_index(self,shot_list,i):
+        if self.conf['training']['ranking_difficulty_fac'] == 1.0:
+            if self.conf['data']['equalize_classes']:
+                shot = shot_list.sample_equal_classes()
+            else:
+                shot = shot_list.shots[i]
+        else: #draw the shot weighted
+            shot = shot_list.sample_weighted() 
+        return shot
 
     def training_batch_generator_partial_reset(self,shot_list):
         """
@@ -170,13 +291,7 @@ class Loader(object):
             # the list of all shots
             shot_list.shuffle() 
             for i in range(len(shot_list)):
-                if self.conf['training']['ranking_difficulty_fac'] == 1.0:
-                    if self.conf['data']['equalize_classes']:
-                        shot = shot_list.sample_equal_classes()
-                    else:
-                        shot = shot_list.shots[i]
-                else: #draw the shot weighted
-                    shot = shot_list.sample_weighted()
+                shot = self.sample_shot_from_list_given_index(shot_list,i)
                 while not np.any(end_indices == 0):
                     X,Y = self.return_from_training_buffer(Xbuff,Ybuff,end_indices)
                     yield X,Y,batches_to_reset,num_so_far,num_total,is_warmup_period

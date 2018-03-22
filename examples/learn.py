@@ -33,7 +33,9 @@ from plasma.preprocessor.normalize import Normalizer
 from plasma.preprocessor.preprocess import Preprocessor, guarantee_preprocessed
 from plasma.models.loader import Loader
 
-if conf['model']['shallow']:
+if conf['model']['torch']:
+    from plasma.models.torch_runner import train, make_predictions_and_evaluate_gpu
+elif conf['model']['shallow']:
     from plasma.models.shallow_runner import train, make_predictions_and_evaluate_gpu
 else:
     from plasma.models.runner import train, make_predictions_and_evaluate_gpu
