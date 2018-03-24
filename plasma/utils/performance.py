@@ -25,6 +25,9 @@ class PerformanceAnalyzer():
             self.T_min_warn = T_min_warn_def
         if T_max_warn == None:
             self.T_max_warn = T_max_warn_def
+        if self.T_max_warn < self.T_min_warn:
+            print("T max warn is too small: need to increase artificially.") #computation of statistics is only correct if T_max_warn is larger than T_min_warn
+            self.T_max_warn = self.T_min_warn + 1
         self.verbose = verbose
         self.results_dir = results_dir
         self.shots_dir = shots_dir
@@ -293,6 +296,7 @@ class PerformanceAnalyzer():
         else:
             print('Error Invalid Mode for acceptable region')
             exit(1) 
+        assert(self.T_max_warn > self.T_min_warn)
 
         acceptable = np.zeros_like(truth,dtype=bool)
         if acceptable_timesteps > 0:

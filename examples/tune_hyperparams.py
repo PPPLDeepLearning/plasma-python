@@ -8,9 +8,9 @@ import plasma.conf
 tunables = []
 shallow = False
 num_nodes = 1
-num_trials = 20
+num_trials = 30
 
-t_warn = CategoricalHyperparam(['data','T_warning'],[0.256,1.024,10.024])
+t_warn = CategoricalHyperparam(['data','T_warning'],[0.256,1.024,4.096,10.024])
 cut_ends = CategoricalHyperparam(['data','cut_shot_ends'],[False,True])
 #for shallow
 if shallow:
@@ -35,19 +35,21 @@ else:
     fac = CategoricalHyperparam(['data','positive_example_penalty'],[1.0,4.0,16.0])
     target = CategoricalHyperparam(['target'],['maxhinge','hinge','ttdinv','ttd'])
     #target = CategoricalHyperparam(['target'],['hinge','ttdinv','ttd'])
-    batch_size = CategoricalHyperparam(['training','batch_size'],[128,256])
+    batch_size = CategoricalHyperparam(['training','batch_size'],[64,128])
     dropout_prob = CategoricalHyperparam(['model','dropout_prob'],[0.01,0.05,0.1])
-    conv_filters = CategoricalHyperparam(['model','num_conv_filters'],[128,256])
+    conv_filters = CategoricalHyperparam(['model','num_conv_filters'],[64,128,256])
     conv_layers = IntegerHyperparam(['model','num_conv_layers'],2,4)
     rnn_layers = IntegerHyperparam(['model','rnn_layers'],1,3)
     rnn_size = CategoricalHyperparam(['model','rnn_size'],[128,256])
     dense_size = CategoricalHyperparam(['model','dense_size'],[128,256])
     extra_dense_input = CategoricalHyperparam(['model','extra_dense_input'],[False,True])
     equalize_classes = CategoricalHyperparam(['data','equalize_classes'],[False,True])
+    t_min_warn = CategoricalHyperparam(['data','T_min_warn'],[30,70,200,500,1000])
     #rnn_length = CategoricalHyperparam(['model','length'],[32,128])
     #tunables = [lr,lr_decay,fac,target,batch_size,dropout_prob]
     tunables = [lr,lr_decay,fac,target,batch_size,equalize_classes,dropout_prob]
     tunables += [conv_filters,conv_layers,rnn_layers,rnn_size,dense_size,extra_dense_input]
+    tunables += [t_min_warn]
 tunables += [cut_ends,t_warn]
 
 
