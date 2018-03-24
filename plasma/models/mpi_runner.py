@@ -171,9 +171,10 @@ class Averager(object):
 
 
 class MPIModel():
-  def __init__(self,model,optimizer,comm,batch_iterator,batch_size,num_replicas=None,warmup_steps=1000,lr=0.01,num_batches_minimum=100):
+  def __init__(self,model,optimizer,comm,batch_iterator,batch_size,num_replicas=None,warmup_steps=1000,lr=0.01,num_batches_minimum=100,conf=None):
     random.seed(task_index)
     np.random.seed(task_index)
+    self.conf = conf
     self.start_time = time.time()
     self.epoch = 0
     self.num_so_far = 0
@@ -200,10 +201,14 @@ class MPIModel():
 
 
   def set_batch_iterator_func(self):
-    self.batch_iterator_func = ProcessGenerator(self.batch_iterator())
+    if self.conf is not None and 'use_process_generator' in conf['training'] and conf['training']['use_process_generator']:
+        self.batch_iterator_func = ProcessGenerator(self.batch_iterator())
+    else:
+        self.batch_iterator_func = self.batch_iterator()
 
   def close(self):
-    self.batch_iterator_func.__exit__()
+    if hasattr(self.batch_iterator_func,'__exit__'):
+      self.batch_iterator_func.__exit__()
 
   def set_lr(self,lr):
     self.lr = lr
@@ -642,6 +647,24 @@ def mpi_make_predictions_and_evaluate(conf,shot_list,loader,custom_path=None):
     loss = get_loss_from_list(y_prime,y_gold,conf['data']['target'])
     return y_prime,y_gold,disruptive,roc_area,loss
 
+def mpi_make_predictions_and_evaluate_multiple_times(conf,shot_list,loader,times,custom_path=None):
+    y_prime,y_gold,disruptive = mpi_make_predictions(conf,shot_list,loader,custom_path)
+    areas = []
+    losses = []
+    for T_min_curr in times:
+    #if 'monitor_test' in conf['callbacks'].keys() and conf['callbacks']['monitor_test']:
+        conf_curr = deepcopy(conf)
+        T_min_warn_orig = conf['data']['T_min_warn']
+        conf_curr['data']['T_min_warn'] = T_min_curr 
+        assert(conf['data']['T_min_warn'] == T_min_warn_orig)
+        analyzer = PerformanceAnalyzer(conf=conf_curr)
+        roc_area = analyzer.get_roc_area(y_prime,y_gold,disruptive)
+        #shot_list.set_weights(analyzer.get_shot_difficulty(y_prime,y_gold,disruptive))
+        loss = get_loss_from_list(y_prime,y_gold,conf['data']['target'])
+        areas.append(roc_area)
+        losses.append(loss)
+    return areas,losses
+
 
 def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=None,shot_list_test=None):   
 
@@ -680,7 +703,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
     #{}batch_generator = partial(loader.training_batch_generator_process,shot_list=shot_list_train)
 
     print("warmup {}".format(warmup_steps))
-    mpi_model = MPIModel(train_model,optimizer,comm,batch_generator,batch_size,lr=lr,warmup_steps = warmup_steps,num_batches_minimum=num_batches_minimum)
+    mpi_model = MPIModel(train_model,optimizer,comm,batch_generator,batch_size,lr=lr,warmup_steps = warmup_steps,num_batches_minimum=num_batches_minimum,conf=conf)
     mpi_model.compile(conf['model']['optimizer'],clipnorm,conf['data']['target'].loss)
 
     tensorboard = None
@@ -709,6 +732,7 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
         cmp_fn = min
 
     while e < num_epochs-1:
+        print_unique("begin epoch {} 0".format(e))
         if task_index == 0:
             callbacks.on_epoch_begin(int(round(e)))
         mpi_model.set_lr(lr*lr_decay**e)
@@ -733,18 +757,15 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
             mpi_model.set_batch_iterator_func()
 
         if 'monitor_test' in conf['callbacks'].keys() and conf['callbacks']['monitor_test']:
-            conf_curr = deepcopy(conf)
-            T_min_warn_orig = conf['data']['T_min_warn']
-            for T_min_curr in conf_curr['callbacks']['monitor_times']:
-                conf_curr['data']['T_min_warn'] = T_min_curr 
-                assert(conf['data']['T_min_warn'] == T_min_warn_orig)
-                if shot_list_test is not None:
-                    _,_,_,roc_area_t,_ = mpi_make_predictions_and_evaluate(conf_curr,shot_list_test,loader)
-                    print_unique('epoch {}, test_roc_{} = {}'.format(int(round(e)),T_min_curr,roc_area_t))
-                    #epoch_logs['test_roc_{}'.format(T_min_curr)] = roc_area_t
-                _,_,_,roc_area_v,_ = mpi_make_predictions_and_evaluate(conf_curr,shot_list_validate,loader)
-                print_unique('epoch {}, val_roc_{} = {}'.format(int(round(e)),T_min_curr,roc_area_v))
-                #epoch_logs['val_roc_{}'.format(T_min_curr)] = roc_area_v
+            times = conf['callbacks']['monitor_times']
+            roc_areas,losses = mpi_make_predictions_and_evaluate_multiple_times(conf,shot_list_validate,loader,times)
+            for roc,t in zip(roc_areas,times):
+                print_unique('epoch {}, val_roc_{} = {}'.format(int(round(e)),t,roc))
+            if shot_list_test is not None:
+                roc_areas,losses = mpi_make_predictions_and_evaluate_multiple_times(conf,shot_list_test,loader,times)
+                for roc,t in zip(roc_areas,times):
+                    print_unique('epoch {}, test_roc_{} = {}'.format(int(round(e)),t,roc))
+
         epoch_logs['val_roc'] = roc_area 
         epoch_logs['val_loss'] = loss
         epoch_logs['train_loss'] = ave_loss
@@ -764,8 +785,12 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
             if hasattr(mpi_model.model,'stop_training'):
                 stop_training = mpi_model.model.stop_training
             if best_so_far != epoch_logs[conf['callbacks']['monitor']]: #only save model weights if quantity we are tracking is improving
-                print("Not saving model weights")
-                specific_builder.delete_model_weights(train_model,int(round(e)))
+                if 'monitor_test' in conf['callbacks'].keys() and conf['callbacks']['monitor_test']:
+
+                    print("No improvement, saving model weights anyways")
+                else:
+                    print("Not saving model weights")
+                    specific_builder.delete_model_weights(train_model,int(round(e)))
 
             #tensorboard
             if backend != 'theano':
@@ -773,7 +798,9 @@ def mpi_train(conf,shot_list_train,shot_list_validate,loader, callbacks_list=Non
                 val_steps = 1
                 tensorboard.on_epoch_end(val_generator,val_steps,int(round(e)),epoch_logs)
 
+        print_unique("end epoch {} 0".format(e))
         stop_training = comm.bcast(stop_training,root=0)
+        print_unique("end epoch {} 1".format(e))
         if stop_training:
             print("Stopping training due to early stopping")
             break
