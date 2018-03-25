@@ -56,6 +56,8 @@ def general_object_hash(o):
 
 def myhash(x):
     return int(hashlib.md5((dill.dumps(x).decode('unicode_escape')).encode('utf-8')).hexdigest(),16)
+    #return int(hashlib.md5((dill.dumps(x))).hexdigest(),16)
+    #return int(hashlib.md5((dill.dumps(x))))#.decode('unicode_escape')).encode('utf-8')).hexdigest(),16)
 
 
 def get_missing_value_array():
