@@ -142,8 +142,8 @@ class Normalizer(object):
         cut_shot_ends = self.conf['data']['cut_shot_ends']
         if not self.inference_mode and cut_shot_ends: #only cut shots during training
             T_min_warn = self.conf['data']['T_min_warn']
-            if shot.ttd.shape[0] <= T_min_warn:
-                print("not cutting shot since T_min_warn is larger than length of shot")
+            if shot.ttd.shape[0] - T_min_warn <= max(self.conf['model']['length'],0):
+                print("not cutting shot since length of shot after cutting by T_min_warn would be shorter than RNN length")
                 return
             for key in shot.signals_dict:
                 shot.signals_dict[key] = shot.signals_dict[key][:-T_min_warn,:]
