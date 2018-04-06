@@ -10,7 +10,7 @@ paths:
     signal_prepath: '/signal_data/' #/signal_data/jet/
     shot_list_dir: '/shot_lists/'
     tensorboard_save_path: '/Graph/'
-    data: jet_data #'d3d_to_jet_data' #'d3d_to_jet_data' # 'jet_to_d3d_data' #jet_data
+    data: d3d_data_0D #'d3d_to_jet_data' #'d3d_to_jet_data' # 'jet_to_d3d_data' #jet_data
     specific_signals: [] #['q95','li','ip','betan','energy','lm','pradcore','pradedge','pradtot','pin','torquein','tmamp1','tmamp2','tmfreq1','tmfreq2','pechin','energydt','ipdirect','etemp_profile','edens_profile'] #if left empty will use all valid signals defined on a machine. Only use if need a custom set
     executable: "mpi_learn.py"
     shallow_executable: "learn.py"
@@ -54,9 +54,9 @@ data:
     floatx: 'float32'
 
 model:
-    use_bidirectional: false
     use_batch_norm: false
-    shallow: False
+    torch: False
+    shallow: True
     shallow_model: 
         num_samples: 1000000 #1000000 #the number of samples to use for training
         type: "xgboost" #"xgboost" #"xgboost" #"random_forest" "xgboost"
@@ -120,7 +120,8 @@ training:
     data_parallel: False
     hyperparam_tuning: False
     batch_generator_warmup_steps: 0
-    num_batches_minimum: 200 #minimum number of batches per epoch
+    use_process_generator: False
+    num_batches_minimum: 20 #minimum number of batches per epoch
     ranking_difficulty_fac: 1.0 #how much to upweight incorrectly classified shots during training
 callbacks:
     list: ['earlystop']
@@ -129,6 +130,8 @@ callbacks:
     monitor: 'val_roc'
     patience: 5
     write_grads: False
+    monitor_test: True
+    monitor_times: [30,70,200,500,1000]
 env: 
     name: 'frnn'
     type: 'anaconda'
