@@ -93,7 +93,7 @@ print('Training on {} shots, testing on {} shots'.format(len(shot_list_train),le
 #####################################################
 #train(conf,shot_list_train,loader)
 if not only_predict:
-    p = old_mp.Process(target = train,args=(conf,shot_list_train,shot_list_validate,loader))
+    p = old_mp.Process(target = train,args=(conf,shot_list_train,shot_list_validate,loader,shot_list_test))
     p.start()
     p.join()
 
