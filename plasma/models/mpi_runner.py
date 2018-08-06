@@ -226,7 +226,16 @@ class MPIModel():
     else:
         print("Optimizer not implemented yet")
         exit(1)
-    self.model.compile(optimizer=optimizer_class,loss=loss)        
+    self.model.compile(optimizer=optimizer_class,loss=loss)
+    self.ensure_equal_weights()
+    
+  def ensure_equal_weights(self):
+    if task_index == 0:
+        new_weights = self.model.get_weights()
+    else:
+        new_weights = None
+    nw = comm.bcast(new_weights,root=0)
+    self.model.set_weights(nw)
 
 
 
