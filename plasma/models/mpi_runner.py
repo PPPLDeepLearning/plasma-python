@@ -226,7 +226,16 @@ class MPIModel():
     else:
         print("Optimizer not implemented yet")
         exit(1)
-    self.model.compile(optimizer=optimizer_class,loss=loss)        
+    self.model.compile(optimizer=optimizer_class,loss=loss)
+    self.ensure_equal_weights()
+    
+  def ensure_equal_weights(self):
+    if task_index == 0:
+        new_weights = self.model.get_weights()
+    else:
+        new_weights = None
+    nw = comm.bcast(new_weights,root=0)
+    self.model.set_weights(nw)
 
 
 
@@ -338,11 +347,7 @@ class MPIModel():
     self.optimizer.set_lr(effective_lr)
     global_deltas = self.optimizer.get_deltas(global_deltas)
 
-    if self.comm.rank == 0:
-      new_weights = self.get_new_weights(global_deltas)
-    else:
-      new_weights = None
-    new_weights = self.comm.bcast(new_weights,root=0)
+    new_weights = self.get_new_weights(global_deltas)
     self.model.set_weights(new_weights)
 
   def build_callbacks(self,conf,callbacks_list):
