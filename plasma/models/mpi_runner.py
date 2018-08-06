@@ -338,11 +338,7 @@ class MPIModel():
     self.optimizer.set_lr(effective_lr)
     global_deltas = self.optimizer.get_deltas(global_deltas)
 
-    if self.comm.rank == 0:
-      new_weights = self.get_new_weights(global_deltas)
-    else:
-      new_weights = None
-    new_weights = self.comm.bcast(new_weights,root=0)
+    new_weights = self.get_new_weights(global_deltas)
     self.model.set_weights(new_weights)
 
   def build_callbacks(self,conf,callbacks_list):
