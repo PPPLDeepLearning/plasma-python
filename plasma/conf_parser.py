@@ -70,6 +70,9 @@ def parameters(input_file):
         #shot lists
         jet_carbon_wall = ShotListFiles(jet,params['paths']['shot_list_dir'],['CWall_clear.txt','CFC_unint.txt'],'jet carbon wall data')
         jet_iterlike_wall = ShotListFiles(jet,params['paths']['shot_list_dir'],['ILW_unint.txt','BeWall_clear.txt'],'jet iter like wall data')
+        jet_iterlike_wall_late = ShotListFiles(jet,params['paths']['shot_list_dir'],['ILW_unint_late.txt','ILW_clear_late.txt'],'Late jet iter like wall data')
+        jet_iterlike_wall_full = ShotListFiles(jet,params['paths']['shot_list_dir'],['ILW_unint_full.txt','ILW_clear_full.txt'],'Full jet iter like wall data')
+
 
         jenkins_jet_carbon_wall = ShotListFiles(jet,params['paths']['shot_list_dir'],['jenkins_CWall_clear.txt','jenkins_CFC_unint.txt'],'Subset of jet carbon wall data for Jenkins tests')
         jenkins_jet_iterlike_wall = ShotListFiles(jet,params['paths']['shot_list_dir'],['jenkins_ILW_unint.txt','jenkins_BeWall_clear.txt'],'Subset of jet iter like wall data for Jenkins tests')
