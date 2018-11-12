@@ -137,11 +137,11 @@ all_machines = [d3d,jet]
 
 profile_num_channels = 64
 #ZIPFIT comes from actual measurements
-#etemp_profile = ProfileSignal("Electron temperature profile",["ppf/hrts/te","ZIPFIT01/PROFILES.ETEMPFIT"],[jet,d3d],mapping_paths=["ppf/hrts/rho",None],causal_shifts=[0,10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerances=[0.05,0.02])
-#edens_profile = ProfileSignal("Electron density profile",["ppf/hrts/ne","ZIPFIT01/PROFILES.EDENSFIT"],[jet,d3d],mapping_paths=["ppf/hrts/rho",None],causal_shifts=[0,10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerances=[0.05,0.02])
+etemp_profile = ProfileSignal("Electron temperature profile",["ppf/hrts/te","ZIPFIT01/PROFILES.ETEMPFIT"],[jet,d3d],mapping_paths=["ppf/hrts/rho",None],causal_shifts=[25,10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerances=[0.05,0.02])
+edens_profile = ProfileSignal("Electron density profile",["ppf/hrts/ne","ZIPFIT01/PROFILES.EDENSFIT"],[jet,d3d],mapping_paths=["ppf/hrts/rho",None],causal_shifts=[25,10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerances=[0.05,0.02])
 
-etemp_profile = ProfileSignal("Electron temperature profile",["ZIPFIT01/PROFILES.ETEMPFIT"],[d3d],mapping_paths=[None],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerances=[0.02])
-edens_profile = ProfileSignal("Electron density profile",["ZIPFIT01/PROFILES.EDENSFIT"],[d3d],mapping_paths=[None],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerances=[0.02])
+# etemp_profile = ProfileSignal("Electron temperature profile",["ZIPFIT01/PROFILES.ETEMPFIT"],[d3d],mapping_paths=[None],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerances=[0.02])
+# edens_profile = ProfileSignal("Electron density profile",["ZIPFIT01/PROFILES.EDENSFIT"],[d3d],mapping_paths=[None],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerances=[0.02])
 itemp_profile = ProfileSignal("Ion temperature profile",["ZIPFIT01/PROFILES.ITEMPFIT"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerances=[0.02])
 zdens_profile = ProfileSignal("Impurity density profile",["ZIPFIT01/PROFILES.ZDENSFIT"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerances=[0.02])
 trot_profile = ProfileSignal("Rotation profile",["ZIPFIT01/PROFILES.TROTFIT"],[d3d],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerances=[0.02])
@@ -179,6 +179,7 @@ energy = Signal("stored energy",['jpf/gs/bl-wmhd<s','d3d/efswmhd'],[jet,d3d])
 pin = Signal("Input Power (beam for d3d)",['jpf/gs/bl-ptot<s','d3d/bmspinj'],[jet,d3d]) #Total Beam Power
 
 pradtot = Signal("Radiated Power",['jpf/db/b5r-ptot>out'],[jet])
+#pradtot = Signal("Radiated Power",['jpf/db/b5r-ptot>out', 'd3d/'+r'\prad_tot'],[jet,d3d])
 #pradcore = ChannelSignal("Radiated Power Core",[ 'd3d/'+r'\bol_l15_p'],[d3d])
 #pradedge = ChannelSignal("Radiated Power Edge",['d3d/'+r'\bol_l03_p'],[d3d])
 pradcore = ChannelSignal("Radiated Power Core",['ppf/bolo/kb5h/channel14', 'd3d/'+r'\bol_l15_p'],[jet,d3d])
