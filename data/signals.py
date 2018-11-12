@@ -137,8 +137,8 @@ all_machines = [d3d,jet]
 
 profile_num_channels = 64
 #ZIPFIT comes from actual measurements
-etemp_profile = ProfileSignal("Electron temperature profile",["ppf/hrts/te","ZIPFIT01/PROFILES.ETEMPFIT"],[jet,d3d],mapping_paths=["ppf/hrts/rho",None],causal_shifts=[25,10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerances=[0.05,0.02])
-edens_profile = ProfileSignal("Electron density profile",["ppf/hrts/ne","ZIPFIT01/PROFILES.EDENSFIT"],[jet,d3d],mapping_paths=["ppf/hrts/rho",None],causal_shifts=[25,10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerances=[0.05,0.02])
+etemp_profile = ProfileSignal("Electron temperature profile",["ppf/hrts/te","ZIPFIT01/PROFILES.ETEMPFIT"],[jet,d3d],mapping_paths=["ppf/hrts/rho",None],causal_shifts=[0,10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerances=[0.05,0.02])
+edens_profile = ProfileSignal("Electron density profile",["ppf/hrts/ne","ZIPFIT01/PROFILES.EDENSFIT"],[jet,d3d],mapping_paths=["ppf/hrts/rho",None],causal_shifts=[0,10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerances=[0.05,0.02])
 
 # etemp_profile = ProfileSignal("Electron temperature profile",["ZIPFIT01/PROFILES.ETEMPFIT"],[d3d],mapping_paths=[None],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerances=[0.02])
 # edens_profile = ProfileSignal("Electron density profile",["ZIPFIT01/PROFILES.EDENSFIT"],[d3d],mapping_paths=[None],causal_shifts=[10],mapping_range=(0,1),num_channels=profile_num_channels,data_avail_tolerances=[0.02])
@@ -159,9 +159,9 @@ q_psi_profile = ProfileSignal("Q(psi) profile",["EFIT01/RESULTS.GEQDSK.QPSI"],[d
 
 
 # epress_profile_spatial = ProfileSignal("Electron pressure profile",["ppf/hrts/pe/"],[jet],causal_shifts=[25],mapping_range=(2,4),num_channels=profile_num_channels)
-etemp_profile_spatial = ProfileSignal("Electron temperature profile",["ppf/hrts/te"],[jet],causal_shifts=[25],mapping_range=(2,4),num_channels=profile_num_channels,data_avail_tolerances=[0.05])
-edens_profile_spatial = ProfileSignal("Electron density profile",["ppf/hrts/ne"],[jet],causal_shifts=[25],mapping_range=(2,4),num_channels=profile_num_channels,data_avail_tolerances=[0.05])
-rho_profile_spatial = ProfileSignal("Rho at spatial positions",["ppf/hrts/rho"],[jet],causal_shifts=[25],mapping_range=(2,4),num_channels=profile_num_channels,data_avail_tolerances=[0.05])
+etemp_profile_spatial = ProfileSignal("Electron temperature profile",["ppf/hrts/te"],[jet],causal_shifts=[0],mapping_range=(2,4),num_channels=profile_num_channels,data_avail_tolerances=[0.05])
+edens_profile_spatial = ProfileSignal("Electron density profile",["ppf/hrts/ne"],[jet],causal_shifts=[0],mapping_range=(2,4),num_channels=profile_num_channels,data_avail_tolerances=[0.05])
+rho_profile_spatial = ProfileSignal("Rho at spatial positions",["ppf/hrts/rho"],[jet],causal_shifts=[0],mapping_range=(2,4),num_channels=profile_num_channels,data_avail_tolerances=[0.05])
 
 etemp = Signal("electron temperature",["ppf/hrtx/te0"],[jet],causal_shifts=[25],data_avail_tolerances=[0.05])
 # epress = Signal("electron pressure",["ppf/hrtx/pe0/"],[jet],causal_shifts=[25])
