@@ -100,6 +100,14 @@ def parameters(input_file):
             params['paths']['shot_files'] = [jet_carbon_wall]
             params['paths']['shot_files_test'] = [jet_iterlike_wall]
             params['paths']['use_signals_dict'] = jet_signals_1D
+        elif params['paths']['data'] == 'jet_data_late':
+            params['paths']['shot_files'] = [jet_iterlike_wall_late]
+            params['paths']['shot_files_test'] = [jet_iterlike_wall_late]
+            params['paths']['use_signals_dict'] = jet_signals
+        elif params['paths']['data'] == 'jet_data_carbon_to_late_0D':
+            params['paths']['shot_files'] = [jet_carbon_wall]
+            params['paths']['shot_files_test'] = [jet_iterlike_wall_late]
+            params['paths']['use_signals_dict'] = jet_signals
         elif params['paths']['data'] == 'jet_data_temp_profile':
             params['paths']['shot_files'] = [jet_carbon_wall]
             params['paths']['shot_files_test'] = [jet_iterlike_wall]
@@ -182,6 +190,10 @@ def parameters(input_file):
         elif params['paths']['data'] == 'd3d_to_jet_data':
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = [jet_iterlike_wall]
+            params['paths']['use_signals_dict'] = fully_defined_signals
+        elif params['paths']['data'] == 'd3d_to_late_jet_data':
+            params['paths']['shot_files'] = [d3d_full]
+            params['paths']['shot_files_test'] = [jet_iterlike_wall_late]
             params['paths']['use_signals_dict'] = fully_defined_signals
         elif params['paths']['data'] == 'jet_to_d3d_data_0D':
             params['paths']['shot_files'] = [jet_full]
