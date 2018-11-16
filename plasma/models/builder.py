@@ -182,7 +182,7 @@ class ModelBuilder(object):
         else:
             pre_rnn = pre_rnn_input        
 
-        if model_conf['rnn_layers'] == 0 or model_conf['extra_dense_input']:
+        if model_conf['rnn_layers'] == 0 or ('extra_dense_input' in model_conf.keys() and model_conf['extra_dense_input']):
             pre_rnn = Dense(dense_size,activation='relu',kernel_regularizer=l2(dense_regularization),bias_regularizer=l2(dense_regularization),activity_regularizer=l2(dense_regularization)) (pre_rnn)
             pre_rnn = Dense(dense_size//2,activation='relu',kernel_regularizer=l2(dense_regularization),bias_regularizer=l2(dense_regularization),activity_regularizer=l2(dense_regularization)) (pre_rnn)
             pre_rnn = Dense(dense_size//4,activation='relu',kernel_regularizer=l2(dense_regularization),bias_regularizer=l2(dense_regularization),activity_regularizer=l2(dense_regularization)) (pre_rnn)
