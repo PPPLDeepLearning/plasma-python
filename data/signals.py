@@ -159,9 +159,9 @@ q_psi_profile = ProfileSignal("Q(psi) profile",["EFIT01/RESULTS.GEQDSK.QPSI"],[d
 
 
 # epress_profile_spatial = ProfileSignal("Electron pressure profile",["ppf/hrts/pe/"],[jet],causal_shifts=[25],mapping_range=(2,4),num_channels=profile_num_channels)
-etemp_profile_spatial = ProfileSignal("Electron temperature profile",["ppf/hrts/te"],[jet],causal_shifts=[25],mapping_range=(2,4),num_channels=profile_num_channels,data_avail_tolerances=[0.05])
-edens_profile_spatial = ProfileSignal("Electron density profile",["ppf/hrts/ne"],[jet],causal_shifts=[25],mapping_range=(2,4),num_channels=profile_num_channels,data_avail_tolerances=[0.05])
-rho_profile_spatial = ProfileSignal("Rho at spatial positions",["ppf/hrts/rho"],[jet],causal_shifts=[25],mapping_range=(2,4),num_channels=profile_num_channels,data_avail_tolerances=[0.05])
+etemp_profile_spatial = ProfileSignal("Electron temperature profile",["ppf/hrts/te"],[jet],causal_shifts=[0],mapping_range=(2,4),num_channels=profile_num_channels,data_avail_tolerances=[0.05])
+edens_profile_spatial = ProfileSignal("Electron density profile",["ppf/hrts/ne"],[jet],causal_shifts=[0],mapping_range=(2,4),num_channels=profile_num_channels,data_avail_tolerances=[0.05])
+rho_profile_spatial = ProfileSignal("Rho at spatial positions",["ppf/hrts/rho"],[jet],causal_shifts=[0],mapping_range=(2,4),num_channels=profile_num_channels,data_avail_tolerances=[0.05])
 
 etemp = Signal("electron temperature",["ppf/hrtx/te0"],[jet],causal_shifts=[25],data_avail_tolerances=[0.05])
 # epress = Signal("electron pressure",["ppf/hrtx/pe0/"],[jet],causal_shifts=[25])
@@ -179,6 +179,7 @@ energy = Signal("stored energy",['jpf/gs/bl-wmhd<s','d3d/efswmhd'],[jet,d3d])
 pin = Signal("Input Power (beam for d3d)",['jpf/gs/bl-ptot<s','d3d/bmspinj'],[jet,d3d]) #Total Beam Power
 
 pradtot = Signal("Radiated Power",['jpf/db/b5r-ptot>out'],[jet])
+#pradtot = Signal("Radiated Power",['jpf/db/b5r-ptot>out', 'd3d/'+r'\prad_tot'],[jet,d3d])
 #pradcore = ChannelSignal("Radiated Power Core",[ 'd3d/'+r'\bol_l15_p'],[d3d])
 #pradedge = ChannelSignal("Radiated Power Edge",['d3d/'+r'\bol_l03_p'],[d3d])
 pradcore = ChannelSignal("Radiated Power Core",['ppf/bolo/kb5h/channel14', 'd3d/'+r'\bol_l15_p'],[jet,d3d])

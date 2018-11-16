@@ -70,6 +70,9 @@ def parameters(input_file):
         #shot lists
         jet_carbon_wall = ShotListFiles(jet,params['paths']['shot_list_dir'],['CWall_clear.txt','CFC_unint.txt'],'jet carbon wall data')
         jet_iterlike_wall = ShotListFiles(jet,params['paths']['shot_list_dir'],['ILW_unint.txt','BeWall_clear.txt'],'jet iter like wall data')
+        jet_iterlike_wall_late = ShotListFiles(jet,params['paths']['shot_list_dir'],['ILW_unint_late.txt','ILW_clear_late.txt'],'Late jet iter like wall data')
+        jet_iterlike_wall_full = ShotListFiles(jet,params['paths']['shot_list_dir'],['ILW_unint_full.txt','ILW_clear_full.txt'],'Full jet iter like wall data')
+
 
         jenkins_jet_carbon_wall = ShotListFiles(jet,params['paths']['shot_list_dir'],['jenkins_CWall_clear.txt','jenkins_CFC_unint.txt'],'Subset of jet carbon wall data for Jenkins tests')
         jenkins_jet_iterlike_wall = ShotListFiles(jet,params['paths']['shot_list_dir'],['jenkins_ILW_unint.txt','jenkins_BeWall_clear.txt'],'Subset of jet iter like wall data for Jenkins tests')
@@ -97,6 +100,14 @@ def parameters(input_file):
             params['paths']['shot_files'] = [jet_carbon_wall]
             params['paths']['shot_files_test'] = [jet_iterlike_wall]
             params['paths']['use_signals_dict'] = jet_signals_1D
+        elif params['paths']['data'] == 'jet_data_late':
+            params['paths']['shot_files'] = [jet_iterlike_wall_late]
+            params['paths']['shot_files_test'] = [jet_iterlike_wall_late]
+            params['paths']['use_signals_dict'] = jet_signals
+        elif params['paths']['data'] == 'jet_data_carbon_to_late_0D':
+            params['paths']['shot_files'] = [jet_carbon_wall]
+            params['paths']['shot_files_test'] = [jet_iterlike_wall_late]
+            params['paths']['use_signals_dict'] = jet_signals
         elif params['paths']['data'] == 'jet_data_temp_profile':
             params['paths']['shot_files'] = [jet_carbon_wall]
             params['paths']['shot_files_test'] = [jet_iterlike_wall]
@@ -179,6 +190,10 @@ def parameters(input_file):
         elif params['paths']['data'] == 'd3d_to_jet_data':
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = [jet_iterlike_wall]
+            params['paths']['use_signals_dict'] = fully_defined_signals
+        elif params['paths']['data'] == 'd3d_to_late_jet_data':
+            params['paths']['shot_files'] = [d3d_full]
+            params['paths']['shot_files_test'] = [jet_iterlike_wall_late]
             params['paths']['use_signals_dict'] = fully_defined_signals
         elif params['paths']['data'] == 'jet_to_d3d_data_0D':
             params['paths']['shot_files'] = [jet_full]
