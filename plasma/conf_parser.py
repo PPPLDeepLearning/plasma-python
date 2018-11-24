@@ -102,12 +102,12 @@ def parameters(input_file):
             params['paths']['use_signals_dict'] = jet_signals_1D
         elif params['paths']['data'] == 'jet_data_late':
             params['paths']['shot_files'] = [jet_iterlike_wall_late]
-            params['paths']['shot_files_test'] = [jet_iterlike_wall_late]
+            params['paths']['shot_files_test'] = []
             params['paths']['use_signals_dict'] = jet_signals
         elif params['paths']['data'] == 'jet_data_carbon_to_late_0D':
             params['paths']['shot_files'] = [jet_carbon_wall]
             params['paths']['shot_files_test'] = [jet_iterlike_wall_late]
-            params['paths']['use_signals_dict'] = jet_signals
+            params['paths']['use_signals_dict'] = jet_signals_0D
         elif params['paths']['data'] == 'jet_data_temp_profile':
             params['paths']['shot_files'] = [jet_carbon_wall]
             params['paths']['shot_files_test'] = [jet_iterlike_wall]
@@ -244,7 +244,7 @@ def parameters(input_file):
     return params
 
 def get_unique_signal_hash(signals):
-    return int(hashlib.md5(''.join(tuple(map(lambda x: x.description, sorted(signals)))).encode('utf-8')).hexdigest(),16)
+    return int(hashlib.md5(''.join(tuple(map(lambda x: "{}".format(x.__hash__()), sorted(signals)))).encode('utf-8')).hexdigest(),16)
 
 #make sure 1D signals come last! This is necessary for model builder.
 def sort_by_channels(list_of_signals):

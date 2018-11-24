@@ -171,21 +171,23 @@ class Signal(object):
         idx = self.machines.index(machine)  
         return idx
 
+    def description_plus_paths(self):
+        return self.description + ' ' + ' '.join(self.paths) 
+
     def __eq__(self,other):
         if other is None:
             return False
-        return self.description.__eq__(other.description)
-
+        return self.description_plus_paths().__eq__(other.description_plus_paths())
     
     def __ne__(self,other):
-        return self.description.__ne__(other.description)
+        return self.description_plus_paths().__ne__(other.description_plus_paths())
 
     def __lt__(self,other):
-        return self.description.__lt__(other.description)
+        return self.description_plus_paths().__lt__(other.description_plus_paths())
     
     def __hash__(self):
        import hashlib
-       return int(hashlib.md5(self.description.encode('utf-8')).hexdigest(),16)
+       return int(hashlib.md5(self.description_plus_paths().encode('utf-8')).hexdigest(),16)
 
     def __str__(self):
         return self.description
