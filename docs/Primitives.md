@@ -2,11 +2,11 @@
 
 Each shot is a measurement of plasma current as a function of time. The Shot objects contains following attributes:
 
- 1. number - integer, unique identifier of a shot
- 1. t_disrupt - double, disruption time in milliseconds (second column in the shotlist input file)
- 1. ttd - array of doubles, time profile of the shot converted to time-to-disruption values
- 1. valid - boolean, whether plasma current reaches a certain value during the shot
- 1. is_disruptive - boolean, 
+ 1. `number` - integer, unique identifier of a shot
+ 1. `t_disrupt` - double, disruption time in milliseconds (second column in the shotlist input file)
+ 1. `ttd` - array of doubles, time profile of the shot converted to time-to-disruption values
+ 1. `valid` - boolean, whether plasma current reaches a certain value during the shot
+ 1. `is_disruptive` - boolean, whether the shot was determined to be disruptive by an expert
 
         
 For 0D data, each shot is modeled as 2D array - time vs plasma current.
