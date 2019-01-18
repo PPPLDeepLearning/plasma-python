@@ -1,4 +1,4 @@
-#First time setup on Theta, Argonne
+# First time setup on Theta, Argonne
 
 ```bash
 mkdir PPPL
