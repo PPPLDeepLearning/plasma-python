@@ -1,94 +1,108 @@
-import MDSplus 
+import MDSplus
 import numpy
-import time
-import sys
+# import time
+
 
 class gadata:
-	"""GA Data Obj"""
-	def __init__(self,signal,shot,tree=None,connection=None,nomds=False):
+    """GA Data Obj"""
 
-		# Save object values
-		self.signal = signal
-		self.shot = shot
-		self.zdata = -1
-		self.xdata = -1
-		self.ydata = -1
-		self.zunits = ''
-		self.xunits = ''
-		self.yunits = ''
-		self.rank = -1
-		self.connection = connection
-		
+    def __init__(self, signal, shot, tree=None, connection=None, nomds=False):
 
-		## Retrieve Data 
-		t0 =  time.time()
-		self.found = False
+        # Save object values
+        self.signal = signal
+        self.shot = shot
+        self.zdata = -1
+        self.xdata = -1
+        self.ydata = -1
+        self.zunits = ''
+        self.xunits = ''
+        self.yunits = ''
+        self.rank = -1
+        self.connection = connection
 
-		# Create the MDSplus connection (thin) if not passed in  
-		if self.connection is None:
-			self.connection = MDSplus.Connection('atlas.gat.com')
+        # Retrieve Data
+        # t0 = time.time()
+        self.found = False
 
-		# Retrieve data from MDSplus (thin)
-		if nomds == False:
-			#first try, retrieve directly from tree and tag
-			try:     
-				#print 'trying direct using tree and tag'
-				if tree != None:
-					tag = self.signal
-					fstree 	= tree
-				else:					
-					tag = self.connection.get('findsig("'+self.signal+'",_fstree)').value
-					fstree = self.connection.get('_fstree').value 
+        # Create the MDSplus connection (thin) if not passed in
+        if self.connection is None:
+            self.connection = MDSplus.Connection('atlas.gat.com')
 
-				self.connection.openTree(fstree,shot)
-				self.zdata  = self.connection.get('_s = '+tag).data()
-				self.zunits = self.connection.get('units_of(_s)').data()  
-				self.rank = numpy.ndim(self.zdata)	
-				if self.rank > 1:
-					self.xdata = self.connection.get('dim_of(_s,1)').data()
-					self.xunits = self.connection.get('units_of(dim_of(_s,1))').data()
-					if self.xunits == '' or self.xunits == ' ': 
-						self.xunits = self.connection.get('units(dim_of(_s,1))').data()
+        # Retrieve data from MDSplus (thin)
+        if not nomds:
+            # first try, retrieve directly from tree and tag
+            try:
+                # print('trying direct using tree and tag')
+                if tree is not None:
+                    tag = self.signal
+                    fstree = tree
+                else:
+                    tag = self.connection.get(
+                        'findsig("' + self.signal + '",_fstree)').value
+                    fstree = self.connection.get('_fstree').value
 
-					self.ydata 	= self.connection.get('dim_of(_s)').data()
-					self.yunits = self.connection.get('units_of(dim_of(_s))').data()
-					if self.yunits == '' or self.yunits == ' ':
- 						self.yunits     = self.connection.get('units(dim_of(_s))').data()
-				else:
-					self.xdata = self.connection.get('dim_of(_s)').data()
-					self.xunits = self.connection.get('units_of(dim_of(_s))').data()
-					if self.xunits == '' or self.xunits == ' ': 
-						self.xunits = self.connection.get('units(dim_of(_s))').data()
-				#print 'zdata: ' + str(self.zdata)
-				self.found = True
+                self.connection.openTree(fstree, shot)
+                self.zdata = self.connection.get('_s = ' + tag).data()
+                self.zunits = self.connection.get('units_of(_s)').data()
+                self.rank = numpy.ndim(self.zdata)
+                if self.rank > 1:
+                    self.xdata = self.connection.get('dim_of(_s,1)').data()
+                    self.xunits = self.connection.get(
+                        'units_of(dim_of(_s,1))').data()
+                    if self.xunits == '' or self.xunits == ' ':
+                        self.xunits = self.connection.get(
+                            'units(dim_of(_s,1))').data()
 
-				# MDSplus seems to return 2-D arrays transposed.  Change them back.
-				if numpy.ndim(self.zdata) == 2: self.zdata = numpy.transpose(self.zdata)
-				if numpy.ndim(self.ydata) == 2: self.ydata = numpy.transpose(self.ydata)
-				if numpy.ndim(self.xdata) == 2: self.xdata = numpy.transpose(self.xdata)
+                    self.ydata = self.connection.get('dim_of(_s)').data()
+                    self.yunits = self.connection.get(
+                        'units_of(dim_of(_s))').data()
+                    if self.yunits == '' or self.yunits == ' ':
+                        self.yunits = self.connection.get(
+                            'units(dim_of(_s))').data()
+                else:
+                    self.xdata = self.connection.get('dim_of(_s)').data()
+                    self.xunits = self.connection.get(
+                        'units_of(dim_of(_s))').data()
+                    if self.xunits == '' or self.xunits == ' ':
+                        self.xunits = self.connection.get(
+                            'units(dim_of(_s))').data()
+                # print('zdata: ' + str(self.zdata))
+                self.found = True
 
-			except Exception as e:
-				pass
+                # MDSplus seems to return 2-D arrays transposed.  Change them
+                # back.
+                if numpy.ndim(self.zdata) == 2:
+                    self.zdata = numpy.transpose(self.zdata)
+                if numpy.ndim(self.ydata) == 2:
+                    self.ydata = numpy.transpose(self.ydata)
+                if numpy.ndim(self.xdata) == 2:
+                    self.xdata = numpy.transpose(self.xdata)
 
-			# Retrieve data from PTDATA if node not found
-		if not self.found:
-			#print 'Trying ptdata: %s' % (signal,)
-			self.zdata = self.connection.get('_s = ptdata2("'+signal+'",'+str(shot)+')')
-			if len(self.zdata) != 1:
-				self.xdata = self.connection.get('dim_of(_s)')
-				self.rank = 1
-				self.found = True
+            except Exception as e:
+                print(e)
+                pass
 
-			# Retrieve data from Pseudo-pointname if not in ptdata
-		if not self.found:
-			#print '   Signal not in PTDATA: %s' % (signal,) 
-			self.zdata = self.connection.get('_s = pseudo("'+signal+'",'+str(shot)+')')
-			if len(self.zdata) != 1:
-				self.xdata = self.connection.get('dim_of(_s)')
-				self.rank = 1
-				self.found = True
+            # Retrieve data from PTDATA if node not found
+        if not self.found:
+            # print('Trying ptdata: %s' % (signal,))
+            self.zdata = self.connection.get(
+                '_s = ptdata2("' + signal+'",' + str(shot)+')')
+            if len(self.zdata) != 1:
+                self.xdata = self.connection.get('dim_of(_s)')
+                self.rank = 1
+                self.found = True
 
-		if not self.found:  #this means the signal wasn't found
-			pass
+            # Retrieve data from Pseudo-pointname if not in ptdata
+        if not self.found:
+            # print('   Signal not in PTDATA: %s' % (signal,))
+            self.zdata = self.connection.get(
+                '_s = pseudo("' + signal+'",' + str(shot)+')')
+            if len(self.zdata) != 1:
+                self.xdata = self.connection.get('dim_of(_s)')
+                self.rank = 1
+                self.found = True
 
-		return
+        if not self.found:  # this means the signal wasn't found
+            pass
+
+        return
