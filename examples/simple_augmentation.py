@@ -1,6 +1,6 @@
 from plasma.models.mpi_runner import (
-    mpi_make_predictions_and_evaluate
-    )
+    mpi_make_predictions, mpi_make_predictions_and_evaluate
+)
 from mpi4py import MPI
 from plasma.preprocessor.preprocess import guarantee_preprocessed
 from plasma.preprocessor.augment import ByShotAugmentator
@@ -115,7 +115,7 @@ def create_shot_list_tmp(original_shot, time_points, sigs=None):
         assert(new_shot.augmentation_fn is None)
         new_shot.augmentation_fn = partial(
             hide_signal_data, t=t, sigs_to_hide=sigs)
-        #new_shot.number = original_shot.number
+        # new_shot.number = original_shot.number
         shot_list_tmp.append(new_shot)
     return shot_list_tmp, t_range
 
@@ -126,7 +126,7 @@ def get_importance_measure(
         custom_path,
         metric,
         time_points=10,
-        sig=None):
+        sigs=None):
     shot_list_tmp, t_range = create_shot_list_tmp(
         original_shot, time_points, sigs)
     y_prime, y_gold, disruptive = mpi_make_predictions(
@@ -138,8 +138,8 @@ def get_importance_measure(
 
 def difference_metric(y_prime, y_prime_orig):
     idx = np.argmax(y_prime_orig)
-    return (np.max(y_prime_orig) - y_prime[idx]) / \
-        (np.max(y_prime_orig) - np.min(y_prime_orig))
+    return ((np.max(y_prime_orig) - y_prime[idx])
+            / (np.max(y_prime_orig) - np.min(y_prime_orig)))
 
 
 def get_importance_measure_given_y_prime(y_prime, metric):
@@ -176,8 +176,9 @@ print(loss)
 
 # for sigs_to_hide in [[s] for s in use_signals[:-3]] +
 # [use_signals[-3:-1]] + [use_signals[-1]]:
-for sigs_to_hide in [[s] for s in use_signals[:-3]] + [[s]
-                                                       for s in use_signals[-3:-1]] + [use_signals[-3:-1]]:  # + [use_signals[-1]]:
+for sigs_to_hide in ([[s] for s in use_signals[:-3]]
+                     + [[s] for s in use_signals[-3:-1]]
+                     + [use_signals[-3:-1]]):
     for shot in shot_list_test:
         shot.augmentation_fn = partial(
             hide_signal_data, t=0, sigs_to_hide=sigs_to_hide)

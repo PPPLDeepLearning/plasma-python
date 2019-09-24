@@ -1,6 +1,6 @@
 from plasma.models.mpi_runner import (
     mpi_train, mpi_make_predictions_and_evaluate
-    )
+)
 from mpi4py import MPI
 from plasma.preprocessor.preprocess import guarantee_preprocessed
 from plasma.preprocessor.augment import Augmentator
