@@ -16,6 +16,7 @@ matrix:
     - env: MPI_LIBRARY=openmpi MPI_LIBRARY_VERSION=2.0.0
       python: 3.6
     - stage: python linter
+      env:
       install: pip install flake8
       script: python -m flake8
 
