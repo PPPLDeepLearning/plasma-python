@@ -18,7 +18,7 @@ matrix:
     - stage: python linter
       env:
       install: pip install flake8
-      script: python -m flake8
+      script: python -m flake8 && echo "Finished linting Python files with flake8"
 
 addons:
   apt:
@@ -55,6 +55,7 @@ notifications:
     on_success: change
     on_failure: always
   slack:
-    secure: NBjGYpIF2VO/GvhbC7XVPIfi0WLGFEuVhi51UbZjfHg4IOv1UuCF0fImi8GN2UZZBFRnZcbtPVffZnyMUyJI0Krw0M1ropkjA4YDaJx1JUGnYuQLxNmX+jbQmN61Usjg5MQOgcRnAn1bdMN1ttWInqkKejpV5buCjZbt8SZbDePfXz4U3No68P/pRsDTVXSy0xLTtRacuEITJjwxfjp6phbmR3qs127MZMRbVYDC2HA6KsoJW6YSKF1vFyHqnFMl7GSavxYw/XQpqFLJkGKXfnNgPZV6qAbVk5+bzyytAbbwLGvgbuFpnJsGPvAyebV8wVYaIPg7OeK+Sm1A3q0jt774NnqFp2AZ+pSKrxbxIkygDM0zoWLm4i3pt6ToJ6dKcqSbCKbELnSY5NphcyYuiJ8uhLVpAR0Y+vp+fOvhb8td/nH2AWkxFpp6xwOHPXvtodBsyPMkiaeKoVElYBfbfOhDSYH2KafADECTX75S63A9KleeNZh0DSImfFdQPaN3GFLEL8Z9UFABzTkM9eYKP9pyEP82Wh/JGDaqbARazEgNzy8rwghomsEguV247XHdOx32PSd0att541gsRFZ5uyMuVFKzI0jiLijekibY2I1c5b6dDeuK4O8uBiq4FTS+bM55Rj4Job01kdxSCKw3RwOh0amzITRTQvEWKpTAekg=
+    rooms:
+    - secure: "NBjGYpIF2VO/GvhbC7XVPIfi0WLGFEuVhi51UbZjfHg4IOv1UuCF0fImi8GN2UZZBFRnZcbtPVffZnyMUyJI0Krw0M1ropkjA4YDaJx1JUGnYuQLxNmX+jbQmN61Usjg5MQOgcRnAn1bdMN1ttWInqkKejpV5buCjZbt8SZbDePfXz4U3No68P/pRsDTVXSy0xLTtRacuEITJjwxfjp6phbmR3qs127MZMRbVYDC2HA6KsoJW6YSKF1vFyHqnFMl7GSavxYw/XQpqFLJkGKXfnNgPZV6qAbVk5+bzyytAbbwLGvgbuFpnJsGPvAyebV8wVYaIPg7OeK+Sm1A3q0jt774NnqFp2AZ+pSKrxbxIkygDM0zoWLm4i3pt6ToJ6dKcqSbCKbELnSY5NphcyYuiJ8uhLVpAR0Y+vp+fOvhb8td/nH2AWkxFpp6xwOHPXvtodBsyPMkiaeKoVElYBfbfOhDSYH2KafADECTX75S63A9KleeNZh0DSImfFdQPaN3GFLEL8Z9UFABzTkM9eYKP9pyEP82Wh/JGDaqbARazEgNzy8rwghomsEguV247XHdOx32PSd0att541gsRFZ5uyMuVFKzI0jiLijekibY2I1c5b6dDeuK4O8uBiq4FTS+bM55Rj4Job01kdxSCKw3RwOh0amzITRTQvEWKpTAekg="
     on_success: always
     on_failure: always
