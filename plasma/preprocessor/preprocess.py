@@ -21,6 +21,7 @@ from plasma.utils.processing import append_to_filename
 from plasma.primitives.shots import ShotList
 from plasma.utils.downloading import mkdirdepth
 
+
 class Preprocessor(object):
 
     def __init__(self, conf):
