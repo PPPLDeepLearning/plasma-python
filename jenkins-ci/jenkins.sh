@@ -31,21 +31,3 @@ sed -i -e 's/data: jet_data/data: jenkins_jet/g' conf.yaml
 srun python mpi_learn.py
 
 echo "Jenkins test Python2.7"
-#rm /tigress/alexeys/model_checkpoints/*
-
-#source deactivate
-#module purge
-#module load anaconda/4.4.0
-#source activate /tigress/alexeys/jenkins/.conda/envs/jenkins2
-#module load cudatoolkit/8.0
-#module load cudnn/cuda-8.0/6.0
-#module load openmpi/cuda-8.0/intel-17.0/2.1.0/64
-#module load intel/17.0/64/17.0.4.196
-
-#cd ..
-#python setup.py install
-
-#echo $SLURM_NODELIST
-#cd examples
-#sed -i -e 's/data: jenkins_jet/data: jenkins_d3d/g' conf.yaml
-#srun python mpi_learn.py

@@ -1,6 +1,6 @@
 # FRNN 
 
-[![Build Status](https://travis-ci.org/PPPLDeepLearning/plasma-python.svg?branch=master)](https://travis-ci.org/PPPLDeepLearning/plasma-python) 
+[![Build Status](https://travis-ci.com/PPPLDeepLearning/plasma-python.svg?branch=master)](https://travis-ci.com/PPPLDeepLearning/plasma-python)
 [![Build Status](https://jenkins.princeton.edu/buildStatus/icon?job=FRNM/PPPL)](https://jenkins.princeton.edu/job/FRNM/job/PPPL/)
 
 ## Package description

@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -t 0-2:00
-#SBATCH -N 10 #how many nodes. The number of GPUs is this times 4.
+#SBATCH -N 10  # how many nodes. The totla number of GPUs is equal to this x4
 #SBATCH --ntasks-per-node=16
 #SBATCH --ntasks-per-socket=8
 #SBATCH --gres=gpu:4
@@ -13,4 +13,3 @@ echo "Removing old model checkpoints."
 rm /tigress/jk7/data/model_checkpoints/*
 echo "Running distributed learning"
 mpirun -npernode 4 python mpi_learn.py
-
