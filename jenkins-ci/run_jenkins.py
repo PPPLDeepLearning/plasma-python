@@ -23,7 +23,7 @@ def generate_conf_file(
         conf_name="conf.yaml"):
     assert(template_path != save_path)
     with open(os.path.join(template_path, conf_name), 'r') as yaml_file:
-        conf = yaml.load(yaml_file)
+        conf = yaml.load(yaml_file, Loader=yaml.SafeLoader)
     conf['training']['num_epochs'] = 2
     conf['paths']['data'] = test_configuration[1]
     if test_configuration[1] == "Python3":
