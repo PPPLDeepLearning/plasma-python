@@ -149,7 +149,7 @@ class Preprocessor(object):
 
     def load_shotlists(self):
         path = self.get_shot_list_path()
-        data = np.load(path, encoding="latin1")
+        data = np.load(path, encoding="latin1", allow_pickle=False)
         shot_list_train = data['shot_list_train'][()]
         shot_list_validate = data['shot_list_validate'][()]
         shot_list_test = data['shot_list_test'][()]
@@ -159,18 +159,13 @@ class Preprocessor(object):
             return ShotList(shot_list_train), ShotList(
                 shot_list_validate), ShotList(shot_list_test)
 
-    def save_shotlists(
-            self,
-            shot_list_train,
-            shot_list_validate,
-            shot_list_test):
+    def save_shotlists(self, shot_list_train, shot_list_validate,
+                       shot_list_test):
         path = self.get_shot_list_path()
         mkdirdepth(path)
-        np.savez(
-            path,
-            shot_list_train=shot_list_train,
-            shot_list_validate=shot_list_validate,
-            shot_list_test=shot_list_test)
+        np.savez(path, shot_list_train=shot_list_train,
+                 shot_list_validate=shot_list_validate,
+                 shot_list_test=shot_list_test)
 
 
 def apply_bleed_in(conf, shot_list_train, shot_list_validate, shot_list_test):

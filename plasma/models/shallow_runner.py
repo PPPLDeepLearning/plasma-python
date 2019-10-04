@@ -137,7 +137,7 @@ class FeatureExtractor(object):
             # print(X.shape, Y.shape)
         else:
             try:
-                dat = np.load(save_path)
+                dat = np.load(save_path, allow_pickle=False)
                 # X, Y, disr = dat["X"], dat["Y"], dat["disr"][()]
                 X = dat["X"]
             except BaseException:

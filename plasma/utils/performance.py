@@ -364,7 +364,8 @@ class PerformanceAnalyzer():
     def load_ith_file(self):
         results_files = os.listdir(self.results_dir)
         print(results_files)
-        dat = np.load(self.results_dir + results_files[self.i])
+        dat = np.load(self.results_dir + results_files[self.i],
+                      allow_pickle=False)
         print("Loading results file {}".format(
             self.results_dir + results_files[self.i]))
 

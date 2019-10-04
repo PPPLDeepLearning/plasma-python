@@ -670,7 +670,7 @@ def save_shotlists(conf, shot_list_train, shot_list_validate, shot_list_test):
 
 def load_shotlists(conf):
     path = get_shot_list_path(conf)
-    data = np.load(path)
+    data = np.load(path, allow_pickle=False)
     shot_list_train = data['shot_list_train'][()]
     shot_list_validate = data['shot_list_validate'][()]
     shot_list_test = data['shot_list_test'][()]
