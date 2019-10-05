@@ -29,13 +29,9 @@ class Preprocessor(object):
 
     def clean_shot_lists(self):
         shot_list_dir = self.conf['paths']['shot_list_dir']
-        paths = [
-            os.path.join(
-                shot_list_dir,
-                f) for f in listdir(shot_list_dir) if os.path.isfile(
-                os.path.join(
-                    shot_list_dir,
-                    f))]
+        paths = [os.path.join(shot_list_dir, f) for f in
+                 listdir(shot_list_dir) if
+                 os.path.isfile(os.path.join(shot_list_dir, f))]
         for path in paths:
             self.clean_shot_list(path)
 
@@ -87,16 +83,15 @@ class Preprocessor(object):
         # empty
         used_shots = ShotList()
 
-        use_cores = max(1, mp.cpu_count()-2)
+        # TODO(KGF): generalize the follwowing line to perform well on
+        # architecutres other than CPUs, e.g. KNLs
+        # min( <desired-maximum-process-count>, max(1,mp.cpu_count()-2) )
+        use_cores = max(1, mp.cpu_count() - 2)
         pool = mp.Pool(use_cores)
-        print('running in parallel on {} processes'.format(pool._processes))
+        print('Running in parallel on {} processes'.format(pool._processes))
         start_time = time.time()
-        for (
-            i,
-            shot) in enumerate(
-            pool.imap_unordered(
-                self.preprocess_single_file,
-                shot_list_picked)):
+        for (i, shot) in enumerate(pool.imap_unordered(
+                self.preprocess_single_file, shot_list_picked)):
             # for (i,shot) in
             # enumerate(map(self.preprocess_single_file,shot_list_picked)):
             sys.stdout.write('\r{}/{}'.format(i, len(shot_list_picked)))
@@ -105,19 +100,15 @@ class Preprocessor(object):
         pool.close()
         pool.join()
         print('Finished Preprocessing {} files in {} seconds'.format(
-            len(shot_list_picked), time.time()-start_time))
-        print(
-            'Omitted {} shots of {} total.'.format(
-                len(shot_list_picked)
-                - len(used_shots),
-                len(shot_list_picked)))
+            len(shot_list_picked), time.time() - start_time))
+        print('Omitted {} shots of {} total.'.format(
+            len(shot_list_picked) - len(used_shots), len(shot_list_picked)))
         print('{}/{} disruptive shots'.format(used_shots.num_disruptive(),
                                               len(used_shots)))
         if len(used_shots) == 0:
-            print(
-                "WARNING: All shots were omitted, please ensure raw data "
-                " is complete and available at {}.".format(
-                    self.conf['paths']['signal_prepath']))
+            print("WARNING: All shots were omitted, please ensure raw data "
+                  " is complete and available at {}.".format(
+                      self.conf['paths']['signal_prepath']))
         return used_shots
 
     def preprocess_single_file(self, shot):
@@ -127,7 +118,6 @@ class Preprocessor(object):
         if recompute or not shot.previously_saved(processed_prepath):
             shot.preprocess(self.conf)
             shot.save(processed_prepath)
-
         else:
             try:
                 shot.restore(processed_prepath, light=True)
@@ -135,9 +125,8 @@ class Preprocessor(object):
             except BaseException:
                 shot.preprocess(self.conf)
                 shot.save(processed_prepath)
-                sys.stdout.write(
-                    '\r{} exists but corrupted, resaved.'.format(
-                        shot.number))
+                sys.stdout.write('\r{} exists but corrupted, resaved.'.format(
+                    shot.number))
         shot.make_light()
         return shot
 
@@ -262,14 +251,10 @@ def guarantee_preprocessed(conf):
         pp.save_shotlists(shot_list_train, shot_list_validate, shot_list_test)
     shot_list_train, shot_list_validate, shot_list_test = apply_bleed_in(
         conf, shot_list_train, shot_list_validate, shot_list_test)
-    print(
-        'validate: {} shots, {} disruptive'.format(
-            len(shot_list_validate),
-            shot_list_validate.num_disruptive()))
-    print(
-        'training: {} shots, {} disruptive'.format(
-            len(shot_list_train),
-            shot_list_train.num_disruptive()))
+    print('validate: {} shots, {} disruptive'.format(
+        len(shot_list_validate), shot_list_validate.num_disruptive()))
+    print('training: {} shots, {} disruptive'.format(
+        len(shot_list_train), shot_list_train.num_disruptive()))
     print('testing: {} shots, {} disruptive'.format(
         len(shot_list_test), shot_list_test.num_disruptive()))
     print("...done")
