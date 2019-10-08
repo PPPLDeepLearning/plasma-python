@@ -12,7 +12,7 @@ import numpy as np
 import sys
 import matplotlib
 matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  # noqa
 
 # if sys.version_info[0] < 3:
 #     from itertools import imap

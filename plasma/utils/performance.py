@@ -7,8 +7,8 @@ from pprint import pprint
 import os
 import matplotlib
 matplotlib.use('Agg')  # for machines that don't have a display
-import matplotlib.pyplot as plt
-from matplotlib import rc
+import matplotlib.pyplot as plt  # noqa
+from matplotlib import rc  # noqa
 rc('font', **{'family': 'serif', 'sans-serif': ['Times']})
 rc('text', usetex=True)
 
