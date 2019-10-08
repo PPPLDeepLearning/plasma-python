@@ -20,9 +20,9 @@ import os
 import datetime
 import time
 import numpy as np
-# import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
+# import matplotlib.pyplot as plt
 
 # import sys
 # if sys.version_info[0] < 3:
