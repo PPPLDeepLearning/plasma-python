@@ -138,7 +138,7 @@ class Preprocessor(object):
 
     def load_shotlists(self):
         path = self.get_shot_list_path()
-        data = np.load(path, encoding="latin1", allow_pickle=False)
+        data = np.load(path, encoding="latin1", allow_pickle=True)
         shot_list_train = data['shot_list_train'][()]
         shot_list_validate = data['shot_list_validate'][()]
         shot_list_test = data['shot_list_test'][()]
@@ -239,7 +239,8 @@ def guarantee_preprocessed(conf):
     else:
         print("preprocessing all shots", end='')
         pp.clean_shot_lists()
-        shot_list = sorted(pp.preprocess_all())
+        shot_list = pp.preprocess_all()
+        shot_list.sort()
         shot_list_train, shot_list_test = shot_list.split_train_test(conf)
         # num_shots = len(shot_list_train) + len(shot_list_test)
         validation_frac = conf['training']['validation_frac']

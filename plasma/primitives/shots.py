@@ -498,7 +498,7 @@ class Shot(object):
     def restore(self, prepath, light=False):
         assert self.previously_saved(prepath), 'shot was never saved'
         save_path = self.get_save_path(prepath)
-        dat = np.load(save_path, encoding="latin1", allow_pickle=False)
+        dat = np.load(save_path, encoding="latin1", allow_pickle=True)
 
         self.valid = dat['valid'][()]
         self.is_disruptive = dat['is_disruptive'][()]
