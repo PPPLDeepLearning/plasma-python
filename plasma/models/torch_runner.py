@@ -1,71 +1,32 @@
-import keras.callbacks as cbks
+from __future__ import print_function
 from keras.utils.generic_utils import Progbar
 from torch.nn.utils import weight_norm
 import torch.optim as opt
 from torch.autograd import Variable
 import torch.nn as nn
 import torch
-import hashlib
 from plasma.utils.downloading import makedirs_process_safe
-from plasma.utils.state_reset import reset_states
-from plasma.utils.evaluation import *
 from plasma.utils.performance import PerformanceAnalyzer
-from plasma.models.loader import Loader, ProcessGenerator
-from plasma.conf import conf
-from sklearn.neural_network import MLPClassifier
-from xgboost import XGBClassifier
-import pathos.multiprocessing as mp
+from plasma.utils.evaluation import get_loss_from_list
 from functools import partial
 import os
-import datetime
-import time
-import sys
 import numpy as np
-import matplotlib.pyplot as plt
-from __future__ import print_function
-import matplotlib
-matplotlib.use('Agg')
-
-if sys.version_info[0] < 3:
-    from itertools import imap
-
-# leading to import errors:
-#from hyperopt import hp, STATUS_OK
-#from hyperas.distributions import conditional
-
 
 model_filename = 'torch_model.pt'
 
 
 class FTCN(nn.Module):
-    def __init__(
-            self,
-            n_scalars,
-            n_profiles,
-            profile_size,
-            layer_sizes_spatial,
-            kernel_size_spatial,
-            linear_size,
-            output_size,
-            num_channels_tcn,
-            kernel_size_temporal,
-            dropout=0.1):
+    def __init__(self, n_scalars, n_profiles, profile_size,
+                 layer_sizes_spatial, kernel_size_spatial,
+                 linear_size, output_size,
+                 num_channels_tcn, kernel_size_temporal, dropout=0.1):
         super(FTCN, self).__init__()
-        self.lin = InputBlock(
-            n_scalars,
-            n_profiles,
-            profile_size,
-            layer_sizes_spatial,
-            kernel_size_spatial,
-            linear_size,
-            dropout)
+        self.lin = InputBlock(n_scalars, n_profiles, profile_size,
+                              layer_sizes_spatial, kernel_size_spatial,
+                              linear_size, dropout)
         self.input_layer = TimeDistributed(self.lin, batch_first=True)
-        self.tcn = TCN(
-            linear_size,
-            output_size,
-            num_channels_tcn,
-            kernel_size_temporal,
-            dropout)
+        self.tcn = TCN(linear_size, output_size, num_channels_tcn,
+                       kernel_size_temporal, dropout)
         self.model = nn.Sequential(self.input_layer, self.tcn)
 
     def forward(self, x):
@@ -73,15 +34,8 @@ class FTCN(nn.Module):
 
 
 class InputBlock(nn.Module):
-    def __init__(
-            self,
-            n_scalars,
-            n_profiles,
-            profile_size,
-            layer_sizes,
-            kernel_size,
-            linear_size,
-            dropout=0.2):
+    def __init__(self, n_scalars, n_profiles, profile_size, layer_sizes,
+                 kernel_size, linear_size, dropout=0.2):
         super(InputBlock, self).__init__()
         self.pooling_size = 2
         self.n_scalars = n_scalars
@@ -98,18 +52,15 @@ class InputBlock(nn.Module):
                     input_size = n_profiles
                 else:
                     input_size = layer_sizes[i-1]
-                self.layers.append(
-                    weight_norm(
-                        nn.Conv1d(
-                            input_size,
-                            layer_size,
-                            kernel_size)))
+                self.layers.append(weight_norm(
+                    nn.Conv1d(input_size, layer_size, kernel_size)))
                 self.layers.append(nn.ReLU())
                 self.conv_output_size = calculate_conv_output_size(
                     self.conv_output_size, 0, 1, 1, kernel_size)
                 self.layers.append(nn.MaxPool1d(kernel_size=self.pooling_size))
                 self.conv_output_size = calculate_conv_output_size(
-                    self.conv_output_size, 0, 1, self.pooling_size, self.pooling_size)
+                    self.conv_output_size, 0, 1, self.pooling_size,
+                    self.pooling_size)
                 self.layers.append(nn.Dropout2d(dropout))
             self.net = nn.Sequential(*self.layers)
             self.conv_output_size = self.conv_output_size*layer_sizes[-1]
@@ -294,7 +245,9 @@ class TCN(nn.Module):
 #     for i in range(iters):
 #         x_,y_,mask_ = data_gen()
 # #         print(y)
-#         x, y, mask = Variable(torch.from_numpy(x_).float()), Variable(torch.from_numpy(y_).float()),Variable(torch.from_numpy(mask_).byte())
+#         x, y, mask = Variable(torch.from_numpy(x_).float()),
+#     Variable(torch.from_numpy(y_).float()),Variable(torch.from_numpy(mask_)
+#     . byte())
 # #         print(y)
 #         optimizer.zero_grad()
 # #         output = model(x.unsqueeze(0)).squeeze(0)
@@ -312,7 +265,8 @@ class TCN(nn.Module):
 #         optimizer.step()
 #         if i > 0 and i % log_step == 0:
 #             cur_loss = total_loss / count
-#             print("Epoch {:2d} | lr {:.5f} | loss {:.5f}".format(0,lr, cur_loss))
+#             print("Epoch {:2d} | lr {:.5f} | loss {:.5f}".format(0,lr,
+# #             cur_loss))
 #             total_loss = 0.0
 #             count = 0
 
@@ -351,8 +305,8 @@ def build_torch_model(conf):
 
     # lin = nn.Linear(input_size,intermediate_dim)
     n_scalars, n_profiles, profile_size = get_signal_dimensions(conf)
-    dim = n_scalars+n_profiles*profile_size
-    input_size = dim
+    # dim = n_scalars + n_profiles*profile_size
+    # input_size = dim
     output_size = 1
     # intermediate_dim = 15
 
@@ -362,17 +316,9 @@ def build_torch_model(conf):
 
     num_channels_tcn = [10, 5, 3, 3]  # [3]*5
     kernel_size_temporal = 3  # 3
-    model = FTCN(
-        n_scalars,
-        n_profiles,
-        profile_size,
-        layer_sizes_spatial,
-        kernel_size_spatial,
-        linear_size,
-        output_size,
-        num_channels_tcn,
-        kernel_size_temporal,
-        dropout)
+    model = FTCN(n_scalars, n_profiles, profile_size, layer_sizes_spatial,
+                 kernel_size_spatial, linear_size, output_size,
+                 num_channels_tcn, kernel_size_temporal, dropout)
 
     return model
 
@@ -392,9 +338,10 @@ def get_signal_dimensions(conf):
             n_profiles += 1
             is_1D_region = True
         else:
-            assert(
-                not is_1D_region), "make sure all use_signals are ordered such that 1D signals come last!"
-            assert(num_channels == 1)
+            assert not is_1D_region, (
+                "make sure all use_signals are ordered such that ",
+                "1D signals come last!")
+            assert num_channels == 1
             n_scalars += 1
             is_1D_region = False
     return n_scalars, n_profiles, profile_size
@@ -402,7 +349,8 @@ def get_signal_dimensions(conf):
 
 def apply_model_to_np(model, x):
     # return
-    # model(Variable(torch.from_numpy(x).float()).unsqueeze(0)).squeeze(0).data.numpy()
+    # model(Variable(torch.from_numpy(x).float()).unsqueeze(0)).squeeze(
+    # 0).data.numpy()
     return model(Variable(torch.from_numpy(x).float())).data.numpy()
 
 
@@ -415,7 +363,7 @@ def make_predictions(conf, shot_list, loader, custom_path=None):
     else:
         model_path = custom_path
     inference_model.load_state_dict(torch.load(model_path))
-    #shot_list = shot_list.random_sublist(10)
+    # shot_list = shot_list.random_sublist(10)
 
     y_prime = []
     y_gold = []
@@ -425,7 +373,9 @@ def make_predictions(conf, shot_list, loader, custom_path=None):
     pbar = Progbar(num_shots)
     while True:
         x, y, mask, disr, lengths, num_so_far, num_total = next(generator)
-        #x, y, mask = Variable(torch.from_numpy(x_).float()), Variable(torch.from_numpy(y_).float()),Variable(torch.from_numpy(mask_).byte())
+        # x, y, mask = Variable(torch.from_numpy(x_).float()),
+        # Variable(torch.from_numpy(y_).float()),
+        # Variable(torch.from_numpy(mask_).byte())
         output = apply_model_to_np(inference_model, x)
         for batch_idx in range(x.shape[0]):
             curr_length = lengths[batch_idx]
@@ -441,8 +391,8 @@ def make_predictions(conf, shot_list, loader, custom_path=None):
     return y_prime, y_gold, disruptive
 
 
-def make_predictions_and_evaluate_gpu(
-        conf, shot_list, loader, custom_path=None):
+def make_predictions_and_evaluate_gpu(conf, shot_list, loader,
+                                      custom_path=None):
     y_prime, y_gold, disruptive = make_predictions(
         conf, shot_list, loader, custom_path)
     analyzer = PerformanceAnalyzer(conf=conf)
@@ -452,8 +402,8 @@ def make_predictions_and_evaluate_gpu(
 
 
 def get_model_path(conf):
-    return conf['paths']['model_save_path'] + 'torch/' + \
-        model_filename  # save_prepath + model_filename
+    return (conf['paths']['model_save_path'] + 'torch/'
+            + model_filename)  # save_prepath + model_filename
 
 
 def train_epoch(model, data_gen, optimizer, loss_fn):
@@ -485,8 +435,9 @@ def train_epoch(model, data_gen, optimizer, loss_fn):
         loss.backward()
         optimizer.step()
         step += 1
-        print("[{}]  [{}/{}] loss: {:.3f}, ave_loss: {:.3f}".format(step,
-                                                                    num_so_far-num_so_far_start, num_total, loss.data[0], total_loss/step))
+        print("[{}]  [{}/{}] loss: {:.3f}, ave_loss: {:.3f}".format(
+            step, num_so_far - num_so_far_start, num_total, loss.data[0],
+            total_loss/step))
         if num_so_far-num_so_far_start >= num_total:
             break
         x_, y_, mask_, num_so_far, num_total = next(data_gen)
@@ -497,19 +448,16 @@ def train(conf, shot_list_train, shot_list_validate, loader):
 
     np.random.seed(1)
 
-    #data_gen = ProcessGenerator(partial(loader.training_batch_generator_full_shot_partial_reset,shot_list=shot_list_train)())
+    # data_gen = ProcessGenerator(partial(
+    # loader.training_batch_generator_full_shot_partial_reset,shot_list
+    # = shot_list_train)())
     data_gen = partial(
         loader.training_batch_generator_full_shot_partial_reset,
         shot_list=shot_list_train)()
-
-    print(
-        'validate: {} shots, {} disruptive'.format(
-            len(shot_list_validate),
-            shot_list_validate.num_disruptive()))
-    print(
-        'training: {} shots, {} disruptive'.format(
-            len(shot_list_train),
-            shot_list_train.num_disruptive()))
+    print('validate: {} shots, {} disruptive'.format(
+        len(shot_list_validate), shot_list_validate.num_disruptive()))
+    print('training: {} shots, {} disruptive'.format(
+        len(shot_list_train), shot_list_train.num_disruptive()))
 
     loader.set_inference_mode(False)
 
@@ -521,16 +469,18 @@ def train(conf, shot_list_train, shot_list_validate, loader):
     num_epochs = conf['training']['num_epochs']
     patience = conf['callbacks']['patience']
     lr_decay = conf['model']['lr_decay']
-    batch_size = conf['training']['batch_size']
+    # batch_size = conf['training']['batch_size']
     lr = conf['model']['lr']
-    clipnorm = conf['model']['clipnorm']
+    # clipnorm = conf['model']['clipnorm']
     e = 0
     # warmup_steps = conf['model']['warmup_steps']
     # num_batches_minimum = conf['training']['num_batches_minimum']
 
     # if 'adam' in conf['model']['optimizer']:
     #     optimizer = MPIAdam(lr=lr)
-    # elif conf['model']['optimizer'] == 'sgd' or conf['model']['optimizer'] == 'tf_sgd':
+    # elif conf['model']['optimizer'] == 'sgd' or conf['model']['optimizer'] ==
+    #     'tf_sgd':
+    #
     #     optimizer = MPISGD(lr=lr)
     # elif 'momentum_sgd' in conf['model']['optimizer']:
     #     optimizer = MPIMomentumSGD(lr=lr)
@@ -550,16 +500,17 @@ def train(conf, shot_list_train, shot_list_validate, loader):
     scheduler = opt.lr_scheduler.ExponentialLR(optimizer, lr_decay)
     train_model.train()
     not_updated = 0
-    total_loss = 0
-    count = 0
+    # total_loss = 0
+    # count = 0
     loss_fn = nn.MSELoss(size_average=True)
     model_path = get_model_path(conf)
     makedirs_process_safe(os.path.dirname(model_path))
-    while e < num_epochs-1:
+    while e < num_epochs - 1:
         scheduler.step()
         print('\nEpoch {}/{}'.format(e, num_epochs))
-        (step, ave_loss, curr_loss, num_so_far, effective_epochs) = train_epoch(
-            train_model, data_gen, optimizer, loss_fn)
+        (step, ave_loss, curr_loss, num_so_far,
+         effective_epochs) = train_epoch(train_model, data_gen, optimizer,
+                                         loss_fn)
         e = effective_epochs
         loader.verbose = False  # True during the first iteration
         # if task_index == 0:
@@ -570,13 +521,14 @@ def train(conf, shot_list_train, shot_list_validate, loader):
 
         best_so_far = cmp_fn(roc_area, best_so_far)
 
-        stop_training = False
+        # stop_training = False
         print('=========Summary======== for epoch{}'.format(step))
         print('Training Loss numpy: {:.3e}'.format(ave_loss))
         print('Validation Loss: {:.3e}'.format(loss))
         print('Validation ROC: {:.4f}'.format(roc_area))
 
-        if best_so_far != roc_area:  # only save model weights if quantity we are tracking is improving
+        # only save model weights if the quantity we are tracking is improving
+        if best_so_far != roc_area:
             print("No improvement, still saving model")
             not_updated += 1
         else:
