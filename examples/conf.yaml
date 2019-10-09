@@ -3,7 +3,7 @@
 #will do stuff in fs_path / [username] / signal_data | shot_lists | processed shots, etc.
 
 fs_path: '/tigress'
-target: 'hinge' #'maxhinge' #'maxhinge' #'binary' #'hinge' 
+target: 'hinge' #'maxhinge' #'maxhinge' #'binary' #'hinge'
 num_gpus: 4
 
 paths:
@@ -54,10 +54,12 @@ data:
     floatx: 'float32'
 
 model:
+    loss_scale_factor: 1.0
+    use_bidirectional: false
     use_batch_norm: false
     torch: False
     shallow: True
-    shallow_model: 
+    shallow_model:
         num_samples: 1000000 #1000000 #the number of samples to use for training
         type: "xgboost" #"xgboost" #"xgboost" #"random_forest" "xgboost"
         n_estimators: 100 #for random forest
@@ -67,7 +69,7 @@ model:
         learning_rate: 0.1 #xgboost
         scale_pos_weight: 10.0 #xgboost
         final_hidden_layer_size: 10 #final layers has this many neurons, every layer before twice as many
-        num_hidden_layers: 3 
+        num_hidden_layers: 3
         learning_rate_mlp: 0.0001
         mlp_regularization: 0.0001
         skip_train: False #should a finished model be loaded if available
@@ -78,7 +80,7 @@ model:
     length: 128
     skip: 1
     #hidden layer size
-    #TODO optimize  
+    #TODO optimize
     rnn_size: 200
     #size 100 slight overfitting, size 20 no overfitting. 200 is not better than 100. Prediction much better with size 100, size 20 cannot capture the data.
     rnn_type: 'LSTM'
@@ -132,6 +134,6 @@ callbacks:
     write_grads: False
     monitor_test: True
     monitor_times: [30,70,200,500,1000]
-env: 
+env:
     name: 'frnn'
     type: 'anaconda'

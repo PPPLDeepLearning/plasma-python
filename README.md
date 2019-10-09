@@ -1,4 +1,7 @@
-# FRNN [![Build Status](https://travis-ci.org/PPPLDeepLearning/plasma-python.svg?branch=master)](https://travis-ci.org/PPPLDeepLearning/plasma-python.svg?branch=master) [![Build Status](https://jenkins.princeton.edu/buildStatus/icon?job=FRNM/PPPL)](https://jenkins.princeton.edu/job/FRNM/job/PPPL/)
+# FRNN 
+
+[![Build Status](https://travis-ci.com/PPPLDeepLearning/plasma-python.svg?branch=master)](https://travis-ci.com/PPPLDeepLearning/plasma-python)
+[![Build Status](https://jenkins.princeton.edu/buildStatus/icon?job=FRNM/PPPL)](https://jenkins.princeton.edu/job/FRNM/job/PPPL/)
 
 ## Package description
 
@@ -12,7 +15,7 @@ It consists of 4 core modules:
 
 - `primitives`: contains abstractions specific to the domain, implemented as Python classes. For instance: Shot - a measurement of plasma current as a function of time. The Shot object contains attributes corresponding to unique identifier of a shot, disruption time in milliseconds, time profile of the shot converted to time-to- disruption values, validity of a shot (whether plasma current reaches a certain value during the shot), etc. Other primitives include `Machines` and `Signals` which carry the relevant information necessary for incorporating physics data into the overall pipeline. Signals know the Machine they live on, their mds+ paths, code for being downloaded, preprocessing approaches, their dimensionality, etc. Machines know which Signals are defined on them, which mds+ server houses the data, etc.
 
-- `utilities`: a set of auxiliary functions for preprocessing, performance evaluation and learning curves analysis. 
+- `utilities`: a set of auxiliary functions for preprocessing, performance evaluation and learning curves analysis.
 
 In addition to the `utilities` FRNN supports TensorBoard scaler variable summaries, histogramms of layers, activations and gradients and graph visualizations.
 
@@ -47,5 +50,4 @@ The Sphinx pages for FRNN are building up here: http://tigress-web.princeton.edu
 
 ## Tutorials
 
-For tutorial check:
-https://github.com/PPPLDeepLearning/plasma-python/blob/mpicc-travis/docs/PrincetonUTutorial.md
+For a tutorial, check out: [PrincetonUTutorial.md](docs/PrincetonUTutorial.md)

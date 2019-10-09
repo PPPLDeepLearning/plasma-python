@@ -1,13 +1,13 @@
 ## Tutorials
 
-### Login to Tigergpu
+### Login to TigerGPU
 
 First, login to TigerGPU cluster headnode via ssh:
 ```
 ssh -XC <yourusername>@tigergpu.princeton.edu
 ```
 
-### Sample usage on Tigergpu
+### Sample usage on TigerGPU
 
 Next, check out the source code from github:
 ```
@@ -26,7 +26,7 @@ export OMPI_MCA_btl="tcp,self,sm"
 module load cudatoolkit/8.0
 module load cudnn/cuda-8.0/6.0
 module load openmpi/cuda-8.0/intel-17.0/2.1.0/64
-module load intel/17.0/64/17.0.4.196
+module load intel/17.0/64/17.0.5.239
 ```
 
 and install the `plasma-python` package:
