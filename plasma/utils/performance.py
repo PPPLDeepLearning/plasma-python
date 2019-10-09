@@ -14,16 +14,8 @@ rc('text', usetex=True)
 
 
 class PerformanceAnalyzer():
-    def __init__(
-            self,
-            results_dir=None,
-            shots_dir=None,
-            i=0,
-            T_min_warn=None,
-            T_max_warn=None,
-            verbose=False,
-            pred_ttd=False,
-            conf=None):
+    def __init__(self, results_dir=None, shots_dir=None, i=0, T_min_warn=None,
+                 T_max_warn=None, verbose=False, pred_ttd=False, conf=None):
         self.T_min_warn = T_min_warn
         self.T_max_warn = T_max_warn
         dt = conf['data']['dt']
@@ -35,7 +27,9 @@ class PerformanceAnalyzer():
         if T_max_warn is None:
             self.T_max_warn = T_max_warn_def
         if self.T_max_warn < self.T_min_warn:
-            print("T max warn is too small: need to increase artificially.") #computation of statistics is only correct if T_max_warn is larger than T_min_warn
+            # computation of statistics is only correct if T_max_warn is larger
+            # than T_min_warn
+            print("T max warn is too small: need to increase artificially.")
             self.T_max_warn = self.T_min_warn + 1
         self.verbose = verbose
         self.results_dir = results_dir

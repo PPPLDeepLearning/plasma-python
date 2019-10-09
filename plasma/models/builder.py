@@ -82,6 +82,7 @@ class ModelBuilder(object):
         conf = self.conf
         model_conf = conf['model']
         rnn_size = model_conf['rnn_size']
+        use_bidirectional = model_conf['use_bidirectional']
         rnn_type = model_conf['rnn_type']
         regularization = model_conf['regularization']
         dense_regularization = model_conf['dense_regularization']
@@ -353,7 +354,8 @@ class ModelBuilder(object):
         self.ensure_save_directory()
         unique_id = self.get_unique_id()
         path = self.conf['paths']['model_save_path']
-        filenames = [name for name in os.listdir(path) if os.path.isfile(os.path.join(path, name))]
+        filenames = [name for name in os.listdir(path)
+                     if os.path.isfile(os.path.join(path, name))]
         epochs = []
         for file in filenames:
             curr_id, epoch = self.extract_id_and_epoch_from_filename(file)

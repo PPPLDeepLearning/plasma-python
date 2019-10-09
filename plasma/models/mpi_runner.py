@@ -786,7 +786,7 @@ def mpi_make_predictions_and_evaluate_multiple_times(conf, shot_list, loader,
 
 
 def mpi_train(conf, shot_list_train, shot_list_validate, loader,
-              callbacks_list=None shot_list_test=None):
+              callbacks_list=None, shot_list_test=None):
     loader.set_inference_mode(False)
     conf['num_workers'] = comm.Get_size()
 
@@ -949,7 +949,7 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
                         round(e)), epoch_logs)
 
         print_unique("end epoch {} 0".format(e))
-        stop_training = comm.bcast(stop_training,root=0)
+        stop_training = comm.bcast(stop_training, root=0)
         print_unique("end epoch {} 1".format(e))
         if stop_training:
             print("Stopping training due to early stopping")

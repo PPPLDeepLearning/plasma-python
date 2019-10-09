@@ -21,7 +21,6 @@ import datetime
 import time
 import numpy as np
 from copy import deepcopy
-from keras.utils.generic_utils import Progbar
 
 # import matplotlib.pyplot as plt
 import matplotlib
