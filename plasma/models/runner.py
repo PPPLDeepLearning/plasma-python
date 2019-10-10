@@ -1,5 +1,5 @@
 from plasma.utils.state_reset import reset_states
-from plasma.utils.evaluation import lr, tf, get_loss_from_list
+from plasma.utils.evaluation import get_loss_from_list
 from plasma.utils.performance import PerformanceAnalyzer
 from plasma.models.loader import Loader, ProcessGenerator
 from plasma.conf import conf
@@ -29,14 +29,10 @@ def train(conf, shot_list_train, shot_list_validate, loader,
     validation_losses = []
     validation_roc = []
     training_losses = []
-    print(
-        'validate: {} shots, {} disruptive'.format(
-            len(shot_list_validate),
-            shot_list_validate.num_disruptive()))
-    print(
-        'training: {} shots, {} disruptive'.format(
-            len(shot_list_train),
-            shot_list_train.num_disruptive()))
+    print('validate: {} shots, {} disruptive'.format(
+        len(shot_list_validate), shot_list_validate.num_disruptive()))
+    print('training: {} shots, {} disruptive'.format(
+        len(shot_list_train), shot_list_train.num_disruptive()))
 
     if backend == 'tf' or backend == 'tensorflow':
         first_time = "tensorflow" not in sys.modules
@@ -59,9 +55,8 @@ def train(conf, shot_list_train, shot_list_validate, loader,
     specific_builder = builder.ModelBuilder(conf)
     train_model = specific_builder.build_model(False)
     print('Compile model', end='')
-    train_model.compile(
-        optimizer=optimizer_class(),
-        loss=conf['data']['target'].loss)
+    train_model.compile(optimizer=optimizer_class(),
+                        loss=conf['data']['target'].loss)
     print('...done')
 
     # load the latest epoch we did. Returns -1 if none exist yet
@@ -87,7 +82,7 @@ def train(conf, shot_list_train, shot_list_validate, loader,
         best_so_far = np.inf
         cmp_fn = min
 
-    while e < num_epochs-1:
+    while e < (num_epochs - 1):
         e += 1
         print('\nEpoch {}/{}'.format(e+1, num_epochs))
         pbar = Progbar(len(shot_list_train))
@@ -114,10 +109,8 @@ def train(conf, shot_list_train, shot_list_validate, loader,
             if np.any(batches_to_reset):
                 reset_states(train_model, batches_to_reset)
             if not is_warmup_period:
-                num_so_far = num_so_far_accum+num_so_far_curr
-
+                num_so_far = num_so_far_accum + num_so_far_curr
                 num_batches_current += 1
-
                 loss = train_model.train_on_batch(batch_xs, batch_ys)
                 training_losses_tmp.append(loss)
                 pbar.add(num_so_far - num_so_far_old,
@@ -127,7 +120,7 @@ def train(conf, shot_list_train, shot_list_validate, loader,
                 _ = train_model.predict(
                     batch_xs, batch_size=conf['training']['batch_size'])
 
-        e = e_start+1.0*num_so_far/num_total
+        e = e_start + 1.0*num_so_far/num_total
         sys.stdout.flush()
         ave_loss = np.mean(training_losses_tmp)
         training_losses.append(ave_loss)
@@ -144,13 +137,13 @@ def train(conf, shot_list_train, shot_list_validate, loader,
             epoch_logs['val_roc'] = roc_area
             epoch_logs['val_loss'] = loss
             epoch_logs['train_loss'] = ave_loss
-            best_so_far = cmp_fn(
-                epoch_logs[conf['callbacks']['monitor']], best_so_far)
+            best_so_far = cmp_fn(epoch_logs[conf['callbacks']['monitor']],
+                                 best_so_far)
             # only save model weights if quantity we are tracking is improving
             if best_so_far != epoch_logs[conf['callbacks']['monitor']]:
                 print("Not saving model weights")
-                specific_builder.delete_model_weights(
-                    train_model, int(round(e)))
+                specific_builder.delete_model_weights(train_model,
+                                                      int(round(e)))
 
             if conf['training']['ranking_difficulty_fac'] != 1.0:
                 (_, _, _, roc_area_train,
@@ -174,12 +167,8 @@ def train(conf, shot_list_train, shot_list_validate, loader,
 
     # plot_losses(conf,[training_losses],specific_builder,name='training')
     if conf['training']['validation_frac'] > 0.0:
-        plot_losses(conf,
-                    [training_losses,
-                     validation_losses,
-                     validation_roc],
-                    specific_builder,
-                    name='training_validation_roc')
+        plot_losses(conf, [training_losses, validation_losses, validation_roc],
+                    specific_builder, name='training_validation_roc')
     batch_iterator.__exit__()
     print('...done')
 
@@ -190,30 +179,22 @@ def optimizer_class():
     if conf['model']['optimizer'] == 'sgd':
         return SGD(lr=conf['model']['lr'], clipnorm=conf['model']['clipnorm'])
     elif conf['model']['optimizer'] == 'momentum_sgd':
-        return SGD(
-            lr=conf['model']['lr'],
-            clipnorm=conf['model']['clipnorm'],
-            decay=1e-6,
-            momentum=0.9)
+        return SGD(lr=conf['model']['lr'], clipnorm=conf['model']['clipnorm'],
+                   decay=1e-6, momentum=0.9)
     elif conf['model']['optimizer'] == 'tf_momentum_sgd':
-        return TFOptimizer(
-            tf.train.MomentumOptimizer(
-                learning_rate=conf['model']['lr'],
-                momentum=0.9))
+        return TFOptimizer(tf.train.MomentumOptimizer(
+            learning_rate=conf['model']['lr'], momentum=0.9))
     elif conf['model']['optimizer'] == 'adam':
         return Adam(lr=conf['model']['lr'], clipnorm=conf['model']['clipnorm'])
     elif conf['model']['optimizer'] == 'tf_adam':
-        return TFOptimizer(
-            tf.train.AdamOptimizer(
-                learning_rate=conf['model']['lr']))
+        return TFOptimizer(tf.train.AdamOptimizer(
+            learning_rate=conf['model']['lr']))
     elif conf['model']['optimizer'] == 'rmsprop':
-        return RMSprop(
-            lr=conf['model']['lr'],
-            clipnorm=conf['model']['clipnorm'])
+        return RMSprop(lr=conf['model']['lr'],
+                       clipnorm=conf['model']['clipnorm'])
     elif conf['model']['optimizer'] == 'nadam':
-        return Nadam(
-            lr=conf['model']['lr'],
-            clipnorm=conf['model']['clipnorm'])
+        return Nadam(lr=conf['model']['lr'],
+                     clipnorm=conf['model']['clipnorm'])
     else:
         print("Optimizer not implemented yet")
         exit(1)
@@ -232,9 +213,8 @@ class HyperRunner(object):
         specific_builder = builder.ModelBuilder(self.conf)
 
         train_model = specific_builder.hyper_build_model(space, False)
-        train_model.compile(
-            optimizer=optimizer_class(),
-            loss=conf['data']['target'].loss)
+        train_model.compile(optimizer=optimizer_class(),
+                            loss=conf['data']['target'].loss)
 
         np.random.seed(1)
         validation_losses = []
@@ -267,17 +247,10 @@ class HyperRunner(object):
                 X_list, y_list = self.loader.load_as_X_y_list(shot_sublist)
                 for j, (X, y) in enumerate(zip(X_list, y_list)):
                     history = builder.LossHistory()
-                    train_model.fit(
-                        X,
-                        y,
-                        batch_size=Loader.get_batch_size(
-                            self.conf['training']['batch_size'],
-                            prediction_mode=False),
-                        epochs=1,
-                        shuffle=False,
-                        verbose=0,
-                        validation_split=0.0,
-                        callbacks=[history])
+                    train_model.fit(X, y,
+                                    batch_size=Loader.get_batch_size(self.conf['training']['batch_size'],  prediction_mode=False),  # noqa
+                                    epochs=1, shuffle=False, verbose=0,
+                                    validation_split=0.0, callbacks=[history])
                     train_model.reset_states()
                     train_loss = np.mean(history.losses)
                     training_losses_tmp.append(train_loss)
@@ -288,12 +261,10 @@ class HyperRunner(object):
             sys.stdout.flush()
             training_losses.append(np.mean(training_losses_tmp))
             specific_builder.save_model_weights(train_model, e)
-
             _, _, _, roc_area, loss = make_predictions_and_evaluate_gpu(
                 self.conf, shot_list_validate, self.loader)
-            print(
-                "Epoch: {}, loss: {}, validation_losses_size: {}".format(
-                    e, loss, len(validation_losses)))
+            print("Epoch: {}, loss: {}, validation_losses_size: {}".format(
+                e, loss, len(validation_losses)))
             validation_losses.append(loss)
             validation_roc.append(roc_area)
             resulting_dict['loss'] = loss
@@ -306,20 +277,13 @@ class HyperRunner(object):
         return resulting_dict
 
     def get_space(self):
-        return {
-            'Dropout': hp.uniform('Dropout', 0, 1),
-        }
+        return {'Dropout': hp.uniform('Dropout', 0, 1), }
 
     def frnn_minimize(self, algo, max_evals, trials, rseed=1337):
         from hyperopt import fmin
-
-        best_run = fmin(self.keras_fmin_fnct,
-                        space=self.get_space(),
-                        algo=algo,
-                        max_evals=max_evals,
-                        trials=trials,
+        best_run = fmin(self.keras_fmin_fnct, space=self.get_space(),
+                        algo=algo, max_evals=max_evals, trials=trials,
                         rstate=np.random.RandomState(rseed))
-
         best_model = None
         for trial in trials:
             vals = trial.get('misc').get('vals')
@@ -373,20 +337,16 @@ def make_predictions(conf, shot_list, loader):
     disruptive = []
 
     model = specific_builder.build_model(True)
-    model.compile(
-        optimizer=optimizer_class(),
-        loss=conf['data']['target'].loss)
+    model.compile(optimizer=optimizer_class(),
+                  loss=conf['data']['target'].loss)
 
     specific_builder.load_model_weights(model)
     model_save_path = specific_builder.get_latest_save_path()
 
     start_time = time.time()
     pool = mp.Pool(use_cores)
-    fn = partial(
-        make_single_prediction,
-        builder=specific_builder,
-        loader=loader,
-        model_save_path=model_save_path)
+    fn = partial(make_single_prediction, builder=specific_builder,
+                 loader=loader, model_save_path=model_save_path)
 
     print('running in parallel on {} processes'.format(pool._processes))
     for (i, (y_p, y, is_disruptive)) in enumerate(pool.imap(fn, shot_list)):
@@ -405,19 +365,16 @@ def make_predictions(conf, shot_list, loader):
 def make_single_prediction(shot, specific_builder, loader, model_save_path):
     loader.set_inference_mode(True)
     model = specific_builder.build_model(True)
-    model.compile(
-        optimizer=optimizer_class(),
-        loss=conf['data']['target'].loss)
+    model.compile(optimizer=optimizer_class(),
+                  loss=conf['data']['target'].loss)
 
     model.load_weights(model_save_path)
     model.reset_states()
     X, y = loader.load_as_X_y(shot, prediction_mode=True)
     assert(X.shape[0] == y.shape[0])
     y_p = model.predict(
-        X,
-        batch_size=Loader.get_batch_size(conf['training']['batch_size'],
-                                         prediction_mode=True),
-        verbose=0)
+        X, batch_size=Loader.get_batch_size(conf['training']['batch_size'],
+                                            prediction_mode=True), verbose=0)
     answer_dims = y_p.shape[-1]
     if conf['model']['return_sequences']:
         shot_length = y_p.shape[0]*y_p.shape[1]
@@ -433,7 +390,6 @@ def make_single_prediction(shot, specific_builder, loader, model_save_path):
 
 def make_predictions_gpu(conf, shot_list, loader, custom_path=None):
     loader.set_inference_mode(True)
-
     if backend == 'tf' or backend == 'tensorflow':
         first_time = "tensorflow" not in sys.modules
         if first_time:
@@ -462,10 +418,8 @@ def make_predictions_gpu(conf, shot_list, loader, custom_path=None):
     model.reset_states()
 
     pbar = Progbar(len(shot_list))
-    shot_sublists = shot_list.sublists(
-        conf['model']['pred_batch_size'],
-        do_shuffle=False,
-        equal_size=True)
+    shot_sublists = shot_list.sublists(conf['model']['pred_batch_size'],
+                                       do_shuffle=False, equal_size=True)
     for (i, shot_sublist) in enumerate(shot_sublists):
         X, y, shot_lengths, disr = loader.load_as_X_y_pred(shot_sublist)
         # load data and fit on data
@@ -496,9 +450,8 @@ def make_predictions_and_evaluate_gpu(
         conf, shot_list, loader, custom_path)
     analyzer = PerformanceAnalyzer(conf=conf)
     roc_area = analyzer.get_roc_area(y_prime, y_gold, disruptive)
-    shot_list.set_weights(
-        analyzer.get_shot_difficulty(
-            y_prime, y_gold, disruptive))
+    shot_list.set_weights(analyzer.get_shot_difficulty(
+        y_prime, y_gold, disruptive))
     loss = get_loss_from_list(y_prime, y_gold, conf['data']['target'])
     return y_prime, y_gold, disruptive, roc_area, loss
 
@@ -528,10 +481,8 @@ def make_evaluations_gpu(conf, shot_list, loader):
     batch_size = min(len(shot_list), conf['model']['pred_batch_size'])
 
     pbar = Progbar(len(shot_list))
-    print(
-        'evaluating {} shots using batchsize {}'.format(
-            len(shot_list),
-            batch_size))
+    print('evaluating {} shots using batchsize {}'.format(
+        len(shot_list), batch_size))
 
     shot_sublists = shot_list.sublists(batch_size, equal_size=False)
     all_metrics = []
@@ -540,21 +491,16 @@ def make_evaluations_gpu(conf, shot_list, loader):
         batch_size = len(shot_sublist)
         model = specific_builder.build_model(
             True, custom_batch_size=batch_size)
-        model.compile(
-            optimizer=optimizer_class(),
-            loss=conf['data']['target'].loss)
+        model.compile(optimizer=optimizer_class(),
+                      loss=conf['data']['target'].loss)
 
         specific_builder.load_model_weights(model)
         model.reset_states()
         X, y, shot_lengths, disr = loader.load_as_X_y_pred(
             shot_sublist, custom_batch_size=batch_size)
         # load data and fit on data
-        all_metrics.append(
-            model.evaluate(
-                X,
-                y,
-                batch_size=batch_size,
-                verbose=False))
+        all_metrics.append(model.evaluate(X, y, batch_size=batch_size,
+                                          verbose=False))
         all_weights.append(batch_size)
         model.reset_states()
 
