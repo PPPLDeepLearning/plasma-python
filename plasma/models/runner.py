@@ -87,6 +87,9 @@ def train(conf, shot_list_train, shot_list_validate, loader,
         print('\nEpoch {}/{}'.format(e+1, num_epochs))
         pbar = Progbar(len(shot_list_train))
 
+        # TODO(KGF): check this fix; lr, tf were undefined in neglected
+        # serial runner.py, since mpi_runner.py has been the main tool
+        lr = conf['model']['lr']
         # decay learning rate each epoch:
         K.set_value(train_model.optimizer.lr, lr*lr_decay**(e))
 
@@ -175,6 +178,9 @@ def train(conf, shot_list_train, shot_list_validate, loader,
 
 def optimizer_class():
     from keras.optimizers import SGD, Adam, RMSprop, Nadam, TFOptimizer
+    # TODO(KGF): check this fix; lr, tf were undefined in neglected
+    # serial runner.py, since mpi_runner.py has been the main tool
+    import tensorflow as tf
 
     if conf['model']['optimizer'] == 'sgd':
         return SGD(lr=conf['model']['lr'], clipnorm=conf['model']['clipnorm'])
@@ -241,7 +247,9 @@ class HyperRunner(object):
             shot_list_train.shuffle()
             shot_sublists = shot_list_train.sublists(num_at_once)[:1]
             training_losses_tmp = []
-
+            # TODO(KGF): check this fix; lr, tf were undefined in neglected
+            # serial runner.py, since mpi_runner.py has been the main tool
+            lr = conf['model']['lr']
             K.set_value(train_model.optimizer.lr, lr*lr_decay**(e))
             for (i, shot_sublist) in enumerate(shot_sublists):
                 X_list, y_list = self.loader.load_as_X_y_list(shot_sublist)

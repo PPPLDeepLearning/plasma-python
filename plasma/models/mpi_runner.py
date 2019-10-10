@@ -59,9 +59,8 @@ if backend == 'tf' or backend == 'tensorflow':
     os.environ['KERAS_BACKEND'] = 'tensorflow'
     import tensorflow as tf
     from keras.backend.tensorflow_backend import set_session
-    gpu_options = tf.GPUOptions(
-        per_process_gpu_memory_fraction=0.95,
-        allow_growth=True)
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.95,
+                                allow_growth=True)
     config = tf.ConfigProto(gpu_options=gpu_options)
     set_session(tf.Session(config=config))
 else:
@@ -206,10 +205,8 @@ class MPIModel():
             self.num_replicas = self.num_workers
         else:
             self.num_replicas = num_replicas
-        self.lr = (
-            lr/(1.0 + self.num_replicas/100.0) if (lr < self.max_lr)
-            else self.max_lr/(1.0+self.num_replicas/100.0)
-            )
+        self.lr = (lr/(1.0 + self.num_replicas/100.0) if (lr < self.max_lr)
+                   else self.max_lr/(1.0 + self.num_replicas/100.0))
 
     def set_batch_iterator_func(self):
         if (self.conf is not None
@@ -238,22 +235,16 @@ class MPIModel():
         if optimizer == 'sgd':
             optimizer_class = SGD(lr=self.DUMMY_LR, clipnorm=clipnorm)
         elif optimizer == 'momentum_sgd':
-            optimizer_class = SGD(
-                lr=self.DUMMY_LR,
-                clipnorm=clipnorm,
-                decay=1e-6,
-                momentum=0.9)
+            optimizer_class = SGD(lr=self.DUMMY_LR, clipnorm=clipnorm,
+                                  decay=1e-6, momentum=0.9)
         elif optimizer == 'tf_momentum_sgd':
-            optimizer_class = TFOptimizer(
-                tf.train.MomentumOptimizer(
-                    learning_rate=self.DUMMY_LR,
-                    momentum=0.9))
+            optimizer_class = TFOptimizer(tf.train.MomentumOptimizer(
+                learning_rate=self.DUMMY_LR, momentum=0.9))
         elif optimizer == 'adam':
             optimizer_class = Adam(lr=self.DUMMY_LR, clipnorm=clipnorm)
         elif optimizer == 'tf_adam':
-            optimizer_class = TFOptimizer(
-                tf.train.AdamOptimizer(
-                    learning_rate=self.DUMMY_LR))
+            optimizer_class = TFOptimizer(tf.train.AdamOptimizer(
+                learning_rate=self.DUMMY_LR))
         elif optimizer == 'rmsprop':
             optimizer_class = RMSprop(lr=self.DUMMY_LR, clipnorm=clipnorm)
         elif optimizer == 'nadam':
@@ -372,9 +363,8 @@ class MPIModel():
         global_deltas = []
         # default is to reduce the deltas from all workers
         for delta in deltas:
-            global_deltas.append(
-                self.mpi_average_gradients(
-                    delta, num_replicas))
+            global_deltas.append(self.mpi_average_gradients(
+                delta, num_replicas))
         return global_deltas
 
     def set_new_weights(self, deltas, num_replicas=None):
@@ -442,11 +432,8 @@ class MPIModel():
             datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")))]
 
         if "earlystop" in callbacks_list:
-            callbacks += [
-                cbks.EarlyStopping(
-                    patience=patience,
-                    monitor=monitor,
-                    mode=mode)]
+            callbacks += [cbks.EarlyStopping(
+                patience=patience, monitor=monitor, mode=mode)]
         if "lr_scheduler" in callbacks_list:
             pass
 
@@ -496,11 +483,8 @@ class MPIModel():
         t1 = 0
         t2 = 0
 
-        while (
-            self.num_so_far
-            - self.epoch
-                * num_total) < num_total or step < self.num_batches_minimum:
-
+        while ((self.num_so_far - self.epoch * num_total) < num_total
+               or step < self.num_batches_minimum):
             try:
                 (batch_xs, batch_ys, batches_to_reset, num_so_far_curr,
                  num_total, is_warmup_period) = next(batch_iterator_func)
@@ -531,9 +515,8 @@ class MPIModel():
                     batch_xs, batch_ys, verbose)
                 self.comm.Barrier()
                 sys.stdout.flush()
-                print_unique(
-                    'Compilation finished in {:.2f}s'.format(
-                        time.time()-t0_comp))
+                print_unique('Compilation finished in {:.2f}s'.format(
+                    time.time()-t0_comp))
                 t_start = time.time()
                 sys.stdout.flush()
 
@@ -548,7 +531,6 @@ class MPIModel():
                 self.set_new_weights(deltas, num_replicas)
                 t2 = time.time()
                 write_str_0 = self.calculate_speed(t0, t1, t2, num_replicas)
-
                 curr_loss = self.mpi_average_scalars(1.0*loss, num_replicas)
                 # if self.task_index == 0:
                 # print(self.model.get_weights()[0][0][:4])
@@ -606,18 +588,13 @@ class MPIModel():
         frac_calculate = t_calculate/t_tot
         frac_sync = t_sync/t_tot
 
-        print_str = (
-            '{:.2E} Examples/sec | {:.2E} sec/batch '.format(examples_per_sec,
-                                                             t_tot)
-            + '[{:.1%} calc., {:.1%} synch.]'.format(frac_calculate,
-                                                     frac_sync))
+        print_str = ('{:.2E} Examples/sec | {:.2E} sec/batch '.format(
+            examples_per_sec, t_tot)
+                     + '[{:.1%} calc., {:.1%} synch.]'.format(
+                         frac_calculate, frac_sync))
         print_str += '[batch = {} = {}*{}] [lr = {:.2E} = {:.2E}*{}]'.format(
-            effective_batch_size,
-            self.batch_size,
-            num_replicas,
-            self.get_effective_lr(num_replicas),
-            self.lr,
-            num_replicas)
+            effective_batch_size, self.batch_size, num_replicas,
+            self.get_effective_lr(num_replicas), self.lr, num_replicas)
         if verbose:
             print_unique(print_str)
         return print_str
@@ -653,11 +630,9 @@ def get_shot_list_path(conf):
 
 def save_shotlists(conf, shot_list_train, shot_list_validate, shot_list_test):
     path = get_shot_list_path(conf)
-    np.savez(
-        path,
-        shot_list_train=shot_list_train,
-        shot_list_validate=shot_list_validate,
-        shot_list_test=shot_list_test)
+    np.savez(path, shot_list_train=shot_list_train,
+             shot_list_validate=shot_list_validate,
+             shot_list_test=shot_list_test)
 
 
 def load_shotlists(conf):
@@ -696,11 +671,8 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
     model.reset_states()
     if task_index == 0:
         pbar = Progbar(len(shot_list))
-    shot_sublists = shot_list.sublists(
-        conf['model']['pred_batch_size'],
-        do_shuffle=False,
-        equal_size=True)
-
+    shot_sublists = shot_list.sublists(conf['model']['pred_batch_size'],
+                                       do_shuffle=False, equal_size=True)
     y_prime_global = []
     y_gold_global = []
     disruptive_global = []
@@ -708,7 +680,6 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
         loader.verbose = False
 
     for (i, shot_sublist) in enumerate(shot_sublists):
-
         if i % num_workers == task_index:
             X, y, shot_lengths, disr = loader.load_as_X_y_pred(shot_sublist)
 
@@ -756,8 +727,7 @@ def mpi_make_predictions_and_evaluate(conf, shot_list, loader,
     analyzer = PerformanceAnalyzer(conf=conf)
     roc_area = analyzer.get_roc_area(y_prime, y_gold, disruptive)
     shot_list.set_weights(
-        analyzer.get_shot_difficulty(
-            y_prime, y_gold, disruptive))
+        analyzer.get_shot_difficulty(y_prime, y_gold, disruptive))
     loss = get_loss_from_list(y_prime, y_gold, conf['data']['target'])
     return y_prime, y_gold, disruptive, roc_area, loss
 
@@ -826,20 +796,15 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
     mpi_model = MPIModel(train_model, optimizer, comm, batch_generator,
                          batch_size, lr=lr, warmup_steps=warmup_steps,
                          num_batches_minimum=num_batches_minimum, conf=conf)
-    mpi_model.compile(
-        conf['model']['optimizer'],
-        clipnorm,
-        conf['data']['target'].loss)
-
+    mpi_model.compile(conf['model']['optimizer'], clipnorm,
+                      conf['data']['target'].loss)
     tensorboard = None
     if backend != "theano" and task_index == 0:
         tensorboard_save_path = conf['paths']['tensorboard_save_path']
         write_grads = conf['callbacks']['write_grads']
-        tensorboard = TensorBoard(
-            log_dir=tensorboard_save_path,
-            histogram_freq=1,
-            write_graph=True,
-            write_grads=write_grads)
+        tensorboard = TensorBoard(log_dir=tensorboard_save_path,
+                                  histogram_freq=1, write_graph=True,
+                                  write_grads=write_grads)
         tensorboard.set_model(mpi_model.model)
         mpi_model.model.summary()
 
@@ -905,8 +870,8 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         epoch_logs['val_roc'] = roc_area
         epoch_logs['val_loss'] = loss
         epoch_logs['train_loss'] = ave_loss
-        best_so_far = cmp_fn(
-            epoch_logs[conf['callbacks']['monitor']], best_so_far)
+        best_so_far = cmp_fn(epoch_logs[conf['callbacks']['monitor']],
+                             best_so_far)
 
         if task_index == 0:
             print('=========Summary======== for epoch{}'.format(step))
@@ -992,9 +957,8 @@ class TensorBoard(object):
 
                         def is_indexed_slices(grad):
                             return type(grad).__name__ == 'IndexedSlices'
-                        grads = [
-                            grad.values if is_indexed_slices(grad) else grad
-                            for grad in grads]
+                        grads = [grad.values if is_indexed_slices(grad) else
+                                 grad for grad in grads]
                         for grad in grads:
                             tf.summary.histogram(
                                 '{}_grad'.format(mapped_weight_name), grad)
@@ -1023,8 +987,7 @@ class TensorBoard(object):
             self.writer.add_summary(summary, epoch)
             self.writer.flush()
 
-        tensors = (self.model.inputs
-                   + self.model.targets
+        tensors = (self.model.inputs + self.model.targets
                    + self.model.sample_weights)
 
         if self.model.uses_learning_phase:
