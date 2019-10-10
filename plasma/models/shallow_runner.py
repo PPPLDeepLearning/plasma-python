@@ -71,12 +71,8 @@ class FeatureExtractor(object):
             return val, val
         return sample_prob_d, sample_prob_nd
 
-    def load_shots(
-            self,
-            shot_list,
-            is_inference=False,
-            as_list=False,
-            num_samples=np.Inf):
+    def load_shots(self, shot_list, is_inference=False, as_list=False,
+                   num_samples=np.Inf):
         X = []
         Y = []
         Disr = []
@@ -153,7 +149,6 @@ class FeatureExtractor(object):
         return X, Y, disr
 
     def get_X(self, shot):
-
         use_signals = self.loader.conf['paths']['use_signals']
         sig_sample = shot.signals_dict[use_signals[0]]
         if len(shot.ttd.shape) == 1:
@@ -181,13 +176,8 @@ class FeatureExtractor(object):
         offset = self.timesteps - 1
         return np.round(shot.ttd[offset:, 0]).astype(np.int)
 
-    def load_shot(
-            self,
-            shot,
-            is_inference=False,
-            sample_prob_d=1.0,
-            sample_prob_nd=1.0):
-
+    def load_shot(self, shot, is_inference=False, sample_prob_d=1.0,
+                  sample_prob_nd=1.0):
         X, Y, disr = self.process(shot)
 
         # cut shot ends if we are supposed to
@@ -200,10 +190,9 @@ class FeatureExtractor(object):
         if disr:
             sample_prob = sample_prob_d
         if sample_prob < 1.0:
-            indices = np.sort(
-                np.random.choice(np.array(range(len(Y))),
-                                 int(round(sample_prob*len(Y))),
-                                 replace=False))
+            indices = np.sort(np.random.choice(np.array(range(len(Y))),
+                                               int(round(sample_prob*len(Y))),
+                                               replace=False))
             X = X[indices]
             Y = Y[indices]
         return X, Y, disr

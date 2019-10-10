@@ -222,30 +222,13 @@ class Signal(object):
 
 
 class ProfileSignal(Signal):
-    def __init__(
-            self,
-            description,
-            paths,
-            machines,
-            tex_label=None,
-            causal_shifts=None,
-            mapping_range=(
-                0,
-                1),
-            num_channels=32,
-            data_avail_tolerances=None,
-            is_strictly_positive=False,
-            mapping_paths=None):
-        super(
-            ProfileSignal,
-            self).__init__(
-            description,
-            paths,
-            machines,
-            tex_label,
-            causal_shifts,
-            is_ip=False,
-            data_avail_tolerances=data_avail_tolerances,
+    def __init__(self, description, paths, machines, tex_label=None,
+                 causal_shifts=None, mapping_range=(0, 1), num_channels=32,
+                 data_avail_tolerances=None, is_strictly_positive=False,
+                 mapping_paths=None):
+        super(ProfileSignal, self).__init__(
+            description, paths, machines, tex_label, causal_shifts,
+            is_ip=False, data_avail_tolerances=data_avail_tolerances,
             is_strictly_positive=is_strictly_positive,
             mapping_paths=mapping_paths)
         self.mapping_range = mapping_range
@@ -261,10 +244,8 @@ class ProfileSignal(Signal):
         # time is stored twice, once for mapping and once for signal
         T = data.shape[0]//2
         mapping = data[:T, 1:]
-        remapping = np.linspace(
-            self.mapping_range[0],
-            self.mapping_range[1],
-            self.num_channels)
+        remapping = np.linspace(self.mapping_range[0], self.mapping_range[1],
+                                self.num_channels)
         t = data[:T, 0]
         sig = data[T:, 1:]
         if sig.shape[1] < 2:
@@ -289,8 +270,8 @@ class ProfileSignal(Signal):
             _, order = np.unique(mapping[i, :], return_index=True)
             if sig[i, order].shape[0] > 2:
                 # ext = 0 is extrapolation, ext = 3 is boundary value.
-                f = UnivariateSpline(
-                    mapping[i, order], sig[i, order], s=0, k=1, ext=3)
+                f = UnivariateSpline(mapping[i, order], sig[i, order], s=0,
+                                     k=1, ext=3)
                 sig_interp[i, :] = f(remapping)
             else:
                 print('Signal {}, shot {} '.format(self.description,
@@ -302,8 +283,8 @@ class ProfileSignal(Signal):
         return t, sig_interp, True
 
     def fetch_data(self, machine, shot_num, c):
-        time, data, mapping, success = self.fetch_data_basic(
-            machine, shot_num, c)
+        time, data, mapping, success = self.fetch_data_basic(machine, shot_num,
+                                                             c)
         path = self.get_path(machine)
         mapping_path = self.get_mapping_path(machine)
 
@@ -335,26 +316,12 @@ class ProfileSignal(Signal):
 
 
 class ChannelSignal(Signal):
-    def __init__(
-            self,
-            description,
-            paths,
-            machines,
-            tex_label=None,
-            causal_shifts=None,
-            data_avail_tolerances=None,
-            is_strictly_positive=False,
-            mapping_paths=None):
-        super(
-            ChannelSignal,
-            self).__init__(
-            description,
-            paths,
-            machines,
-            tex_label,
-            causal_shifts,
-            is_ip=False,
-            data_avail_tolerances=data_avail_tolerances,
+    def __init__(self, description, paths, machines, tex_label=None,
+                 causal_shifts=None, data_avail_tolerances=None,
+                 is_strictly_positive=False, mapping_paths=None):
+        super(ChannelSignal, self).__init__(
+            description, paths, machines, tex_label, causal_shifts,
+            is_ip=False, data_avail_tolerances=data_avail_tolerances,
             is_strictly_positive=is_strictly_positive,
             mapping_paths=mapping_paths)
         nums, new_paths = self.get_channel_nums(paths)
@@ -407,13 +374,8 @@ class ChannelSignal(Signal):
 
 
 class Machine(object):
-    def __init__(
-            self,
-            name,
-            server,
-            fetch_data_fn,
-            max_cores=8,
-            current_threshold=0):
+    def __init__(self, name, server, fetch_data_fn, max_cores=8,
+                 current_threshold=0):
         self.name = name
         self.server = server
         self.max_cores = max_cores

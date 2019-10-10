@@ -107,13 +107,8 @@ class Loader(object):
                         num_so_far, num_total
             epoch += 1
 
-    def fill_training_buffer(
-            self,
-            Xbuff,
-            Ybuff,
-            end_indices,
-            shot,
-            is_first_fill=False):
+    def fill_training_buffer(self, Xbuff, Ybuff, end_indices, shot,
+                             is_first_fill=False):
         sig, res = self.get_signal_result_from_shot(shot)
         length = self.conf['model']['length']
         if is_first_fill:  # cut signal to random position
@@ -388,20 +383,16 @@ class Loader(object):
 
     def training_batch_generator_process(self, shot_list):
         queue = mp.Queue()
-        proc = mp.Process(
-            target=self.fill_batch_queue, args=(
-                shot_list, queue))
+        proc = mp.Process(target=self.fill_batch_queue,
+                          args=(shot_list, queue))
         proc.start()
         while True:
             yield queue.get(True)
         proc.join()
         queue.close()
 
-    def load_as_X_y_list(
-            self,
-            shot_list,
-            verbose=False,
-            prediction_mode=False):
+    def load_as_X_y_list(self, shot_list, verbose=False,
+                         prediction_mode=False):
         """
         The method turns a ShotList into a set of equal-sized patches which
         contain a number of examples that is a multiple of the batch size.
@@ -696,12 +687,8 @@ class Loader(object):
             y_list.append(y)
         return X_list, y_list
 
-    def arange_patches_single(
-            self,
-            sig_patches,
-            res_patches,
-            prediction_mode=False,
-            custom_batch_size=None):
+    def arange_patches_single(self, sig_patches, res_patches,
+                              prediction_mode=False, custom_batch_size=None):
         if prediction_mode:
             num_timesteps = self.conf['model']['pred_length']
             batch_size = self.conf['model']['pred_batch_size']

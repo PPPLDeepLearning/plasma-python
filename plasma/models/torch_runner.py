@@ -66,10 +66,8 @@ class InputBlock(nn.Module):
             self.conv_output_size = self.conv_output_size*layer_sizes[-1]
         self.linear_layers = []
 
-        print(
-            "Final feature size = {}".format(
-                self.n_scalars
-                + self.conv_output_size))
+        print("Final feature size = {}".format(self.n_scalars
+                                               + self.conv_output_size))
         self.linear_layers.append(
             nn.Linear(
                 self.conv_output_size
@@ -111,8 +109,8 @@ class InputBlock(nn.Module):
 
 
 def calculate_conv_output_size(L_in, padding, dilation, stride, kernel_size):
-    return int(np.floor((L_in + 2*padding - dilation
-                         * (kernel_size-1) - 1)*1.0/stride + 1))
+    return int(np.floor(
+        (L_in + 2*padding - dilation * (kernel_size-1) - 1)*1.0/stride + 1))
 
 
 class Chomp1d(nn.Module):
@@ -125,51 +123,28 @@ class Chomp1d(nn.Module):
 
 
 class TemporalBlock(nn.Module):
-    def __init__(
-            self,
-            n_inputs,
-            n_outputs,
-            kernel_size,
-            stride,
-            dilation,
-            padding,
-            dropout=0.2):
+    def __init__(self, n_inputs, n_outputs, kernel_size, stride, dilation,
+                 padding, dropout=0.2):
         super(TemporalBlock, self).__init__()
-        self.conv1 = weight_norm(
-            nn.Conv1d(
-                n_inputs,
-                n_outputs,
-                kernel_size,
-                stride=stride,
-                padding=padding,
-                dilation=dilation))
+        self.conv1 = weight_norm(nn.Conv1d(
+            n_inputs, n_outputs, kernel_size, stride=stride, padding=padding,
+            dilation=dilation))
         self.chomp1 = Chomp1d(padding)
         self.relu1 = nn.ReLU()
         self.dropout1 = nn.Dropout2d(dropout)
 
-        self.conv2 = weight_norm(
-            nn.Conv1d(
-                n_outputs,
-                n_outputs,
-                kernel_size,
-                stride=stride,
-                padding=padding,
-                dilation=dilation))
+        self.conv2 = weight_norm(nn.Conv1d(
+            n_outputs, n_outputs, kernel_size, stride=stride, padding=padding,
+            dilation=dilation))
         self.chomp2 = Chomp1d(padding)
         self.relu2 = nn.ReLU()
         self.dropout2 = nn.Dropout2d(dropout)
 
-        self.net = nn.Sequential(
-            self.conv1,
-            self.chomp1,
-            self.relu1,
-            self.dropout1,
-            self.conv2,
-            self.chomp2,
-            self.relu2,
-            self.dropout2)
-        self.downsample = nn.Conv1d(
-            n_inputs, n_outputs, 1) if n_inputs != n_outputs else None
+        self.net = nn.Sequential(self.conv1, self.chomp1, self.relu1,
+                                 self.dropout1, self.conv2, self.chomp2,
+                                 self.relu2, self.dropout2)
+        self.downsample = (nn.Conv1d(n_inputs, n_outputs, 1)
+                           if n_inputs != n_outputs else None)
         self.relu = nn.ReLU()
         self.init_weights()
 
@@ -196,11 +171,8 @@ class TemporalConvNet(nn.Module):
             dilation_size = 2 ** i
             in_channels = num_inputs if i == 0 else num_channels[i-1]
             out_channels = num_channels[i]
-            layers += [TemporalBlock(in_channels,
-                                     out_channels,
-                                     kernel_size,
-                                     stride=1,
-                                     dilation=dilation_size,
+            layers += [TemporalBlock(in_channels, out_channels, kernel_size,
+                                     stride=1, dilation=dilation_size,
                                      padding=(kernel_size-1) * dilation_size,
                                      dropout=dropout)]
 
@@ -211,19 +183,11 @@ class TemporalConvNet(nn.Module):
 
 
 class TCN(nn.Module):
-    def __init__(
-            self,
-            input_size,
-            output_size,
-            num_channels,
-            kernel_size,
-            dropout):
+    def __init__(self, input_size, output_size, num_channels, kernel_size,
+                 dropout):
         super(TCN, self).__init__()
-        self.tcn = TemporalConvNet(
-            input_size,
-            num_channels,
-            kernel_size,
-            dropout=dropout)
+        self.tcn = TemporalConvNet(input_size, num_channels, kernel_size,
+                                   dropout=dropout)
         self.linear = nn.Linear(num_channels[-1], output_size)
 #         self.sig = nn.Sigmoid()
 
@@ -278,7 +242,6 @@ class TimeDistributed(nn.Module):
         self.batch_first = batch_first
 
     def forward(self, x):
-
         if len(x.size()) <= 2:
             return self.module(x)
 
@@ -301,8 +264,7 @@ class TimeDistributed(nn.Module):
 
 def build_torch_model(conf):
     dropout = conf['model']['dropout_prob']
-# dim = 10
-
+    # dim = 10
     # lin = nn.Linear(input_size,intermediate_dim)
     n_scalars, n_profiles, profile_size = get_signal_dimensions(conf)
     # dim = n_scalars + n_profiles*profile_size
@@ -445,9 +407,7 @@ def train_epoch(model, data_gen, optimizer, loss_fn):
 
 
 def train(conf, shot_list_train, shot_list_validate, loader):
-
     np.random.seed(1)
-
     # data_gen = ProcessGenerator(partial(
     # loader.training_batch_generator_full_shot_partial_reset,shot_list
     # = shot_list_train)())

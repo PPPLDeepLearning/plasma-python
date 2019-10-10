@@ -54,8 +54,8 @@ backend = conf['model']['backend']
 
 if backend == 'tf' or backend == 'tensorflow':
     if NUM_GPUS > 1:
-        os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(
-            MY_GPU)  # ,mode=NanGuardMode'
+        os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(MY_GPU)
+        # ,mode=NanGuardMode'
     os.environ['KERAS_BACKEND'] = 'tensorflow'
     import tensorflow as tf
     from keras.backend.tensorflow_backend import set_session
@@ -749,8 +749,8 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
     return y_prime_global, y_gold_global, disruptive_global
 
 
-def mpi_make_predictions_and_evaluate(
-        conf, shot_list, loader, custom_path=None):
+def mpi_make_predictions_and_evaluate(conf, shot_list, loader,
+                                      custom_path=None):
     y_prime, y_gold, disruptive = mpi_make_predictions(
         conf, shot_list, loader, custom_path)
     analyzer = PerformanceAnalyzer(conf=conf)
@@ -823,17 +823,9 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         shot_list=shot_list_train)
 
     print("warmup {}".format(warmup_steps))
-    mpi_model = MPIModel(
-        train_model,
-        optimizer,
-        comm,
-        batch_generator,
-        batch_size,
-        lr=lr,
-        warmup_steps=warmup_steps,
-        num_batches_minimum=num_batches_minimum,
-        conf=conf
-    )
+    mpi_model = MPIModel(train_model, optimizer, comm, batch_generator,
+                         batch_size, lr=lr, warmup_steps=warmup_steps,
+                         num_batches_minimum=num_batches_minimum, conf=conf)
     mpi_model.compile(
         conf['model']['optimizer'],
         clipnorm,
@@ -940,13 +932,11 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
 
             # tensorboard
             if backend != 'theano':
-                val_generator = partial(
-                    loader.training_batch_generator,
-                    shot_list=shot_list_validate)()
+                val_generator = partial(loader.training_batch_generator,
+                                        shot_list=shot_list_validate)()
                 val_steps = 1
-                tensorboard.on_epoch_end(
-                    val_generator, val_steps, int(
-                        round(e)), epoch_logs)
+                tensorboard.on_epoch_end(val_generator, val_steps,
+                                         int(round(e)), epoch_logs)
 
         print_unique("end epoch {} 0".format(e))
         stop_training = comm.bcast(stop_training, root=0)
@@ -972,11 +962,8 @@ def get_stop_training(callbacks):
 
 
 class TensorBoard(object):
-    def __init__(self, log_dir='./logs',
-                 histogram_freq=0,
-                 validation_steps=0,
-                 write_graph=True,
-                 write_grads=False):
+    def __init__(self, log_dir='./logs', histogram_freq=0, validation_steps=0,
+                 write_graph=True, write_grads=False):
         if K.backend() != 'tensorflow':
             raise RuntimeError('TensorBoard callback only works '
                                'with the TensorFlow backend.')
