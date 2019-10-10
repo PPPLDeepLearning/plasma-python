@@ -95,3 +95,16 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+# Job scheduler output
+# Slurm
+*.out
+
+# Cobalt
+*.output
+*.error
+*.cobaltlog
+
+# PBS
+# *.o*
+# *.e*
