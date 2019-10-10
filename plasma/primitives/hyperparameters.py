@@ -105,7 +105,7 @@ class HyperparamExperiment(object):
         self.raw_logs_path = path[:-1] + ".out"
         self.changed_path = os.path.join(path, "changed_params.out")
         with open(os.path.join(self.path, conf_name), 'r') as yaml_file:
-            conf = yaml.load(yaml_file)
+            conf = yaml.load(yaml_file, Loader=yaml.SafeLoader)
         self.name_to_monitor = conf['callbacks']['monitor']
         self.load_data()
         self.get_changed()

@@ -20,11 +20,12 @@ import os
 import datetime
 import time
 import numpy as np
+
 from copy import deepcopy
 
-# import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
+# import matplotlib.pyplot as plt
 
 # import sys
 # if sys.version_info[0] < 3:
@@ -134,7 +135,7 @@ class FeatureExtractor(object):
             # print(X.shape, Y.shape)
         else:
             try:
-                dat = np.load(save_path)
+                dat = np.load(save_path, allow_pickle=False)
                 # X, Y, disr = dat["X"], dat["Y"], dat["disr"][()]
                 X = dat["X"]
             except BaseException:

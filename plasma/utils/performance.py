@@ -5,10 +5,10 @@ from scipy import stats
 import numpy as np
 from pprint import pprint
 import os
-import matplotlib.pyplot as plt
-from matplotlib import rc
 import matplotlib
 matplotlib.use('Agg')  # for machines that don't have a display
+import matplotlib.pyplot as plt  # noqa
+from matplotlib import rc  # noqa
 rc('font', **{'family': 'serif', 'sans-serif': ['Times']})
 rc('text', usetex=True)
 
@@ -358,7 +358,8 @@ class PerformanceAnalyzer():
     def load_ith_file(self):
         results_files = os.listdir(self.results_dir)
         print(results_files)
-        dat = np.load(self.results_dir + results_files[self.i])
+        dat = np.load(self.results_dir + results_files[self.i],
+                      allow_pickle=False)
         print("Loading results file {}".format(
             self.results_dir + results_files[self.i]))
 

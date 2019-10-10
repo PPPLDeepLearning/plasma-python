@@ -107,7 +107,7 @@ def generate_conf_file(tunables, shallow, template_path="../", save_path="./",
                        conf_name="conf.yaml"):
     assert(template_path != save_path)
     with open(os.path.join(template_path, conf_name), 'r') as yaml_file:
-        conf = yaml.load(yaml_file)
+        conf = yaml.load(yaml_file, Loader=yaml.SafeLoader)
     for tunable in tunables:
         tunable.assign_to_conf(conf, save_path)
     # rely on early stopping to terminate training

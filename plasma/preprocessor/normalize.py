@@ -191,7 +191,7 @@ class Normalizer(object):
         if not os.path.isfile(self.path):
             return False, set([])
         else:
-            dat = np.load(self.path, encoding="latin1")
+            dat = np.load(self.path, encoding="latin1", allow_pickle=True)
             machines = dat['machines'][()]
             ret = all(
                 [m in machines for m in self.conf['paths']['all_machines']])
@@ -300,7 +300,7 @@ class MeanVarNormalizer(Normalizer):
 
     def load_stats(self):
         assert self.previously_saved_stats()[0], "stats not saved before"
-        dat = np.load(self.path, encoding="latin1")
+        dat = np.load(self.path, encoding="latin1", allow_pickle=True)
         self.means = dat['means'][()]
         self.stds = dat['stds'][()]
         self.num_processed = dat['num_processed'][()]
@@ -458,7 +458,7 @@ class MinMaxNormalizer(Normalizer):
 
     def load_stats(self):
         assert(self.previously_saved_stats()[0])
-        dat = np.load(self.path, encoding="latin1")
+        dat = np.load(self.path, encoding="latin1", allow_pickle=True)
         self.minimums = dat['minimums'][()]
         self.maximums = dat['maximums'][()]
         self.num_processed = dat['num_processed'][()]

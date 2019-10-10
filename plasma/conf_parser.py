@@ -16,21 +16,22 @@ def parameters(input_file):
         TTDTarget, TTDInvTarget, TTDLinearTarget
         )
     with open(input_file, 'r') as yaml_file:
-        params = yaml.load(yaml_file)
+        params = yaml.load(yaml_file, Loader=yaml.SafeLoader)
 
         params['user_name'] = getpass.getuser()
         output_path = params['fs_path'] + "/" + params['user_name']
         base_path = output_path
 
         params['paths']['base_path'] = base_path
-        params['paths']['signal_prepath'] = base_path + \
-            params['paths']['signal_prepath']
-        params['paths']['shot_list_dir'] = base_path + \
-            params['paths']['shot_list_dir']
+        params['paths']['signal_prepath'] = (
+            base_path + params['paths']['signal_prepath'])
+        params['paths']['shot_list_dir'] = (
+            base_path + params['paths']['shot_list_dir'])
         params['paths']['output_path'] = output_path
         h = get_unique_signal_hash(sig.all_signals.values())
-        params['paths']['global_normalizer_path'] = output_path + \
-            '/normalization/normalization_signal_group_{}.npz'.format(h)
+        params['paths']['global_normalizer_path'] = (
+            output_path
+            + '/normalization/normalization_signal_group_{}.npz'.format(h))
         if params['training']['hyperparam_tuning']:
             # params['paths']['saved_shotlist_path'] =
             # './normalization/shot_lists.npz'
@@ -44,12 +45,12 @@ def parameters(input_file):
             # '/normalization/shot_lists.npz'
             params['paths']['normalizer_path'] = (
                 params['paths']['global_normalizer_path'])
-            params['paths']['model_save_path'] = (
-                output_path + '/model_checkpoints/')
+            params['paths']['model_save_path'] = (output_path
+                                                  + '/model_checkpoints/')
             params['paths']['csvlog_save_path'] = output_path + '/csv_logs/'
             params['paths']['results_prepath'] = output_path + '/results/'
-        params['paths']['tensorboard_save_path'] = output_path + \
-            params['paths']['tensorboard_save_path']
+        params['paths']['tensorboard_save_path'] = (
+            output_path + params['paths']['tensorboard_save_path'])
         params['paths']['saved_shotlist_path'] = (
             params['paths']['base_path'] + '/processed_shotlists/'
             + params['paths']['data']
