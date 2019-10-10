@@ -35,6 +35,7 @@ import numpy as np
 import random
 
 from functools import partial
+from copy import deepcopy
 import socket
 sys.setrecursionlimit(10000)
 
@@ -53,8 +54,8 @@ backend = conf['model']['backend']
 
 if backend == 'tf' or backend == 'tensorflow':
     if NUM_GPUS > 1:
-        os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(
-            MY_GPU)  # ,mode=NanGuardMode'
+        os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(MY_GPU)
+        # ,mode=NanGuardMode'
     os.environ['KERAS_BACKEND'] = 'tensorflow'
     import tensorflow as tf
     from keras.backend.tensorflow_backend import set_session
@@ -175,19 +176,12 @@ class Averager(object):
 
 
 class MPIModel():
-    def __init__(
-            self,
-            model,
-            optimizer,
-            comm,
-            batch_iterator,
-            batch_size,
-            num_replicas=None,
-            warmup_steps=1000,
-            lr=0.01,
-            num_batches_minimum=100):
+    def __init__(self, model, optimizer, comm, batch_iterator, batch_size,
+                 num_replicas=None, warmup_steps=1000, lr=0.01,
+                 num_batches_minimum=100, conf=None):
         random.seed(task_index)
         np.random.seed(task_index)
+        self.conf = conf
         self.start_time = time.time()
         self.epoch = 0
         self.num_so_far = 0
@@ -213,12 +207,17 @@ class MPIModel():
         else:
             self.num_replicas = num_replicas
         self.lr = (
-            lr/(1.0+self.num_replicas/100.0) if (lr < self.max_lr)
+            lr/(1.0 + self.num_replicas/100.0) if (lr < self.max_lr)
             else self.max_lr/(1.0+self.num_replicas/100.0)
             )
 
     def set_batch_iterator_func(self):
-        self.batch_iterator_func = ProcessGenerator(self.batch_iterator())
+        if (self.conf is not None
+                and 'use_process_generator' in conf['training']
+                and conf['training']['use_process_generator']):
+            self.batch_iterator_func = ProcessGenerator(self.batch_iterator())
+        else:
+            self.batch_iterator_func = self.batch_iterator()
 
     def close(self):
         self.batch_iterator_func.__exit__()
@@ -477,7 +476,6 @@ class MPIModel():
           - num_so_far: the number of samples seen by ensemble of replicas to a
         current epoch (step)
 
-
         Intermediate outputs and logging: debug printout of task_index (MPI),
         epoch number, number of samples seen to a current epoch, average
         training loss
@@ -589,22 +587,16 @@ class MPIModel():
         effective_lr = self.lr * num_replicas
         if effective_lr > self.max_lr:
             print_unique('Warning: effective learning rate set to {}, '.format(
-                effective_lr)
-                         + 'larger than maximum {}. Clipping.'.format(
-                             self.max_lr))
+                effective_lr) + 'larger than maximum {}. Clipping.'.format(
+                    self.max_lr))
             effective_lr = self.max_lr
         return effective_lr
 
     def get_effective_batch_size(self, num_replicas):
         return self.batch_size*num_replicas
 
-    def calculate_speed(
-            self,
-            t0,
-            t_after_deltas,
-            t_after_update,
-            num_replicas,
-            verbose=False):
+    def calculate_speed(self, t0, t_after_deltas, t_after_update, num_replicas,
+                        verbose=False):
         effective_batch_size = self.get_effective_batch_size(num_replicas)
         t_calculate = t_after_deltas - t0
         t_sync = t_after_update - t_after_deltas
@@ -757,8 +749,8 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
     return y_prime_global, y_gold_global, disruptive_global
 
 
-def mpi_make_predictions_and_evaluate(
-        conf, shot_list, loader, custom_path=None):
+def mpi_make_predictions_and_evaluate(conf, shot_list, loader,
+                                      custom_path=None):
     y_prime, y_gold, disruptive = mpi_make_predictions(
         conf, shot_list, loader, custom_path)
     analyzer = PerformanceAnalyzer(conf=conf)
@@ -770,13 +762,31 @@ def mpi_make_predictions_and_evaluate(
     return y_prime, y_gold, disruptive, roc_area, loss
 
 
-def mpi_train(
-        conf,
-        shot_list_train,
-        shot_list_validate,
-        loader,
-        callbacks_list=None):
+def mpi_make_predictions_and_evaluate_multiple_times(conf, shot_list, loader,
+                                                     times, custom_path=None):
+    y_prime, y_gold, disruptive = mpi_make_predictions(conf, shot_list, loader,
+                                                       custom_path)
+    areas = []
+    losses = []
+    for T_min_curr in times:
+        # if 'monitor_test' in conf['callbacks'].keys() and
+        # conf['callbacks']['monitor_test']:
+        conf_curr = deepcopy(conf)
+        T_min_warn_orig = conf['data']['T_min_warn']
+        conf_curr['data']['T_min_warn'] = T_min_curr
+        assert(conf['data']['T_min_warn'] == T_min_warn_orig)
+        analyzer = PerformanceAnalyzer(conf=conf_curr)
+        roc_area = analyzer.get_roc_area(y_prime, y_gold, disruptive)
+        # shot_list.set_weights(analyzer.get_shot_difficulty(y_prime, y_gold,
+        # disruptive))
+        loss = get_loss_from_list(y_prime, y_gold, conf['data']['target'])
+        areas.append(roc_area)
+        losses.append(loss)
+    return areas, losses
 
+
+def mpi_train(conf, shot_list_train, shot_list_validate, loader,
+              callbacks_list=None, shot_list_test=None):
     loader.set_inference_mode(False)
     conf['num_workers'] = comm.Get_size()
 
@@ -813,15 +823,9 @@ def mpi_train(
         shot_list=shot_list_train)
 
     print("warmup {}".format(warmup_steps))
-    mpi_model = MPIModel(
-        train_model,
-        optimizer,
-        comm,
-        batch_generator,
-        batch_size,
-        lr=lr,
-        warmup_steps=warmup_steps,
-        num_batches_minimum=num_batches_minimum)
+    mpi_model = MPIModel(train_model, optimizer, comm, batch_generator,
+                         batch_size, lr=lr, warmup_steps=warmup_steps,
+                         num_batches_minimum=num_batches_minimum, conf=conf)
     mpi_model.compile(
         conf['model']['optimizer'],
         clipnorm,
@@ -843,11 +847,9 @@ def mpi_train(
         callbacks = mpi_model.build_callbacks(conf, callbacks_list)
         callbacks.set_model(mpi_model.model)
         callback_metrics = conf['callbacks']['metrics']
-        callbacks.set_params({
-            'epochs': num_epochs,
-            'metrics': callback_metrics,
-            'batch_size': batch_size,
-        })
+        callbacks.set_params({'epochs': num_epochs,
+                              'metrics': callback_metrics,
+                              'batch_size': batch_size, })
         callbacks.on_train_begin()
     if conf['callbacks']['mode'] == 'max':
         best_so_far = -np.inf
@@ -857,6 +859,7 @@ def mpi_train(
         cmp_fn = min
 
     while e < num_epochs-1:
+        print_unique("begin epoch {} 0".format(e))
         if task_index == 0:
             callbacks.on_epoch_begin(int(round(e)))
         mpi_model.set_lr(lr*lr_decay**e)
@@ -885,6 +888,20 @@ def mpi_train(
             mpi_model.batch_iterator_func.__exit__()
             mpi_model.num_so_far_accum = mpi_model.num_so_far_indiv
             mpi_model.set_batch_iterator_func()
+
+        if ('monitor_test' in conf['callbacks'].keys()
+                and conf['callbacks']['monitor_test']):
+            times = conf['callbacks']['monitor_times']
+            roc_areas, losses = mpi_make_predictions_and_evaluate_multiple_times(conf, shot_list_validate, loader, times)  # noqa
+            for roc, t in zip(roc_areas, times):
+                print_unique('epoch {}, val_roc_{} = {}'.format(
+                    int(round(e)), t, roc))
+            if shot_list_test is not None:
+                roc_areas, losses = mpi_make_predictions_and_evaluate_multiple_times(conf, shot_list_test, loader, times)  # noqa
+                for roc, t in zip(roc_areas, times):
+                    print_unique('epoch {}, test_roc_{} = {}'.format(
+                        int(round(e)), t, roc))
+
         epoch_logs['val_roc'] = roc_area
         epoch_logs['val_loss'] = loss
         epoch_logs['train_loss'] = ave_loss
@@ -901,23 +918,29 @@ def mpi_train(
                 print('Training ROC: {:.4f}'.format(roc_area_train))
 
             callbacks.on_epoch_end(int(round(e)), epoch_logs)
+            if hasattr(mpi_model.model, 'stop_training'):
+                stop_training = mpi_model.model.stop_training
             # only save model weights if quantity we are tracking is improving
             if best_so_far != epoch_logs[conf['callbacks']['monitor']]:
-                print("Not saving model weights")
-                specific_builder.delete_model_weights(
-                    train_model, int(round(e)))
+                if ('monitor_test' in conf['callbacks'].keys()
+                        and conf['callbacks']['monitor_test']):
+                    print("No improvement, saving model weights anyways")
+                else:
+                    print("Not saving model weights")
+                    specific_builder.delete_model_weights(
+                        train_model, int(round(e)))
 
             # tensorboard
             if backend != 'theano':
-                val_generator = partial(
-                    loader.training_batch_generator,
-                    shot_list=shot_list_validate)()
+                val_generator = partial(loader.training_batch_generator,
+                                        shot_list=shot_list_validate)()
                 val_steps = 1
-                tensorboard.on_epoch_end(
-                    val_generator, val_steps, int(
-                        round(e)), epoch_logs)
+                tensorboard.on_epoch_end(val_generator, val_steps,
+                                         int(round(e)), epoch_logs)
 
-        stop_training = comm.bcast(mpi_model.model.stop_training, root=0)
+        print_unique("end epoch {} 0".format(e))
+        stop_training = comm.bcast(stop_training, root=0)
+        print_unique("end epoch {} 1".format(e))
         if stop_training:
             print("Stopping training due to early stopping")
             break
@@ -939,11 +962,8 @@ def get_stop_training(callbacks):
 
 
 class TensorBoard(object):
-    def __init__(self, log_dir='./logs',
-                 histogram_freq=0,
-                 validation_steps=0,
-                 write_graph=True,
-                 write_grads=False):
+    def __init__(self, log_dir='./logs', histogram_freq=0, validation_steps=0,
+                 write_graph=True, write_grads=False):
         if K.backend() != 'tensorflow':
             raise RuntimeError('TensorBoard callback only works '
                                'with the TensorFlow backend.')
@@ -963,7 +983,6 @@ class TensorBoard(object):
 
         if self.histogram_freq and self.merged is None:
             for layer in self.model.layers:
-
                 for weight in layer.weights:
                     mapped_weight_name = weight.name.replace(':', '_')
                     tf.summary.histogram(mapped_weight_name, weight)

@@ -157,28 +157,32 @@ nstx = Machine("nstx", "skylark.pppl.gov:8501::", fetch_nstx_data, max_cores=8)
 all_machines = [d3d, jet]
 
 profile_num_channels = 64
-# ZIPFIT comes from actual measurements
-# etemp_profile = ProfileSignal(
-#     "Electron temperature profile",
-#     ["ppf/hrts/te", "ZIPFIT01/PROFILES.ETEMPFIT"], [jet, d3d],
-#     mapping_paths=["ppf/hrts/rho", None], causal_shifts=[0, 10],
-#     mapping_range=(0, 1), num_channels=profile_num_channels,
-#     data_avail_tolerances=[0.05, 0.02])
-# edens_profile = ProfileSignal(
-#     "Electron density profile",
-#     ["ppf/hrts/ne", "ZIPFIT01/PROFILES.EDENSFIT"], [jet, d3d],
-#     mapping_paths=["ppf/hrts/rho", None], causal_shifts=[0, 10],
-#     mapping_range=(0, 1), num_channels=profile_num_channels,
-#     data_avail_tolerances=[0.05, 0.02])
 
+# ZIPFIT comes from actual measurements
+# jet and d3d:
 etemp_profile = ProfileSignal(
-    "Electron temperature profile", ["ZIPFIT01/PROFILES.ETEMPFIT"], [d3d],
-    mapping_paths=[None], causal_shifts=[10], mapping_range=(0, 1),
-    num_channels=profile_num_channels, data_avail_tolerances=[0.02])
+    "Electron temperature profile",
+    ["ppf/hrts/te", "ZIPFIT01/PROFILES.ETEMPFIT"], [jet, d3d],
+    mapping_paths=["ppf/hrts/rho", None], causal_shifts=[0, 10],
+    mapping_range=(0, 1), num_channels=profile_num_channels,
+    data_avail_tolerances=[0.05, 0.02])
 edens_profile = ProfileSignal(
-    "Electron density profile", ["ZIPFIT01/PROFILES.EDENSFIT"], [d3d],
-    mapping_paths=[None], causal_shifts=[10], mapping_range=(0, 1),
-    num_channels=profile_num_channels, data_avail_tolerances=[0.02])
+    "Electron density profile",
+    ["ppf/hrts/ne", "ZIPFIT01/PROFILES.EDENSFIT"], [jet, d3d],
+    mapping_paths=["ppf/hrts/rho", None], causal_shifts=[0, 10],
+    mapping_range=(0, 1), num_channels=profile_num_channels,
+    data_avail_tolerances=[0.05, 0.02])
+
+# d3d only:
+# etemp_profile = ProfileSignal(
+#     "Electron temperature profile", ["ZIPFIT01/PROFILES.ETEMPFIT"], [d3d],
+#     mapping_paths=[None], causal_shifts=[10], mapping_range=(0, 1),
+#     num_channels=profile_num_channels, data_avail_tolerances=[0.02])
+# edens_profile = ProfileSignal(
+#     "Electron density profile", ["ZIPFIT01/PROFILES.EDENSFIT"], [d3d],
+#     mapping_paths=[None], causal_shifts=[10], mapping_range=(0, 1),
+#     num_channels=profile_num_channels, data_avail_tolerances=[0.02])
+
 itemp_profile = ProfileSignal(
     "Ion temperature profile", ["ZIPFIT01/PROFILES.ITEMPFIT"], [d3d],
     causal_shifts=[10], mapping_range=(0, 1),
@@ -237,15 +241,15 @@ q_psi_profile = ProfileSignal(
 
 etemp_profile_spatial = ProfileSignal(
     "Electron temperature profile", ["ppf/hrts/te"], [jet],
-    causal_shifts=[25], mapping_range=(2, 4),
+    causal_shifts=[0], mapping_range=(2, 4),
     num_channels=profile_num_channels, data_avail_tolerances=[0.05])
 edens_profile_spatial = ProfileSignal(
     "Electron density profile", ["ppf/hrts/ne"], [jet],
-    causal_shifts=[25], mapping_range=(2, 4),
+    causal_shifts=[0], mapping_range=(2, 4),
     num_channels=profile_num_channels, data_avail_tolerances=[0.05])
 rho_profile_spatial = ProfileSignal(
     "Rho at spatial positions", ["ppf/hrts/rho"], [jet],
-    causal_shifts=[25], mapping_range=(2, 4),
+    causal_shifts=[0], mapping_range=(2, 4),
     num_channels=profile_num_channels, data_avail_tolerances=[0.05])
 
 etemp = Signal("electron temperature", ["ppf/hrtx/te0"],
@@ -277,6 +281,8 @@ pin = Signal("Input Power (beam for d3d)", ['jpf/gs/bl-ptot<s', 'd3d/bmspinj'],
              [jet, d3d])
 
 pradtot = Signal("Radiated Power", ['jpf/db/b5r-ptot>out'], [jet])
+# pradtot = Signal("Radiated Power", ['jpf/db/b5r-ptot>out',
+# 'd3d/'+r'\prad_tot'], [jet,d3d])
 # pradcore = ChannelSignal("Radiated Power Core", [ 'd3d/' + r'\bol_l15_p']
 # ,[d3d])
 # pradedge = ChannelSignal("Radiated Power Edge", ['d3d/' + r'\bol_l03_p'],
@@ -321,6 +327,7 @@ ipdirect = Signal("plasma current direction", ["d3d/iptdirect"], [d3d])
 # 'ipdirect':ipdirect, 'iptarget':iptarget, 'iperr':iperr,
 # 'etemp_profile_spatial':etemp_profile_spatial,
 # 'edens_profile_spatial':edens_profile_spatial,
+
 # 'etemp':etemp
 # }
 

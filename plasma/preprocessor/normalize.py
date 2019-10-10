@@ -45,7 +45,9 @@ class Normalizer(object):
         self.remapper = conf['data']['target'].remapper
         self.machines = set()
         self.inference_mode = False
-        self.bound = self.conf['data']['norm_stat_range']
+        self.bound = np.Inf
+        if 'norm_stat_range' in self.conf['data']:
+            self.bound = self.conf['data']['norm_stat_range']
 
     @abc.abstractmethod
     def __str__(self):
@@ -151,9 +153,13 @@ class Normalizer(object):
         # only cut shots during training
         if not self.inference_mode and cut_shot_ends:
             T_min_warn = self.conf['data']['T_min_warn']
+            if shot.ttd.shape[0] - T_min_warn <= max(
+                    self.conf['model']['length'], 0):
+                print("not cutting shot; length of shot after cutting by ",
+                      "T_min_warn would be shorter than RNN length")
+                return
             for key in shot.signals_dict:
-                shot.signals_dict[key] = shot.signals_dict[key][:-T_min_warn,
-                                                                :]
+                shot.signals_dict[key] = shot.signals_dict[key][:-T_min_warn,:]  # noqa
             shot.ttd = shot.ttd[:-T_min_warn]
 
     # def apply_mask(self,shot):
@@ -204,7 +210,9 @@ class MeanVarNormalizer(Normalizer):
         Normalizer.__init__(self, conf)
         self.means = dict()
         self.stds = dict()
-        self.bound = self.conf['data']['norm_stat_range']
+        self.bound = np.Inf
+        if 'norm_stat_range' in self.conf['data']:
+            self.bound = self.conf['data']['norm_stat_range']
 
     def __str__(self):
         s = ''
@@ -368,7 +376,9 @@ class MinMaxNormalizer(Normalizer):
         Normalizer.__init__(self, conf)
         self.minimums = None
         self.maximums = None
-        self.bound = self.conf['data']['norm_stat_range']
+        self.bound = np.Inf
+        if 'norm_stat_range' in self.conf['data']:
+            self.bound = self.conf['data']['norm_stat_range']
 
     def __str__(self):
         s = ''
