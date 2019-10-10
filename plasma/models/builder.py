@@ -5,7 +5,7 @@ from keras.layers.core import (
     Dense, Activation, Dropout, Lambda,
     Reshape, Flatten, Permute,  # RepeatVector
     )
-from keras.layers import LSTM, SimpleRNN, Bidirectional, BatchNormalization
+from keras.layers import LSTM, SimpleRNN, BatchNormalization
 from keras.layers.convolutional import Convolution1D
 from keras.layers.pooling import MaxPooling1D
 # from keras.utils.data_utils import get_file
@@ -82,7 +82,6 @@ class ModelBuilder(object):
         conf = self.conf
         model_conf = conf['model']
         rnn_size = model_conf['rnn_size']
-        use_bidirectional = model_conf['use_bidirectional']
         rnn_type = model_conf['rnn_type']
         regularization = model_conf['regularization']
         dense_regularization = model_conf['dense_regularization']
@@ -249,33 +248,15 @@ class ModelBuilder(object):
         # pre_rnn_model.summary()
         x_input = Input(batch_shape=batch_input_shape)
         x_in = TimeDistributed(pre_rnn_model)(x_input)
-
-        if use_bidirectional:
-            for _ in range(model_conf['rnn_layers']):
-                x_in = Bidirectional(
-                    rnn_model(
-                        rnn_size,
-                        return_sequences=return_sequences,
-                        stateful=stateful,
-                        kernel_regularizer=l2(regularization),
-                        recurrent_regularizer=l2(regularization),
-                        bias_regularizer=l2(regularization),
-                        dropout=dropout_prob,
-                        recurrent_dropout=dropout_prob))(x_in)
-                x_in = Dropout(dropout_prob)(x_in)
-        else:
-            for _ in range(model_conf['rnn_layers']):
-                x_in = rnn_model(
-                    rnn_size,
-                    return_sequences=return_sequences,
-                    # batch_input_shape=batch_input_shape,
-                    stateful=stateful,
-                    kernel_regularizer=l2(regularization),
-                    recurrent_regularizer=l2(regularization),
-                    bias_regularizer=l2(regularization),
-                    dropout=dropout_prob,
-                    recurrent_dropout=dropout_prob)(x_in)
-                x_in = Dropout(dropout_prob)(x_in)
+        for _ in range(model_conf['rnn_layers']):
+            x_in = rnn_model(
+                rnn_size, return_sequences=return_sequences,
+                # batch_input_shape=batch_input_shape,
+                stateful=stateful, kernel_regularizer=l2(regularization),
+                recurrent_regularizer=l2(regularization),
+                bias_regularizer=l2(regularization), dropout=dropout_prob,
+                recurrent_dropout=dropout_prob)(x_in)
+            x_in = Dropout(dropout_prob)(x_in)
         if return_sequences:
             # x_out = TimeDistributed(Dense(100,activation='tanh')) (x_in)
             x_out = TimeDistributed(
