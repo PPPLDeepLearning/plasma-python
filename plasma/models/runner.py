@@ -21,7 +21,8 @@ import matplotlib.pyplot as plt  # noqa
 backend = conf['model']['backend']
 
 
-def train(conf, shot_list_train, shot_list_validate, loader):
+def train(conf, shot_list_train, shot_list_validate, loader,
+          shot_list_test=None):
     loader.set_inference_mode(False)
     np.random.seed(1)
 

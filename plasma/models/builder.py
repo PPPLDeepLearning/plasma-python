@@ -5,7 +5,7 @@ from keras.layers.core import (
     Dense, Activation, Dropout, Lambda,
     Reshape, Flatten, Permute,  # RepeatVector
     )
-from keras.layers import LSTM, SimpleRNN, Bidirectional, BatchNormalization
+from keras.layers import LSTM, SimpleRNN, BatchNormalization
 from keras.layers.convolutional import Convolution1D
 from keras.layers.pooling import MaxPooling1D
 # from keras.utils.data_utils import get_file
@@ -16,15 +16,12 @@ from keras.regularizers import l2  # l1, l1_l2
 
 import keras.backend as K
 
-import dill
 import re
 import os
 import sys
 import numpy as np
 from copy import deepcopy
-from plasma.utils.downloading import makedirs_process_safe
-
-import hashlib
+from plasma.utils.downloading import makedirs_process_safe, general_object_hash
 
 
 class LossHistory(Callback):
@@ -42,10 +39,13 @@ class ModelBuilder(object):
     def get_unique_id(self):
         # num_epochs = self.conf['training']['num_epochs']
         this_conf = deepcopy(self.conf)
-        # don't make hash dependent on number of epochs.
+        # don't make hash dependent on number of epochs or T_min_warn
+        # (they can both be modified)
         this_conf['training']['num_epochs'] = 0
-        unique_id = int(hashlib.md5((dill.dumps(this_conf).decode(
-            'unicode_escape')).encode('utf-8')).hexdigest(), 16)
+        this_conf['data']['T_min_warn'] = 30
+        unique_id = general_object_hash(this_conf)
+        # unique_id = int(hashlib.md5((dill.dumps(this_conf).decode(
+        #     'unicode_escape')).encode('utf-8')).hexdigest(), 16)
         return unique_id
 
     def get_0D_1D_indices(self):
@@ -81,12 +81,13 @@ class ModelBuilder(object):
     def build_model(self, predict, custom_batch_size=None):
         conf = self.conf
         model_conf = conf['model']
-        use_bidirectional = model_conf['use_bidirectional']
         rnn_size = model_conf['rnn_size']
         rnn_type = model_conf['rnn_type']
         regularization = model_conf['regularization']
         dense_regularization = model_conf['dense_regularization']
-        use_batch_norm = model_conf['use_batch_norm']
+        use_batch_norm = False
+        if 'use_batch_norm' in model_conf:
+            use_batch_norm = model_conf['use_batch_norm']
 
         dropout_prob = model_conf['dropout_prob']
         length = model_conf['length']
@@ -221,7 +222,9 @@ class ModelBuilder(object):
         else:
             pre_rnn = pre_rnn_input
 
-        if model_conf['rnn_layers'] == 0 or model_conf['extra_dense_input']:
+        if model_conf['rnn_layers'] == 0 or (
+                'extra_dense_input' in model_conf.keys()
+                and model_conf['extra_dense_input']):
             pre_rnn = Dense(
                 dense_size,
                 activation='relu',
@@ -245,33 +248,15 @@ class ModelBuilder(object):
         # pre_rnn_model.summary()
         x_input = Input(batch_shape=batch_input_shape)
         x_in = TimeDistributed(pre_rnn_model)(x_input)
-
-        if use_bidirectional:
-            for _ in range(model_conf['rnn_layers']):
-                x_in = Bidirectional(
-                    rnn_model(
-                        rnn_size,
-                        return_sequences=return_sequences,
-                        stateful=stateful,
-                        kernel_regularizer=l2(regularization),
-                        recurrent_regularizer=l2(regularization),
-                        bias_regularizer=l2(regularization),
-                        dropout=dropout_prob,
-                        recurrent_dropout=dropout_prob))(x_in)
-                x_in = Dropout(dropout_prob)(x_in)
-        else:
-            for _ in range(model_conf['rnn_layers']):
-                x_in = rnn_model(
-                    rnn_size,
-                    return_sequences=return_sequences,
-                    # batch_input_shape=batch_input_shape,
-                    stateful=stateful,
-                    kernel_regularizer=l2(regularization),
-                    recurrent_regularizer=l2(regularization),
-                    bias_regularizer=l2(regularization),
-                    dropout=dropout_prob,
-                    recurrent_dropout=dropout_prob)(x_in)
-                x_in = Dropout(dropout_prob)(x_in)
+        for _ in range(model_conf['rnn_layers']):
+            x_in = rnn_model(
+                rnn_size, return_sequences=return_sequences,
+                # batch_input_shape=batch_input_shape,
+                stateful=stateful, kernel_regularizer=l2(regularization),
+                recurrent_regularizer=l2(regularization),
+                bias_regularizer=l2(regularization), dropout=dropout_prob,
+                recurrent_dropout=dropout_prob)(x_in)
+            x_in = Dropout(dropout_prob)(x_in)
         if return_sequences:
             # x_out = TimeDistributed(Dense(100,activation='tanh')) (x_in)
             x_out = TimeDistributed(
@@ -349,7 +334,9 @@ class ModelBuilder(object):
     def get_all_saved_files(self):
         self.ensure_save_directory()
         unique_id = self.get_unique_id()
-        filenames = os.listdir(self.conf['paths']['model_save_path'])
+        path = self.conf['paths']['model_save_path']
+        filenames = [name for name in os.listdir(path)
+                     if os.path.isfile(os.path.join(path, name))]
         epochs = []
         for file in filenames:
             curr_id, epoch = self.extract_id_and_epoch_from_filename(file)

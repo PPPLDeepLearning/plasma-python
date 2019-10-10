@@ -1,12 +1,17 @@
 from __future__ import print_function
 import errno
 import os
-# from multiprocessing import Queue
 from functools import partial
 import multiprocessing as mp
 import sys
 import time
 import numpy as np
+import dill
+import hashlib
+from copy import deepcopy
+# import gadata
+# from plasma.primitives.shots import ShotList
+
 '''
 http://www.mdsplus.org/index.php?title=Documentation:Tutorial:RemoteAccess&open=76203664636339686324830207&page=Documentation%2FThe+MDSplus+tutorial%2FRemote+data+access+in+MDSplus
 http://piscope.psfc.mit.edu/index.php/MDSplus_%26_python#Simple_example_of_reading_MDSplus_data
@@ -26,8 +31,34 @@ try:
 except ImportError:
     pass
 
-# import gadata
-# from plasma.primitives.shots import ShotList
+
+def general_object_hash(o):
+    """
+    Makes a hash from a dictionary, list, tuple or set to any level, that
+    contains only other hashable types (including any lists, tuples, sets, and
+    dictionaries). Relies on dill for serialization
+"""
+
+    if isinstance(o, (set, tuple, list)):
+        return tuple([general_object_hash(e) for e in o])
+
+    elif not isinstance(o, dict):
+        return myhash(o)
+
+    new_o = deepcopy(o)
+    for k, v in new_o.items():
+        new_o[k] = general_object_hash(v)
+
+    return myhash(tuple(frozenset(sorted(new_o.items()))))
+
+
+def myhash(x):
+    return int(hashlib.md5((dill.dumps(x).decode('unicode_escape')).encode(
+        'utf-8')).hexdigest(), 16)
+    # return int(hashlib.md5((dill.dumps(x))).hexdigest(),16)
+    # return
+    # int(hashlib.md5((dill.dumps(x))))#.decode('unicode_escape')).encode(
+    # 'utf-8')).hexdigest(),16)
 
 
 def get_missing_value_array():

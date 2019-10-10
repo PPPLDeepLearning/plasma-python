@@ -93,6 +93,14 @@ def parameters(input_file):
         jet_iterlike_wall = ShotListFiles(
             sig.jet, params['paths']['shot_list_dir'],
             ['ILW_unint.txt', 'BeWall_clear.txt'], 'jet iter like wall data')
+        jet_iterlike_wall_late = ShotListFiles(
+            sig.jet, params['paths']['shot_list_dir'],
+            ['ILW_unint_late.txt', 'ILW_clear_late.txt'],
+            'Late jet iter like wall data')
+        # jet_iterlike_wall_full = ShotListFiles(
+        #     sig.jet, params['paths']['shot_list_dir'],
+        #     ['ILW_unint_full.txt', 'ILW_clear_full.txt'],
+        #     'Full jet iter like wall data')
 
         jenkins_jet_carbon_wall = ShotListFiles(
             sig.jet, params['paths']['shot_list_dir'],
@@ -150,6 +158,24 @@ def parameters(input_file):
             params['paths']['shot_files'] = [jet_carbon_wall]
             params['paths']['shot_files_test'] = [jet_iterlike_wall]
             params['paths']['use_signals_dict'] = sig.jet_signals_1D
+        elif params['paths']['data'] == 'jet_data_late':
+            params['paths']['shot_files'] = [jet_iterlike_wall_late]
+            params['paths']['shot_files_test'] = []
+            params['paths']['use_signals_dict'] = sig.jet_signals
+        elif params['paths']['data'] == 'jet_data_carbon_to_late_0D':
+            params['paths']['shot_files'] = [jet_carbon_wall]
+            params['paths']['shot_files_test'] = [jet_iterlike_wall_late]
+            params['paths']['use_signals_dict'] = sig.jet_signals_0D
+        elif params['paths']['data'] == 'jet_data_temp_profile':
+            params['paths']['shot_files'] = [jet_carbon_wall]
+            params['paths']['shot_files_test'] = [jet_iterlike_wall]
+            params['paths']['use_signals_dict'] = {
+                'etemp_profile': sig.etemp_profile}
+        elif params['paths']['data'] == 'jet_data_dens_profile':
+            params['paths']['shot_files'] = [jet_carbon_wall]
+            params['paths']['shot_files_test'] = [jet_iterlike_wall]
+            params['paths']['use_signals_dict'] = {
+                'edens_profile': sig.edens_profile}
         elif params['paths']['data'] == 'jet_carbon_data':
             params['paths']['shot_files'] = [jet_carbon_wall]
             params['paths']['shot_files_test'] = []
@@ -272,6 +298,18 @@ def parameters(input_file):
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = []
             params['paths']['use_signals_dict'] = sig.fully_defined_signals_0D
+        elif params['paths']['data'] == 'd3d_data_temp_profile':
+            # jet data but with fully defined signals
+            params['paths']['shot_files'] = [d3d_full]
+            params['paths']['shot_files_test'] = []
+            params['paths']['use_signals_dict'] = {
+                'etemp_profile': sig.etemp_profile}  # fully_defined_signals_0D
+        elif params['paths']['data'] == 'd3d_data_dens_profile':
+            # jet data but with fully defined signals
+            params['paths']['shot_files'] = [d3d_full]
+            params['paths']['shot_files_test'] = []
+            params['paths']['use_signals_dict'] = {
+                'edens_profile': sig.edens_profile}  # fully_defined_signals_0D
 
         # cross-machine
         elif params['paths']['data'] == 'jet_to_d3d_data':
@@ -281,6 +319,10 @@ def parameters(input_file):
         elif params['paths']['data'] == 'd3d_to_jet_data':
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = [jet_iterlike_wall]
+            params['paths']['use_signals_dict'] = sig.fully_defined_signals
+        elif params['paths']['data'] == 'd3d_to_late_jet_data':
+            params['paths']['shot_files'] = [d3d_full]
+            params['paths']['shot_files_test'] = [jet_iterlike_wall_late]
             params['paths']['use_signals_dict'] = sig.fully_defined_signals
         elif params['paths']['data'] == 'jet_to_d3d_data_0D':
             params['paths']['shot_files'] = [jet_full]
@@ -343,9 +385,11 @@ def parameters(input_file):
 
 
 def get_unique_signal_hash(signals):
-    return int(hashlib.md5(''.join(
-        tuple(map(lambda x: x.description, sorted(signals)))).encode(
-            'utf-8')).hexdigest(), 16)
+    return int(hashlib.md5(''.join(tuple(map(lambda x: "{}".format(
+        x.__hash__()), sorted(signals)))).encode('utf-8')).hexdigest(), 16)
+    # return int(hashlib.md5(''.join(
+    #     tuple(map(lambda x: x.description, sorted(signals)))).encode(
+    #         'utf-8')).hexdigest(), 16)
 
 
 def sort_by_channels(list_of_signals):

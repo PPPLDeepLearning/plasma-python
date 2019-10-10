@@ -14,16 +14,8 @@ rc('text', usetex=True)
 
 
 class PerformanceAnalyzer():
-    def __init__(
-            self,
-            results_dir=None,
-            shots_dir=None,
-            i=0,
-            T_min_warn=None,
-            T_max_warn=None,
-            verbose=False,
-            pred_ttd=False,
-            conf=None):
+    def __init__(self, results_dir=None, shots_dir=None, i=0, T_min_warn=None,
+                 T_max_warn=None, verbose=False, pred_ttd=False, conf=None):
         self.T_min_warn = T_min_warn
         self.T_max_warn = T_max_warn
         dt = conf['data']['dt']
@@ -34,6 +26,11 @@ class PerformanceAnalyzer():
             self.T_min_warn = T_min_warn_def
         if T_max_warn is None:
             self.T_max_warn = T_max_warn_def
+        if self.T_max_warn < self.T_min_warn:
+            # computation of statistics is only correct if T_max_warn is larger
+            # than T_min_warn
+            print("T max warn is too small: need to increase artificially.")
+            self.T_max_warn = self.T_min_warn + 1
         self.verbose = verbose
         self.results_dir = results_dir
         self.shots_dir = shots_dir
@@ -70,8 +67,8 @@ class PerformanceAnalyzer():
         return self.get_metrics_vs_p_thresh_custom(
             all_preds, all_truths, all_disruptive)
 
-    def get_metrics_vs_p_thresh_custom(
-            self, all_preds, all_truths, all_disruptive):
+    def get_metrics_vs_p_thresh_custom(self, all_preds, all_truths,
+                                       all_disruptive):
         return self.get_metrics_vs_p_thresh_fast(
             all_preds, all_truths, all_disruptive)
         P_thresh_range = self.get_p_thresh_range()
@@ -116,8 +113,8 @@ class PerformanceAnalyzer():
         # print(np.unique(self.p_thresh_range))
         return self.p_thresh_range
 
-    def get_metrics_vs_p_thresh_fast(
-            self, all_preds, all_truths, all_disruptive):
+    def get_metrics_vs_p_thresh_fast(self, all_preds, all_truths,
+                                     all_disruptive):
         all_disruptive = np.array(all_disruptive)
         if self.pred_train is not None:
             p_thresh_range = self.get_p_thresh_range()
@@ -213,20 +210,23 @@ class PerformanceAnalyzer():
                     d_late_thresholds.append(-np.inf)
                 else:
                     d_late_thresholds.append(np.max(pred[late_indices]))
+                #
                 if np.sum(early_indices) == 0:
                     d_early_thresholds.append(-np.inf)
                 else:
                     d_early_thresholds.append(np.max(pred[early_indices]))
-
-                d_correct_thresholds.append(np.max(pred[correct_indices]))
+                #
+                if np.sum(correct_indices) == 0:
+                    d_correct_thresholds.append(-np.inf)
+                else:
+                    d_correct_thresholds.append(np.max(pred[correct_indices]))
             else:
                 nd_thresholds.append(np.max(pred))
         return (np.array(d_early_thresholds), np.array(d_correct_thresholds),
                 np.array(d_late_thresholds), np.array(nd_thresholds))
 
-    def summarize_shot_prediction_stats_by_mode(
-            self, P_thresh, mode, verbose=False):
-
+    def summarize_shot_prediction_stats_by_mode(self, P_thresh, mode,
+                                                verbose=False):
         if mode == 'train':
             all_preds = self.pred_train
             all_truths = self.truth_train
@@ -240,20 +240,13 @@ class PerformanceAnalyzer():
         return self.summarize_shot_prediction_stats(
             P_thresh, all_preds, all_truths, all_disruptive, verbose)
 
-    def summarize_shot_prediction_stats(
-            self,
-            P_thresh,
-            all_preds,
-            all_truths,
-            all_disruptive,
-            verbose=False):
+    def summarize_shot_prediction_stats(self, P_thresh, all_preds, all_truths,
+                                        all_disruptive, verbose=False):
         TPs, FPs, FNs, TNs, earlies, lates = (0, 0, 0, 0, 0, 0)
-
         for i in range(len(all_preds)):
             preds = all_preds[i]
             truth = all_truths[i]
             is_disruptive = all_disruptive[i]
-
             TP, FP, FN, TN, early, late = self.get_shot_prediction_stats(
                 P_thresh, preds, truth, is_disruptive)
             TPs += TP
@@ -326,14 +319,15 @@ class PerformanceAnalyzer():
         else:
             print('Error Invalid Mode for acceptable region')
             exit(1)
+        assert(self.T_max_warn > self.T_min_warn)
 
         acceptable = np.zeros_like(truth, dtype=bool)
         if acceptable_timesteps > 0:
             acceptable[-acceptable_timesteps:] = True
         return acceptable
 
-    def get_accuracy_and_fp_rate_from_stats(
-            self, tp, fp, fn, tn, early, late, verbose=False):
+    def get_accuracy_and_fp_rate_from_stats(self, tp, fp, fn, tn, early, late,
+                                            verbose=False):
         total = tp + fp + fn + tn + early + late
         disr = early + late + tp + fn
         nondisr = fp + tn
@@ -385,15 +379,15 @@ class PerformanceAnalyzer():
         # normalized shot ttd.
         self.conf['data']['T_warning'] = self.saved_conf['data']['T_warning']
         for mode in ['test', 'train']:
-            print(
-                '{}: loaded {} shot ({}) disruptive'.format(
-                    mode,
-                    self.get_num_shots(mode),
-                    self.get_num_disruptive_shots(mode)))
+            print('{}: loaded {} shot ({}) disruptive'.format(
+                mode, self.get_num_shots(mode),
+                self.get_num_disruptive_shots(mode)))
         if self.verbose:
             self.print_conf()
-        # self.assert_same_lists(self.shot_list_test,self.truth_test,self.disruptive_test)
-        # self.assert_same_lists(self.shot_list_train,self.truth_train,self.disruptive_train)
+        # self.assert_same_lists(self.shot_list_test, self.truth_test,
+        # self.disruptive_test)
+        # self.assert_same_lists(self.shot_list_train, self.truth_train,
+        # self.disruptive_train)
 
     def assert_same_lists(self, shot_list, truth_arr, disr_arr):
         assert(len(shot_list) == len(truth_arr))
@@ -422,12 +416,8 @@ class PerformanceAnalyzer():
         if mode == 'train':
             return sum(self.disruptive_train)
 
-    def hist_alarms(
-            self,
-            alarms,
-            title_str='alarms',
-            save_figure=False,
-            linestyle='-'):
+    def hist_alarms(self, alarms, title_str='alarms', save_figure=False,
+                    linestyle='-'):
         fontsize = 15
         T_min_warn = self.T_min_warn
         T_max_warn = self.T_max_warn
@@ -447,7 +437,6 @@ class PerformanceAnalyzer():
             plt.step(np.concatenate((alarms[::-1], alarms[[0]])),
                      1.0*np.arange(alarms.size+1)/(alarms.size),
                      linestyle=linestyle, linewidth=1.5)
-
             plt.gca().set_xscale('log')
             plt.axvline(T_min_warn, color='r', linewidth=0.5)
             # if T_max_warn < np.max(alarms):
@@ -462,10 +451,8 @@ class PerformanceAnalyzer():
             plt.setp(plt.gca().get_xticklabels(), fontsize=fontsize)
             plt.show()
             if save_figure:
-                plt.savefig(
-                    'accum_disruptions.png',
-                    dpi=200,
-                    bbox_inches='tight')
+                plt.savefig('accum_disruptions.png', dpi=200,
+                            bbox_inches='tight')
         else:
             print(title_str + ": No alarms!")
 
@@ -639,12 +626,8 @@ class PerformanceAnalyzer():
         elif late:
             return 'late'
 
-    def plot_individual_shot(
-            self,
-            P_thresh_opt,
-            shot_num,
-            normalize=True,
-            plot_signals=True):
+    def plot_individual_shot(self, P_thresh_opt, shot_num, normalize=True,
+                             plot_signals=True):
         success = False
         for mode in ['test', 'train']:
             if mode == 'test':
@@ -662,28 +645,20 @@ class PerformanceAnalyzer():
                     t = truth[i]
                     p = pred[i]
                     is_disr = is_disruptive[i]
-
                     TP, FP, FN, TN, early, late = (
                         self.get_shot_prediction_stats(P_thresh_opt, p, t,
                                                        is_disr))
                     prediction_type = self.get_prediction_type(TP, FP, FN, TN,
                                                                early, late)
                     print(prediction_type)
-                    self.plot_shot(
-                        shot,
-                        True,
-                        normalize,
-                        t,
-                        p,
-                        P_thresh_opt,
-                        prediction_type,
-                        extra_filename='_indiv')
+                    self.plot_shot(shot, True, normalize, t, p, P_thresh_opt,
+                                   prediction_type, extra_filename='_indiv')
                     success = True
         if not success:
             print("Shot {} not found".format(shot_num))
 
-    def get_prediction_type_for_individual_shot(
-            self, P_thresh, shot, mode='test'):
+    def get_prediction_type_for_individual_shot(self, P_thresh, shot,
+                                                mode='test'):
         p, t, is_disr = self.get_pred_truth_disr_by_shot(shot)
 
         TP, FP, FN, TN, early, late = self.get_shot_prediction_stats(
@@ -691,15 +666,9 @@ class PerformanceAnalyzer():
         prediction_type = self.get_prediction_type(TP, FP, FN, TN, early, late)
         return prediction_type
 
-    def example_plots(
-            self,
-            P_thresh_opt,
-            mode='test',
-            types_to_plot=['FP'],
-            max_plot=5,
-            normalize=True,
-            plot_signals=True,
-            extra_filename=''):
+    def example_plots(self, P_thresh_opt, mode='test', types_to_plot=['FP'],
+                      max_plot=5, normalize=True, plot_signals=True,
+                      extra_filename=''):
         if mode == 'test':
             pred = self.pred_test
             truth = self.truth_test
@@ -730,51 +699,30 @@ class PerformanceAnalyzer():
             if (('any' in types_to_plot or prediction_type in types_to_plot)
                     and plotted < max_plot):
                 if plot_signals:
-                    self.plot_shot(
-                        shot,
-                        True,
-                        normalize,
-                        t,
-                        p,
-                        P_thresh_opt,
-                        prediction_type,
-                        extra_filename=extra_filename)
+                    self.plot_shot(shot, True, normalize, t, p, P_thresh_opt,
+                                   prediction_type,
+                                   extra_filename=extra_filename)
                 else:
                     plt.figure()
                     plt.semilogy((t+0.001)[::-1], label='ground truth')
                     plt.plot(p[::-1], 'g', label='neural net prediction')
-                    plt.axvline(
-                        self.T_min_warn,
-                        color='r',
-                        label='max warning time')
-                    plt.axvline(
-                        self.T_max_warn,
-                        color='r',
-                        label='min warning time')
-                    plt.axhline(
-                        P_thresh_opt,
-                        color='k',
-                        label='trigger threshold')
+                    plt.axvline(self.T_min_warn, color='r',
+                                label='max warning time')
+                    plt.axvline(self.T_max_warn, color='r',
+                                label='min warning time')
+                    plt.axhline(P_thresh_opt, color='k',
+                                label='trigger threshold')
                     plt.xlabel('TTD [ms]')
                     plt.legend(loc=(1.0, 0.6))
                     plt.ylim([1e-7, 1.1e0])
                     plt.grid()
-                    plt.savefig(
-                        'fig_{}.png'.format(
-                            shot.number),
-                        bbox_inches='tight')
+                    plt.savefig('fig_{}.png'.format(shot.number),
+                                bbox_inches='tight')
                 plotted += 1
 
-    def plot_shot(
-            self,
-            shot,
-            save_fig=True,
-            normalize=True,
-            truth=None,
-            prediction=None,
-            P_thresh_opt=None,
-            prediction_type='',
-            extra_filename=''):
+    def plot_shot(self, shot, save_fig=True, normalize=True, truth=None,
+                  prediction=None, P_thresh_opt=None, prediction_type='',
+                  extra_filename=''):
         if self.normalizer is None and normalize:
             if self.conf is not None:
                 self.saved_conf['paths']['normalizer_path'] = (
@@ -831,16 +779,10 @@ class PerformanceAnalyzer():
                         ax.set_yticks([0, num_channels/2])
                         ax.set_yticklabels(["0", "0.5"])
                         ax.set_ylabel("$\\rho$", size=fontsize)
-                    ax.legend(
-                        loc="best",
-                        labelspacing=0.1,
-                        fontsize=fontsize,
-                        frameon=False)
-                    ax.axvline(
-                        len(truth)
-                        - self.T_min_warn,
-                        color='r',
-                        linewidth=0.5)
+                    ax.legend(loc="best", labelspacing=0.1, fontsize=fontsize,
+                              frameon=False)
+                    ax.axvline(len(truth) - self.T_min_warn, color='r',
+                               linewidth=0.5)
                     plt.setp(ax.get_xticklabels(), visible=False)
                     plt.setp(ax.get_yticklabels(), fontsize=fontsize)
                     f.subplots_adjust(hspace=0)
@@ -880,36 +822,22 @@ class PerformanceAnalyzer():
                 plt.xlim([lower_lim, len(truth)])
         #         plt.savefig("{}.png".format(num),dpi=200,bbox_inches="tight")
                 if save_fig:
-                    plt.savefig(
-                        'sig_fig_{}{}.png'.format(
-                            shot.number,
-                            extra_filename),
-                        bbox_inches='tight')
-                    np.savez(
-                        'sig_{}{}.npz'.format(
-                            shot.number,
-                            extra_filename),
-                        shot=shot,
-                        T_min_warn=self.T_min_warn,
-                        T_max_warn=self.T_max_warn,
-                        prediction=prediction,
-                        truth=truth,
-                        use_signals=use_signals,
-                        P_thresh=P_thresh_opt)
+                    plt.savefig('sig_fig_{}{}.png'.format(shot.number,
+                                                          extra_filename),
+                                bbox_inches='tight')
+                    np.savez('sig_{}{}.npz'.format(shot.number,
+                                                   extra_filename),
+                             shot=shot, T_min_warn=self.T_min_warn,
+                             T_max_warn=self.T_max_warn, prediction=prediction,
+                             truth=truth, use_signals=use_signals,
+                             P_thresh=P_thresh_opt)
                 # plt.show()
         else:
             print("Shot hasn't been processed")
 
-    def plot_shot_old(
-            self,
-            shot,
-            save_fig=True,
-            normalize=True,
-            truth=None,
-            prediction=None,
-            P_thresh_opt=None,
-            prediction_type='',
-            extra_filename=''):
+    def plot_shot_old(self, shot, save_fig=True, normalize=True, truth=None,
+                      prediction=None, P_thresh_opt=None, prediction_type='',
+                      extra_filename=''):
         if self.normalizer is None and normalize:
             if self.conf is not None:
                 self.saved_conf['paths']['normalizer_path'] = (
@@ -976,63 +904,34 @@ class PerformanceAnalyzer():
             plt.setp(ax.get_yticklabels(), fontsize=7)
             # ax.grid()
             if save_fig:
-                plt.savefig(
-                    'sig_fig_{}{}.png'.format(
-                        shot.number,
-                        extra_filename),
-                    bbox_inches='tight')
-                np.savez(
-                    'sig_{}{}.npz'.format(
-                        shot.number,
-                        extra_filename),
-                    shot=shot,
-                    T_min_warn=self.T_min_warn,
-                    T_max_warn=self.T_max_warn,
-                    prediction=prediction,
-                    truth=truth,
-                    use_signals=use_signals,
-                    P_thresh=P_thresh_opt)
+                plt.savefig('sig_fig_{}{}.png'.format(
+                    shot.number, extra_filename), bbox_inches='tight')
+                np.savez('sig_{}{}.npz'.format(shot.number, extra_filename),
+                         shot=shot, T_min_warn=self.T_min_warn,
+                         T_max_warn=self.T_max_warn, prediction=prediction,
+                         truth=truth, use_signals=use_signals,
+                         P_thresh=P_thresh_opt)
             plt.close()
         else:
             print("Shot hasn't been processed")
 
-    def tradeoff_plot(
-            self,
-            accuracy_range,
-            missed_range,
-            fp_range,
-            early_alarm_range,
-            save_figure=False,
-            plot_string='',
-            linestyle="-"):
+    def tradeoff_plot(self, accuracy_range, missed_range, fp_range,
+                      early_alarm_range, save_figure=False, plot_string='',
+                      linestyle="-"):
         fontsize = 15
         plt.figure()
         P_thresh_range = self.get_p_thresh_range()
         # semilogx(P_thresh_range,accuracy_range,label="accuracy")
         if self.pred_ttd:
-            plt.semilogx(abs(P_thresh_range[::-1]),
-                         missed_range,
-                         'r',
-                         label="missed",
-                         linestyle=linestyle)
-            plt.plot(abs(P_thresh_range[::-1]),
-                     fp_range,
-                     'k',
-                     label="false positives",
-                     linestyle=linestyle)
+            plt.semilogx(abs(P_thresh_range[::-1]), missed_range, 'r',
+                         label="missed", linestyle=linestyle)
+            plt.plot(abs(P_thresh_range[::-1]), fp_range, 'k',
+                     label="false positives", linestyle=linestyle)
         else:
-            plt.plot(
-                P_thresh_range,
-                missed_range,
-                'r',
-                label="missed",
-                linestyle=linestyle)
-            plt.plot(
-                P_thresh_range,
-                fp_range,
-                'k',
-                label="false positives",
-                linestyle=linestyle)
+            plt.plot(P_thresh_range, missed_range, 'r', label="missed",
+                     linestyle=linestyle)
+            plt.plot(P_thresh_range, fp_range, 'k', label="false positives",
+                     linestyle=linestyle)
         # plot(P_thresh_range,early_alarm_range,'c',label="early alarms")
         plt.legend(loc=(1.0, .6))
         plt.xlabel('Alarm threshold', size=fontsize)
@@ -1061,12 +960,8 @@ class PerformanceAnalyzer():
         plt.ylim([0, 1])
         if save_figure:
             plt.savefig(title_str + '_roc.png', bbox_inches='tight', dpi=200)
-        print(
-            'ROC area ({}) is {}'.format(
-                plot_string,
-                self.roc_from_missed_fp(
-                    missed_range,
-                    fp_range)))
+        print('ROC area ({}) is {}'.format(
+            plot_string, self.roc_from_missed_fp(missed_range, fp_range)))
         return P_thresh_range, missed_range, fp_range
 
     def get_pred_truth_disr_by_shot(self, shot):

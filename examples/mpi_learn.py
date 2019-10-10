@@ -99,7 +99,8 @@ print("...done")
 np.random.seed(task_index)
 random.seed(task_index)
 if not only_predict:
-    mpi_train(conf, shot_list_train, shot_list_validate, loader)
+    mpi_train(conf, shot_list_train, shot_list_validate, loader,
+              shot_list_test=shot_list_test)
 
 # load last model for testing
 loader.set_inference_mode(True)
