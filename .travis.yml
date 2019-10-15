@@ -1,5 +1,7 @@
 language: python
-
+branches:
+  only:
+    - master
 os:
   - linux
 
