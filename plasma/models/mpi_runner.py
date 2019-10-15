@@ -568,9 +568,9 @@ class MPIModel():
     def get_effective_lr(self, num_replicas):
         effective_lr = self.lr * num_replicas
         if effective_lr > self.max_lr:
-            print_unique('Warning: effective learning rate set to {}, '.format(
-                effective_lr) + 'larger than maximum {}. Clipping.'.format(
-                    self.max_lr))
+            print_unique(
+                'Warning: effective learning rate set to {}, '.format(effective_lr)
+                + 'larger than maximum {}. Clipping.'.format(self.max_lr))
             effective_lr = self.max_lr
         return effective_lr
 
@@ -872,7 +872,7 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         epoch_logs['train_loss'] = ave_loss
         best_so_far = cmp_fn(epoch_logs[conf['callbacks']['monitor']],
                              best_so_far)
-
+        stop_training = False
         if task_index == 0:
             print('=========Summary======== for epoch{}'.format(step))
             print('Training Loss numpy: {:.3e}'.format(ave_loss))
