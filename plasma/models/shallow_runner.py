@@ -8,7 +8,7 @@ from sklearn.ensemble import RandomForestClassifier
 import hashlib
 from plasma.utils.downloading import makedirs_process_safe
 # from plasma.utils.state_reset import reset_states
-from plasma.utils.evaluation import ttd, get_loss_from_list
+from plasma.utils.evaluation import get_loss_from_list
 from plasma.utils.performance import PerformanceAnalyzer
 # from plasma.models.loader import Loader, ProcessGenerator
 # from plasma.conf import conf
@@ -156,7 +156,7 @@ class FeatureExtractor(object):
             shot.ttd = np.expand_dims(shot.ttd, axis=1)
         length = sig_sample.shape[0]
         if length < self.timesteps:
-            print(ttd, shot, shot.number)
+            print(shot.ttd, shot.number)
             print("Shot must be at least as long as the RNN length.")
             exit(1)
         assert(len(sig_sample.shape) == len(shot.ttd.shape) == 2)
