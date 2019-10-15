@@ -3,7 +3,7 @@ from keras.utils.generic_utils import Progbar
 import keras.callbacks as cbks
 from sklearn.metrics import classification_report
 #  accuracy_score, auc, confusion_matrix
-from sklearn.externals import joblib
+import joblib
 from sklearn.ensemble import RandomForestClassifier
 import hashlib
 from plasma.utils.downloading import makedirs_process_safe
