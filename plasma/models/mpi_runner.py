@@ -568,9 +568,9 @@ class MPIModel():
     def get_effective_lr(self, num_replicas):
         effective_lr = self.lr * num_replicas
         if effective_lr > self.max_lr:
-            print_unique(
-                'Warning: effective learning rate set to {}, '.format(effective_lr)
-                + 'larger than maximum {}. Clipping.'.format(self.max_lr))
+            print_unique('Warning: effective learning rate set to {}, '.format(
+                effective_lr) + 'larger than maximum {}. Clipping.'.format(
+                    self.max_lr))
             effective_lr = self.max_lr
         return effective_lr
 
