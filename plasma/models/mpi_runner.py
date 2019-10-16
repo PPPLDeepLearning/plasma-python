@@ -217,7 +217,10 @@ class MPIModel():
             self.batch_iterator_func = self.batch_iterator()
 
     def close(self):
-        self.batch_iterator_func.__exit__()
+        if (self.conf is not None
+                and 'use_process_generator' in conf['training']
+                and conf['training']['use_process_generator']):
+            self.batch_iterator_func.__exit__()
 
     def set_lr(self, lr):
         self.lr = lr
@@ -918,6 +921,7 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
 
 
 def get_stop_training(callbacks):
+    # TODO(KGF): this funciton is unused
     for cb in callbacks.callbacks:
         if isinstance(cb, cbks.EarlyStopping):
             print("Checking for early stopping")
