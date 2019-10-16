@@ -252,7 +252,7 @@ import pandas as pd
 import numpy as np
 from bokeh.plotting import figure, show, output_file, save
 
-data = pd.read_csv("/mnt/<destination folder name on your laptop>/csv_logs/<name of the log file>.csv")
+data = pd.read_csv("<destination folder name on your laptop>/csv_logs/<name of the log file>.csv")
 
 from bokeh.io import output_notebook
 output_notebook()
