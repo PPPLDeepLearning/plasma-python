@@ -22,7 +22,7 @@ After that, create an isolated Anaconda environment and load CUDA drivers, an MP
 #cd plasma-python
 module load anaconda3
 conda create --name my_env --file requirements-travis.txt
-source activate my_env
+conda activate my_env
 
 export OMPI_MCA_btl="tcp,self,vader"
 # replace "vader" with "sm" for OpenMPI versions prior to 3.0.0
@@ -42,7 +42,7 @@ Currently Loaded Modulefiles:
 Next, install the `plasma-python` package:
 
 ```bash
-#source activate my_env
+#conda activate my_env
 python setup.py install
 ```
 
@@ -57,7 +57,7 @@ $ which mpicc
 /usr/local/openmpi/cuda-8.0/3.0.0/intel170/x86_64/bin/mpicc
 ```
 
-If you `source activate` the Anaconda environment **after** loading the OpenMPI library, your application would be built with the MPI library from Anaconda, which has worse performance on this cluster and could lead to errors. See [On Computing Well: Installing and Running ‘mpi4py’ on the Cluster](https://oncomputingwell.princeton.edu/2018/11/installing-and-running-mpi4py-on-the-cluster/) for a related discussion. 
+If you `conda activate` the Anaconda environment **after** loading the OpenMPI library, your application would be built with the MPI library from Anaconda, which has worse performance on this cluster and could lead to errors. See [On Computing Well: Installing and Running ‘mpi4py’ on the Cluster](https://oncomputingwell.princeton.edu/2018/11/installing-and-running-mpi4py-on-the-cluster/) for a related discussion. 
 
 #### Location of the data on Tigress
 
@@ -104,7 +104,7 @@ For batch analysis, make sure to allocate 1 MPI process per GPU. Save the follow
 #SBATCH --mem-per-cpu=0
 
 module load anaconda3
-source activate my_env
+conda activate my_env
 export OMPI_MCA_btl="tcp,self,vader"
 module load cudatoolkit cudann 
 module load openmpi/cuda-8.0/intel-17.0/3.0.0/64
@@ -148,7 +148,10 @@ Then, launch the application from the command line:
 mpirun -N 4 python mpi_learn.py
 ```
 where `-N` is a synonym for `-npernode` in OpenMPI. Do **not** use `srun` to launch the job inside an interactive session. 
-[//]: # (This option appears to be redundant given the salloc options; "mpirun python mpi_learn.py" appears to work just the same. HOWEVER, "srun python mpi_learn.py", "srun --ntasks-per-node python mpi_learn.py", etc. NEVER works--- it just hangs without any output. Why?)
+
+[//]: # (This option appears to be redundant given the salloc options; "mpirun python mpi_learn.py" appears to work just the same.)
+
+[//]: # (HOWEVER, "srun python mpi_learn.py", "srun --ntasks-per-node python mpi_learn.py", etc. NEVER works--- it just hangs without any output. Why?)
 
 [//]: # (Consistent with https://www.open-mpi.org/faq/?category=slurm ?)
 
@@ -210,20 +213,23 @@ A regular FRNN run will produce several outputs and callbacks.
 
 Currently supports graph visualization, histograms of weights, activations and biases, and scalar variable summaries of losses and accuracies.
 
-The summaries are written real time to `/tigress/<netid>/Graph`. For MacOS, you can set up the `sshfs` mount of /tigress filesystem and view those summaries in your browser.
+The summaries are written in real time to `/tigress/<netid>/Graph`. For macOS, you can set up the `sshfs` mount of the `/tigress` filesystem and view those summaries in your browser.
 
-For Mac, you could follow the instructions here:
+To install SSHFS on a macOS system, you could follow the instructions here:
 https://github.com/osxfuse/osxfuse/wiki/SSHFS
+Or use [Homebrew](https://brew.sh/), `brew cask install osxfuse; brew install sshfs`. Note, to install and/or use `osxfuse` you may need to enable its kernel extension in: System Preferences → Security & Privacy → General
 
 then do something like:
 ```
-sshfs -o allow_other,defer_permissions netid@tigergpu.princeton.edu:/tigress/netid/ /mnt/<destination folder name on your laptop>/
+sshfs -o allow_other,defer_permissions netid@tigergpu.princeton.edu:/tigress/<netid>/ <destination folder name on your laptop>/
 ```
 
-Launch TensorBoard locally:
+Launch TensorBoard locally (assuming that it is installed on your local computer):
 ```
-python -m tensorflow.tensorboard --logdir /mnt/<destination folder name on your laptop>/Graph
+python -m tensorboard.main --logdir <destination folder name on your laptop>/Graph
 ```
+A URL should be emitted to the console output. Navigate to this link in your browser. If the TensorBoard interface does not open, try directing your browser to `localhost:6006`.
+
 You should see something like:
 
 ![tensorboard example](https://github.com/PPPLDeepLearning/plasma-python/blob/master/docs/tb.png)
@@ -237,7 +243,7 @@ python performance_analysis.py
 ```
 this uses the resulting file produced as a result of training the neural network as an input, and produces several `.png` files with plots as an output.
 
-In addition, you can check the scalar variable summaries for training loss, validation loss and validation ROC logged at `/tigress/netid/csv_logs` (each run will produce a new log file with a timestamp in name).
+In addition, you can check the scalar variable summaries for training loss, validation loss and validation ROC logged at `/tigress/<netid>/csv_logs` (each run will produce a new log file with a timestamp in name).
 
 A sample code to analyze can be found in `examples/notebooks`. For instance:
 
@@ -266,5 +272,4 @@ show(p, notebook_handle=True)
 
 ### Learning curve summaries per mini-batch
 
-To extract per mini-batch summaries, use the output produced by FRNN logged to the standard out (in case of the batch jobs, it will all be contained in the Slurm output file). Refer to the following notebook to perform the analysis of learning curve on a mini-batch level:
-https://github.com/PPPLDeepLearning/plasma-python/blob/master/examples/notebooks/FRNN_scaling.ipynb
+To extract per mini-batch summaries, use the output produced by FRNN logged to the standard out (in case of the batch jobs, it will all be contained in the Slurm output file). Refer to the following notebook to perform the analysis of learning curve on a mini-batch level: [FRNN_scaling.ipynb](https://github.com/PPPLDeepLearning/plasma-python/blob/master/examples/notebooks/FRNN_scaling.ipynb)
