@@ -1,4 +1,5 @@
 ## Tutorials
+*Last updated 2019-10-16*
 
 ### Login to TigerGPU
 
@@ -6,6 +7,7 @@ First, login to TigerGPU cluster headnode via ssh:
 ```
 ssh -XC <yourusername>@tigergpu.princeton.edu
 ```
+Note, `-XC` is optional; it is only necessary if you are planning on performing remote visualization, e.g. the output `.png` files from the below [section](#Learning-curves-and-ROC-per-epoch). Trusted X11 forwarding can be used with `-Y` instead of `-X` and may prevent timeouts, but it disables X11 SECURITY extension controls. Compression `-C` reduces the bandwidth usage and may be useful on slow connections. 
 
 ### Sample usage on TigerGPU
 
@@ -15,21 +17,29 @@ git clone https://github.com/PPPLDeepLearning/plasma-python
 cd plasma-python
 ```
 
-After that, create an isolated Anaconda environment and load CUDA drivers:
+After that, create an isolated Anaconda environment and load CUDA drivers, an MPI compiler, and the HDF5 library:
 ```
 #cd plasma-python
-module load anaconda3/4.4.0
+module load anaconda3
 conda create --name my_env --file requirements-travis.txt
 source activate my_env
 
-export OMPI_MCA_btl="tcp,self,sm"
-module load cudatoolkit/8.0
-module load cudnn/cuda-8.0/6.0
-module load openmpi/cuda-8.0/intel-17.0/2.1.0/64
-module load intel/17.0/64/17.0.5.239
+export OMPI_MCA_btl="tcp,self,vader"
+# replace "vader" with "sm" for OpenMPI versions prior to 3.0.0
+module load cudatoolkit cudann 
+module load openmpi/cuda-8.0/intel-17.0/3.0.0/64
+module load intel
+module load hdf5/intel-17.0/intel-mpi/1.10.0
+```
+As of the latest update of this document, the above modules correspond to the following versions on the TigerGPU system, given by `module list`:
+```
+Currently Loaded Modulefiles:
+  1) anaconda3/2019.3                       4) openmpi/cuda-8.0/intel-17.0/3.0.0/64   7) hdf5/intel-17.0/intel-mpi/1.10.0
+  2) cudatoolkit/10.1                       5) intel-mkl/2019.3/3/64
+  3) cudnn/cuda-9.2/7.6.3                   6) intel/19.0/64/19.0.3.199
 ```
 
-and install the `plasma-python` package:
+Next, install the `plasma-python` package:
 
 ```bash
 #source activate my_env
@@ -44,7 +54,7 @@ Common issue is Intel compiler mismatch in the `PATH` and what you use in the mo
 you should see something like this:
 ```
 $ which mpicc
-/usr/local/openmpi/cuda-8.0/2.1.0/intel170/x86_64/bin/mpicc
+/usr/local/openmpi/cuda-8.0/3.0.0/intel170/x86_64/bin/mpicc
 ```
 
 If you source activate the Anaconda environment after loading the openmpi, you would pick the MPI from Anaconda, which is not good and could lead to errors. 
@@ -93,20 +103,20 @@ For batch analysis, make sure to allocate 1 MPI process per GPU. Save the follow
 #SBATCH -c 4
 #SBATCH --mem-per-cpu=0
 
-module load anaconda3/4.4.0
+module load anaconda3
 source activate my_env
-export OMPI_MCA_btl="tcp,self,sm"
-module load cudatoolkit/8.0
-module load cudnn/cuda-8.0/6.0
-module load openmpi/cuda-8.0/intel-17.0/2.1.0/64
-module load intel/17.0/64/17.0.4.196
+export OMPI_MCA_btl="tcp,self,vader"
+module load cudatoolkit cudann 
+module load openmpi/cuda-8.0/intel-17.0/3.0.0/64
+module load intel
+module load hdf5/intel-17.0/intel-mpi/1.10.0
 
 srun python mpi_learn.py
 
 ```
 where `X` is the number of nodes for distibuted training.
 
-Submit the job with:
+Submit the job with (assuming you are still in the `examples/` subdirectory):
 ```bash
 #cd examples
 sbatch slurm.cmd
@@ -131,7 +141,7 @@ where the number of GPUs is X * 4.
 Then launch the application from the command line:
 
 ```bash
-mpirun -npernode 4 python examples/mpi_learn.py
+mpirun -npernode 4 python mpi_learn.py
 ```
 
 ### Understanding the data
@@ -205,7 +215,7 @@ python -m tensorflow.tensorboard --logdir /mnt/<destination folder name on your 
 ```
 You should see something like:
 
-![alt text](https://github.com/PPPLDeepLearning/plasma-python/blob/master/docs/tb.png)
+![tensorboard example](https://github.com/PPPLDeepLearning/plasma-python/blob/master/docs/tb.png)
 
 #### Learning curves and ROC per epoch
 
