@@ -1,5 +1,5 @@
 ## Tutorials
-*Last updated 2019-10-16*
+*Last updated 2019-10-16.*
 
 ### Login to TigerGPU
 
@@ -57,13 +57,13 @@ $ which mpicc
 /usr/local/openmpi/cuda-8.0/3.0.0/intel170/x86_64/bin/mpicc
 ```
 
-If you source activate the Anaconda environment after loading the openmpi, you would pick the MPI from Anaconda, which is not good and could lead to errors. 
+If you `source activate` the Anaconda environment **after** loading the OpenMPI library, your application would be built with the MPI library from Anaconda, which has worse performance on this cluster and could lead to errors. See [On Computing Well: Installing and Running ‘mpi4py’ on the Cluster](https://oncomputingwell.princeton.edu/2018/11/installing-and-running-mpi4py-on-the-cluster/) for a related discussion. 
 
 #### Location of the data on Tigress
 
-The JET and D3D datasets containing multi-modal time series of sensory measurements leading up to deleterious events called plasma disruptions are located on `/tigress/FRNN` filesystem on Princeton U clusters.
-Fo convenience, create following symbolic links:
+The JET and D3D datasets contain multi-modal time series of sensory measurements leading up to deleterious events called plasma disruptions. The datasets are located in the `/tigress/FRNN` project directory of the [GPFS](https://www.ibm.com/support/knowledgecenter/en/SSPT3X_3.0.0/com.ibm.swg.im.infosphere.biginsights.product.doc/doc/bi_gpfs_overview.html) filesystem on Princeton University clusters.
 
+For convenience, create following symbolic links:
 ```bash
 cd /tigress/<netid>
 ln -s /tigress/FRNN/shot_lists shot_lists
@@ -76,14 +76,14 @@ ln -s /tigress/FRNN/signal_data signal_data
 cd examples/
 python guarantee_preprocessed.py
 ```
-This will preprocess the data and save it in `/tigress/<netid>/processed_shots`, `/tigress/<netid>/processed_shotlists` and `/tigress/<netid>/normalization`
+This will preprocess the data and save rescaled copies of the signals in `/tigress/<netid>/processed_shots`, `/tigress/<netid>/processed_shotlists` and `/tigress/<netid>/normalization`
 
 You would only have to run preprocessing once for each dataset. The dataset is specified in the config file `examples/conf.yaml`:
 ```yaml
 paths:
     data: jet_data_0D
 ```    
-It take takes about 20 minutes to preprocess in parallel and can normally be done on the cluster headnode.
+Preprocessing this dataset takes about 20 minutes to preprocess in parallel and can normally be done on the cluster headnode.
 
 #### Training and inference
 
@@ -91,7 +91,7 @@ Use Slurm scheduler to perform batch or interactive analysis on TigerGPU cluster
 
 ##### Batch analysis
 
-For batch analysis, make sure to allocate 1 MPI process per GPU. Save the following to slurm.cmd file (or make changes to the existing `examples/slurm.cmd`):
+For batch analysis, make sure to allocate 1 MPI process per GPU. Save the following to `slurm.cmd` file (or make changes to the existing `examples/slurm.cmd`):
 
 ```bash
 #!/bin/bash
@@ -114,7 +114,9 @@ module load hdf5/intel-17.0/intel-mpi/1.10.0
 srun python mpi_learn.py
 
 ```
-where `X` is the number of nodes for distibuted training.
+where `X` is the number of nodes for distibuted training and the total number of GPUs is `X * 4`. This configuration guarantees 1 MPI process per GPU, regardless of the value of `X`. 
+
+Update the `num_gpus` value in `conf.yaml` to correspond to the total number of GPUs specified for your Slurm allocation.
 
 Submit the job with (assuming you are still in the `examples/` subdirectory):
 ```bash
@@ -126,7 +128,11 @@ And monitor it's completion via:
 ```bash
 squeue -u <netid>
 ```
-Optionally, add an email notification option in the Slurm about the job completion.
+Optionally, add an email notification option in the Slurm configuration about the job completion:
+```
+#SBATCH --mail-user=<netid>@princeton.edu
+#SBATCH --mail-type=ALL
+```
 
 ##### Interactive analysis
 
@@ -136,13 +142,18 @@ The workflow is to request an interactive session:
 ```bash
 salloc -N [X] --ntasks-per-node=4 --ntasks-per-socket=2 --gres=gpu:4 -c 4 --mem-per-cpu=0 -t 0-6:00
 ```
-where the number of GPUs is X * 4.
-
-Then launch the application from the command line:
+Then, launch the application from the command line:
 
 ```bash
-mpirun -npernode 4 python mpi_learn.py
+mpirun -N 4 python mpi_learn.py
 ```
+where `-N` is a synonym for `-npernode` in OpenMPI. Do **not** use `srun` to launch the job inside an interactive session. 
+[//]: # (This option appears to be redundant given the salloc options; "mpirun python mpi_learn.py" appears to work just the same. HOWEVER, "srun python mpi_learn.py", "srun --ntasks-per-node python mpi_learn.py", etc. NEVER works--- it just hangs without any output. Why?)
+
+[//]: # (Consistent with https://www.open-mpi.org/faq/?category=slurm ?)
+
+[//]: # (certain output seems to be repeated by ntasks-per-node, e.g. echoing the conf.yaml. Expected?)
+
 
 ### Understanding the data
 
