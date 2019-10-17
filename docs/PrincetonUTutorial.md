@@ -213,16 +213,17 @@ A regular FRNN run will produce several outputs and callbacks.
 
 Currently supports graph visualization, histograms of weights, activations and biases, and scalar variable summaries of losses and accuracies.
 
-The summaries are written in real time to `/tigress/<netid>/Graph`. For macOS, you can set up the `sshfs` mount of the `/tigress` filesystem and view those summaries in your browser.
+The summaries are written in real time to `/tigress/<netid>/Graph`. For macOS, you can set up the `sshfs` mount of the [`/tigress`](https://researchcomputing.princeton.edu/storage/tigress) filesystem and view those summaries in your browser.
 
 To install SSHFS on a macOS system, you could follow the instructions here:
 https://github.com/osxfuse/osxfuse/wiki/SSHFS
 Or use [Homebrew](https://brew.sh/), `brew cask install osxfuse; brew install sshfs`. Note, to install and/or use `osxfuse` you may need to enable its kernel extension in: System Preferences → Security & Privacy → General
 
-then do something like:
+After installation, execute:
 ```
 sshfs -o allow_other,defer_permissions netid@tigergpu.princeton.edu:/tigress/<netid>/ <destination folder name on your laptop>/
 ```
+The local destination folder may be an existing (possibly nonempty) folder. If it does not exist, SSHFS will create the folder. You can confirm that the operation succeeded via the `mount` command, which prints the list of currently mounted filesystems if no arguments are given.
 
 Launch TensorBoard locally (assuming that it is installed on your local computer):
 ```
@@ -233,6 +234,19 @@ A URL should be emitted to the console output. Navigate to this link in your bro
 You should see something like:
 
 ![tensorboard example](https://github.com/PPPLDeepLearning/plasma-python/blob/master/docs/tb.png)
+
+When you are finished with analyzing the summaries in TensorBoard, you may wish to unmount the remote filesystem:
+```
+umount  <destination folder name on your laptop>
+```
+The local destination folder will remain present, but it will no longer contain the remote files. It will be returned to its previous state, either empty or containing the original local files. Note, the `umount` command is appropriate for macOS systems; some Linux systems instead offer the `fusermount` command.  
+
+These commands may be useful when the SSH connection is lost and an existing mount point cannot be re-mounted, e.g. errors such as:
+```
+mount_osxfuse: mount point <destination folder name on your laptop> is itself on a OSXFUSE volume
+```
+
+More aggressive options such as `umount -f <destination folder name on your laptop>` and alternative approaches may be necessary; see [discussion here](https://github.com/osxfuse/osxfuse/issues/45#issuecomment-21943107).
 
 #### Learning curves and ROC per epoch
 
