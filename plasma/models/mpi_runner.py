@@ -217,6 +217,8 @@ class MPIModel():
             self.batch_iterator_func = self.batch_iterator()
 
     def close(self):
+        # TODO(KGF): extend __exit__() fn capability when this member
+        # = self.batch_iterator() (i.e. is not a ProcessGenerator())
         if (self.conf is not None
                 and 'use_process_generator' in conf['training']
                 and conf['training']['use_process_generator']):

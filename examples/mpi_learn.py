@@ -148,7 +148,10 @@ if task_index == 0:
              y_prime_test=y_prime_test, disruptive=disruptive,
              disruptive_train=disruptive_train,
              disruptive_test=disruptive_test, shot_list_train=shot_list_train,
-             shot_list_test=shot_list_test, conf=conf)
+             shot_list_test=shot_list_test, conf=conf,
+             # TODO(KGF): changing allow_pickle behavior not documented for
+             # https://docs.scipy.org/doc/numpy/reference/generated/numpy.savez.html
+             allow_pickle=True)
 
 sys.stdout.flush()
 if task_index == 0:
