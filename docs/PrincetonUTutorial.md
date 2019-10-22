@@ -56,6 +56,7 @@ you should see something like this:
 $ which mpicc
 /usr/local/openmpi/cuda-8.0/3.0.0/intel170/x86_64/bin/mpicc
 ```
+Especially note the presence of the CUDA directory in this path. This indicates that the loaded OpenMPI library is [CUDA-aware](https://www.open-mpi.org/faq/?category=runcuda).
 
 If you `conda activate` the Anaconda environment **after** loading the OpenMPI library, your application would be built with the MPI library from Anaconda, which has worse performance on this cluster and could lead to errors. See [On Computing Well: Installing and Running ‘mpi4py’ on the Cluster](https://oncomputingwell.princeton.edu/2018/11/installing-and-running-mpi4py-on-the-cluster/) for a related discussion. 
 
@@ -142,12 +143,25 @@ The workflow is to request an interactive session:
 ```bash
 salloc -N [X] --ntasks-per-node=4 --ntasks-per-socket=2 --gres=gpu:4 -c 4 --mem-per-cpu=0 -t 0-6:00
 ```
+
+[//]: # (Note, the modules might not/are not inherited from the shell that spawns the interactive Slurm session. Need to reload anaconda module, activate environment, and reload other compiler/library modules)
+
+Re-load the above modules and reactivate your conda environment. Confirm that the correct CUDA-aware OpenMPI library is in your interactive Slurm sessions's shell search path:
+```bash
+$ which mpirun 
+/usr/local/openmpi/cuda-8.0/3.0.0/intel170/x86_64/bin/mpirun
+```
 Then, launch the application from the command line:
 
 ```bash
 mpirun -N 4 python mpi_learn.py
 ```
-where `-N` is a synonym for `-npernode` in OpenMPI. Do **not** use `srun` to launch the job inside an interactive session. 
+where `-N` is a synonym for `-npernode` in OpenMPI. Do **not** use `srun` to launch the job inside an interactive session. If 
+you an encounter an error such as "unrecognized argument N", it is likely that your modules are incorrect and point to an Intel MPI distribution instead of CUDA-aware OpenMPI. Intel MPI is based on MPICH, which does not offer the `-npernode` option. You can confirm this by checking:
+```bash
+$ which mpirun 
+/opt/intel/compilers_and_libraries_2019.3.199/linux/mpi/intel64/bin/mpirun
+```
 
 [//]: # (This option appears to be redundant given the salloc options; "mpirun python mpi_learn.py" appears to work just the same.)
 
@@ -155,7 +169,7 @@ where `-N` is a synonym for `-npernode` in OpenMPI. Do **not** use `srun` to lau
 
 [//]: # (Consistent with https://www.open-mpi.org/faq/?category=slurm ?)
 
-[//]: # (certain output seems to be repeated by ntasks-per-node, e.g. echoing the conf.yaml. Expected?)
+[//]: # (certain output seems to be repeated by ntasks-per-node, e.g. echoing the conf.yaml. Expected? Or, replace the print calls with print_unique)
 
 
 ### Understanding the data
