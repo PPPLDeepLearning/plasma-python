@@ -1,5 +1,6 @@
 scipy
 pandas
+flake8
 h5py
 pyparsing
 pyyaml
