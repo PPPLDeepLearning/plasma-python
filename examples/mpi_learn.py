@@ -148,10 +148,12 @@ if task_index == 0:
              y_prime_test=y_prime_test, disruptive=disruptive,
              disruptive_train=disruptive_train,
              disruptive_test=disruptive_test, shot_list_train=shot_list_train,
-             shot_list_test=shot_list_test, conf=conf,
-             # TODO(KGF): changing allow_pickle behavior not documented for
-             # https://docs.scipy.org/doc/numpy/reference/generated/numpy.savez.html
-             allow_pickle=True)
+             shot_list_test=shot_list_test, conf=conf)
+
+    # TODO(KGF): Intel NumPy fork
+    # https://conda.anaconda.org/intel/linux-64/numpy-1.16.2-py36h7b7c402_0.tar.bz2
+    # applies cve_2019_6446_fix.patch, which unlike main NumPy, adds
+    # requirement for "allow_pickle=True" to savez() calls
 
 sys.stdout.flush()
 if task_index == 0:
