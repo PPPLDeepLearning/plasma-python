@@ -1,6 +1,7 @@
-## Tutorials
-*Last updated 2019-10-16.*
+# TigerGPU Tutorial
+*Last updated 2019-10-24.*
 
+## Building the package
 ### Login to TigerGPU
 
 First, login to TigerGPU cluster headnode via ssh:
@@ -9,7 +10,7 @@ ssh -XC <yourusername>@tigergpu.princeton.edu
 ```
 Note, `-XC` is optional; it is only necessary if you are planning on performing remote visualization, e.g. the output `.png` files from the below [section](#Learning-curves-and-ROC-per-epoch). Trusted X11 forwarding can be used with `-Y` instead of `-X` and may prevent timeouts, but it disables X11 SECURITY extension controls. Compression `-C` reduces the bandwidth usage and may be useful on slow connections. 
 
-### Sample usage on TigerGPU
+### Sample installation on TigerGPU
 
 Next, check out the source code from github:
 ```
@@ -48,7 +49,7 @@ python setup.py install
 
 Where `my_env` should contain the Python packages as per `requirements-travis.txt` file.
 
-#### Common issue
+### Common build issue: cluster's MPI library and `mpi4py`
 
 Common issue is Intel compiler mismatch in the `PATH` and what you use in the module. With the modules loaded as above,
 you should see something like this:
@@ -60,7 +61,9 @@ Especially note the presence of the CUDA directory in this path. This indicates 
 
 If you `conda activate` the Anaconda environment **after** loading the OpenMPI library, your application would be built with the MPI library from Anaconda, which has worse performance on this cluster and could lead to errors. See [On Computing Well: Installing and Running ‘mpi4py’ on the Cluster](https://oncomputingwell.princeton.edu/2018/11/installing-and-running-mpi4py-on-the-cluster/) for a related discussion. 
 
-#### Location of the data on Tigress
+
+## Understanding and preparing the input data
+### Location of the data on Tigress
 
 The JET and D3D datasets contain multi-modal time series of sensory measurements leading up to deleterious events called plasma disruptions. The datasets are located in the `/tigress/FRNN` project directory of the [GPFS](https://www.ibm.com/support/knowledgecenter/en/SSPT3X_3.0.0/com.ibm.swg.im.infosphere.biginsights.product.doc/doc/bi_gpfs_overview.html) filesystem on Princeton University clusters.
 
@@ -71,7 +74,29 @@ ln -s /tigress/FRNN/shot_lists shot_lists
 ln -s /tigress/FRNN/signal_data signal_data
 ```
 
-#### Preprocessing
+### Configuring the dataset
+All the configuration parameters are summarised in `examples/conf.yaml`. In this section, we highlight the important ones used to control the input data. 
+
+Currently, FRNN is capable of working with JET and D3D data as well as thecross-machine regime. The switch is done in the configuration file:
+
+```yaml
+paths:
+    ... 
+    data: 'jet_data_0D'
+```
+use `d3d_data` for D3D signals, use `jet_to_d3d_data` ir `d3d_to_jet_data` for cross-machine regime.
+    
+By default, FRNN will select, preprocess, and normalize all valid signals available in the above dataset. To chose only specific signals use:
+```yaml
+paths:
+    ... 
+    specific_signals: [q95,ip] 
+```    
+if left empty `[]` will use all valid signals defined on a machine. Only set this variable if you need a custom set of signals.
+
+Other parameters configured in the `conf.yaml` include batch size, learning rate, neural network topology and special conditions foir hyperparameter sweeps.
+
+### Preprocessing the input data
 
 ```bash
 cd examples/
@@ -79,20 +104,45 @@ python guarantee_preprocessed.py
 ```
 This will preprocess the data and save rescaled copies of the signals in `/tigress/<netid>/processed_shots`, `/tigress/<netid>/processed_shotlists` and `/tigress/<netid>/normalization`
 
-You would only have to run preprocessing once for each dataset. The dataset is specified in the config file `examples/conf.yaml`:
+Preprocessing must be performed only once per each dataset. For example, consider the following dataset specified in the config file `examples/conf.yaml`:
 ```yaml
 paths:
     data: jet_data_0D
 ```    
 Preprocessing this dataset takes about 20 minutes to preprocess in parallel and can normally be done on the cluster headnode.
 
-#### Training and inference
+### Current signals and notations
 
-Use Slurm scheduler to perform batch or interactive analysis on TigerGPU cluster.
+Signal name | Description 
+--- | --- 
+q95 | q95 safety factor
+ip | plasma current
+li | internal inductance 
+lm | Locked mode amplitude
+dens | Plasma density
+energy | stored energy
+pin | Input Power (beam for d3d)
+pradtot | Radiated Power
+pradcore | Radiated Power Core
+pradedge | Radiated Power Edge
+pechin | ECH input power, not always on
+pechin | ECH input power, not always on
+betan | Normalized Beta
+energydt | stored energy time derivative
+torquein | Input Beam Torque
+tmamp1 | Tearing Mode amplitude (rotating 2/1)
+tmamp2 | Tearing Mode amplitude (rotating 3/2)
+tmfreq1 | Tearing Mode frequency (rotating 2/1)
+tmfreq2 | Tearing Mode frequency (rotating 3/2)
+ipdirect | plasma current direction
 
-##### Batch analysis
+## Training and inference
 
-For batch analysis, make sure to allocate 1 MPI process per GPU. Save the following to `slurm.cmd` file (or make changes to the existing `examples/slurm.cmd`):
+Use the Slurm job scheduler to perform batch or interactive analysis on TigerGPU cluster.
+
+### Batch job
+
+For non-interactive batch analysis, make sure to allocate exactly 1 MPI process per GPU. Save the following to `slurm.cmd` file (or make changes to the existing `examples/slurm.cmd`):
 
 ```bash
 #!/bin/bash
@@ -135,7 +185,7 @@ Optionally, add an email notification option in the Slurm configuration about th
 #SBATCH --mail-type=ALL
 ```
 
-##### Interactive analysis
+### Interactive job
 
 Interactive option is preferred for **debugging** or running in the **notebook**, for all other case batch is preferred.
 The workflow is to request an interactive session:
@@ -165,65 +215,13 @@ $ which mpirun
 
 [//]: # (This option appears to be redundant given the salloc options; "mpirun python mpi_learn.py" appears to work just the same.)
 
-[//]: # (HOWEVER, "srun python mpi_learn.py", "srun --ntasks-per-node python mpi_learn.py", etc. NEVER works--- it just hangs without any output. Why?)
+[//]: # (HOWEVER, "srun python mpi_learn.py", "srun --ntasks-per-node python mpi_learn.py", etc. NEVER works--- it just hangs without any output. Why? ANSWER: salloc starts a session on the node using srun under the covers, which may consume a GPU in the allocation. Next srun call will hang due to a lack of required resources. Wrapper fix to this may have been extended from mpirun to srun on 2019-10-22)
 
-[//]: # (Consistent with https://www.open-mpi.org/faq/?category=slurm ?)
-
-[//]: # (certain output seems to be repeated by ntasks-per-node, e.g. echoing the conf.yaml. Expected? Or, replace the print calls with print_unique)
-
-
-### Understanding the data
-
-All the configuration parameters are summarised in `examples/conf.yaml`. Highlighting the important ones to control the data.
-Currently, FRNN is capable of working with JET and D3D data as well as cross-machine regime. The switch is done in the configuration file:
-
-```yaml
-paths:
-    ... 
-    data: 'jet_data_0D'
-```
-use `d3d_data` for D3D signals, use `jet_to_d3d_data` ir `d3d_to_jet_data` for cross-machine regime.
-    
-By default, FRNN will select, preprocess and normalize all valid signals available. To chose only specific signals use:
-```yaml
-paths:
-    ... 
-    specific_signals: [q95,ip] 
-```    
-if left empty `[]` will use all valid signals defined on a machine. Only use if need a custom set.
-
-Other parameters configured in the conf.yaml include batch size, learning rate, neural network topology and special conditions foir hyperparameter sweeps.
-
-### Current signals and notations
-
-Signal name | Description 
---- | --- 
-q95 | q95 safety factor
-ip | plasma current
-li | internal inductance 
-lm | Locked mode amplitude
-dens | Plasma density
-energy | stored energy
-pin | Input Power (beam for d3d)
-pradtot | Radiated Power
-pradcore | Radiated Power Core
-pradedge | Radiated Power Edge
-pechin | ECH input power, not always on
-pechin | ECH input power, not always on
-betan | Normalized Beta
-energydt | stored energy time derivative
-torquein | Input Beam Torque
-tmamp1 | Tearing Mode amplitude (rotating 2/1)
-tmamp2 | Tearing Mode amplitude (rotating 3/2)
-tmfreq1 | Tearing Mode frequency (rotating 2/1)
-tmfreq2 | Tearing Mode frequency (rotating 3/2)
-ipdirect | plasma current direction
-
-### Visualizing learning
+## Visualizing learning
 
 A regular FRNN run will produce several outputs and callbacks.
 
-#### TensorBoard visualization
+### TensorBoard visualization
 
 Currently supports graph visualization, histograms of weights, activations and biases, and scalar variable summaries of losses and accuracies.
 
@@ -262,19 +260,23 @@ mount_osxfuse: mount point <destination folder name on your laptop> is itself on
 
 More aggressive options such as `umount -f <destination folder name on your laptop>` and alternative approaches may be necessary; see [discussion here](https://github.com/osxfuse/osxfuse/issues/45#issuecomment-21943107).
 
-#### Learning curves and ROC per epoch
+## Custom visualization
+Besides TensorBoard summaries, you can visualize the accuracy of the trained FRNN model using the custom Python scripts and notebooks included in the repository.
 
-Besides TensorBoard summaries you can produce the ROC curves for validation and test data as well as visualizations of shots:
+### Learning curves, example shots, and ROC per epoch
+
+You can produce the ROC curves for validation and test data as well as visualizations of shots by using:
 ```
 cd examples/
 python performance_analysis.py
 ```
-this uses the resulting file produced as a result of training the neural network as an input, and produces several `.png` files with plots as an output.
+The `performance_analysis.py` script uses the file produced as a result of training the neural network as an input, and produces several `.png` files with plots as an output.
 
-In addition, you can check the scalar variable summaries for training loss, validation loss and validation ROC logged at `/tigress/<netid>/csv_logs` (each run will produce a new log file with a timestamp in name).
+[//]: # (Add details about sig_161308test.npz, disruptive_alarms_test.npz, 4x metric* png, accum_disruptions.png, test_roc.npz)
 
-A sample code to analyze can be found in `examples/notebooks`. For instance:
+In addition, you can check the scalar variable summaries for training loss, validation loss, and validation ROC logged at `/tigress/<netid>/csv_logs` (each run will produce a new log file with a timestamp in name).
 
+Sample notebooks for analyzing the files in this directory can be found in `examples/notebooks/`. For instance, the [LearningCurves.ipynb](https://github.com/PPPLDeepLearning/plasma-python/blob/master/examples/notebooks/LearningCurves.ipynb) notebook contains a variation on the following code snippet:
 ```python
 import pandas as pd
 import numpy as np
@@ -297,7 +299,8 @@ p.line(data['epoch'].values, data['train_loss'].values, legend="Test description
 p.legend.location = "top_right"
 show(p, notebook_handle=True)
 ```
+The resulting plot should match the `train_loss` plot in the Scalars tab of the TensorBoard summary. 
 
-### Learning curve summaries per mini-batch
+#### Learning curve summaries per mini-batch
 
-To extract per mini-batch summaries, use the output produced by FRNN logged to the standard out (in case of the batch jobs, it will all be contained in the Slurm output file). Refer to the following notebook to perform the analysis of learning curve on a mini-batch level: [FRNN_scaling.ipynb](https://github.com/PPPLDeepLearning/plasma-python/blob/master/examples/notebooks/FRNN_scaling.ipynb)
+To extract per mini-batch summaries, we require a finer granularity of checkpoint data than what it is logged to the per-epoch lines of `csv_logs/` files. We must directly use the output produced by FRNN logged to the standard output stream. In the case of the non-interactive Slurm batch jobs, it will all be contained in the Slurm output file, e.g. `slurm-3842170.out`. Refer to the following notebook to perform the analysis of learning curve on a mini-batch level: [FRNN_scaling.ipynb](https://github.com/PPPLDeepLearning/plasma-python/blob/master/examples/notebooks/FRNN_scaling.ipynb)
