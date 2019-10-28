@@ -37,7 +37,7 @@ def general_object_hash(o):
     Makes a hash from a dictionary, list, tuple or set to any level, that
     contains only other hashable types (including any lists, tuples, sets, and
     dictionaries). Relies on dill for serialization
-"""
+    """
 
     if isinstance(o, (set, tuple, list)):
         return tuple([general_object_hash(e) for e in o])
@@ -46,19 +46,17 @@ def general_object_hash(o):
         return myhash(o)
 
     new_o = deepcopy(o)
+    # recursively call this function when given a dictionary
     for k, v in new_o.items():
+        # replace the dict entry value with its hash
         new_o[k] = general_object_hash(v)
 
-    return myhash(tuple(frozenset(sorted(new_o.items()))))
+    return myhash(tuple(sorted(frozenset(new_o.items()))))
 
 
 def myhash(x):
     return int(hashlib.md5((dill.dumps(x).decode('unicode_escape')).encode(
         'utf-8')).hexdigest(), 16)
-    # return int(hashlib.md5((dill.dumps(x))).hexdigest(),16)
-    # return
-    # int(hashlib.md5((dill.dumps(x))))#.decode('unicode_escape')).encode(
-    # 'utf-8')).hexdigest(),16)
 
 
 def get_missing_value_array():
