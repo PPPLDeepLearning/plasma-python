@@ -368,7 +368,7 @@ def parameters(input_file):
         params['paths']['all_signals'] = sort_by_channels(
             list(params['paths']['all_signals_dict'].values()))
 
-        print("Selected signals (determines which signals are used for ",
+        print("Selected signals (determines which signals are used for",
               "training):\n{}".format(params['paths']['use_signals']))
 
         params['paths']['shot_files_all'] = (

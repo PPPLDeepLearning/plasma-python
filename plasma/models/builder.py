@@ -37,15 +37,12 @@ class ModelBuilder(object):
         self.conf = conf
 
     def get_unique_id(self):
-        # num_epochs = self.conf['training']['num_epochs']
         this_conf = deepcopy(self.conf)
-        # don't make hash dependent on number of epochs or T_min_warn
-        # (they can both be modified)
+        # ignore hash depednecy on number of epochs or T_min_warn (they are
+        # both modifiable). Map local copy of all confs to the same values
         this_conf['training']['num_epochs'] = 0
         this_conf['data']['T_min_warn'] = 30
         unique_id = general_object_hash(this_conf)
-        # unique_id = int(hashlib.md5((dill.dumps(this_conf).decode(
-        #     'unicode_escape')).encode('utf-8')).hexdigest(), 16)
         return unique_id
 
     def get_0D_1D_indices(self):

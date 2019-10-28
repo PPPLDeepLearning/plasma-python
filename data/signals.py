@@ -361,7 +361,7 @@ all_signals = {
 
 all_signals_restricted = all_signals
 
-print('all signals (determines which signals are downloaded & preprocessed):')
+print('All signals (determines which signals are downloaded & preprocessed):')
 print(all_signals.values())
 
 fully_defined_signals = {
