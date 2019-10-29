@@ -29,7 +29,7 @@ def general_object_hash(o):
         return tuple([general_object_hash(e) for e in o])
 
     elif not isinstance(o, dict):
-        # sequence and set types handled above, mapping types (dict) handled below.
+        # sequence and set types handled above, mapping types (dict) below.
         # Other objs can be directly serialized and hashed, including:
         # - Text sequence (str)
         # - Binary sequence (bytes)
