@@ -72,9 +72,8 @@ class ModelBuilder(object):
                 num_0D += 1
                 is_1D_region = False
             curr_idx += num_channels
-        return np.array(indices_0d).astype(
-            np.int32), np.array(indices_1d).astype(
-            np.int32), num_0D, num_1D
+        return (np.array(indices_0d).astype(np.int32),
+                np.array(indices_1d).astype(np.int32), num_0D, num_1D)
 
     def build_model(self, predict, custom_batch_size=None):
         conf = self.conf

@@ -1,5 +1,4 @@
 from __future__ import print_function
-import keras.backend as K
 
 
 def get_states(model):
@@ -8,10 +7,9 @@ def get_states(model):
         if hasattr(layer, "states"):
             layer_states = []
             for state in layer.states:
-                # print(K.get_value(state)[0][0:3])
+                import keras.backend as K
                 layer_states.append(K.get_value(state))
             all_states.append(layer_states)
-    # print(all_states)
     return all_states
 
 

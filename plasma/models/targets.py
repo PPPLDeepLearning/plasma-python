@@ -1,12 +1,18 @@
 import numpy as np
 import abc
 
-from keras.losses import hinge  # squared_hinge, mean_absolute_percentage_error
 from plasma.utils.evaluation import (
     mse_np, binary_crossentropy_np, hinge_np,
     # mae_np, squared_hinge_np,
     )
-import keras.backend as K
+
+import warnings
+# TODO(KGF): temporarily suppress numpy>=1.17.0 warning with TF<2.0.0
+# ~6x tensorflow/python/framework/dtypes.py:529: FutureWarning ...
+warnings.filterwarnings('ignore', category=FutureWarning)
+import keras.backend as K  # noqa
+from keras.losses import hinge  # noqa
+warnings.resetwarnings()
 
 # Requirement: larger value must mean disruption more likely.
 

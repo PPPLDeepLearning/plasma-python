@@ -5,12 +5,10 @@ from plasma.utils.processing import concatenate_sublists
 from plasma.utils.evaluation import get_loss_from_list
 from plasma.models import builder
 from plasma.models.loader import ProcessGenerator
-from plasma.utils.state_reset import reset_states  # , get_states
+from plasma.utils.state_reset import reset_states
 from plasma.conf import conf
 from pprint import pprint
 from mpi4py import MPI
-# import mpi4py
-# import getpass
 '''
 #########################################################
 This file trains a deep learning model to predict
@@ -56,7 +54,7 @@ if backend == 'tf' or backend == 'tensorflow':
     if NUM_GPUS > 1:
         os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(MY_GPU)
         # ,mode=NanGuardMode'
-    os.environ['KERAS_BACKEND'] = 'tensorflow'
+    os.environ['KERAS_BACKEND'] = 'tensorflow'  # default setting
     import tensorflow as tf
     from keras.backend.tensorflow_backend import set_session
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.95,
@@ -71,7 +69,7 @@ else:
         'device=gpu{},floatX=float32,base_compiledir={}'.format(
             MY_GPU, base_compile_dir))  # ,mode=NanGuardMode'
     # import theano
-# import keras
+    # import keras
 for i in range(num_workers):
     comm.Barrier()
     if i == task_index:
@@ -862,13 +860,15 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         if ('monitor_test' in conf['callbacks'].keys()
                 and conf['callbacks']['monitor_test']):
             times = conf['callbacks']['monitor_times']
-            roc_areas, losses = mpi_make_predictions_and_evaluate_multiple_times(conf, shot_list_validate, loader, times)  # noqa
-            for roc, t in zip(roc_areas, times):
+            areas, _ = mpi_make_predictions_and_evaluate_multiple_times(
+                conf, shot_list_validate, loader, times)
+            for roc, t in zip(areas, times):
                 print_unique('epoch {}, val_roc_{} = {}'.format(
                     int(round(e)), t, roc))
             if shot_list_test is not None:
-                roc_areas, losses = mpi_make_predictions_and_evaluate_multiple_times(conf, shot_list_test, loader, times)  # noqa
-                for roc, t in zip(roc_areas, times):
+                areas, _ = mpi_make_predictions_and_evaluate_multiple_times(
+                    conf, shot_list_test, loader, times)
+                for roc, t in zip(areas, times):
                     print_unique('epoch {}, test_roc_{} = {}'.format(
                         int(round(e)), t, roc))
 
