@@ -8,6 +8,7 @@ from scipy.interpolate import UnivariateSpline
 
 from plasma.utils.processing import get_individual_shot_file
 from plasma.utils.downloading import get_missing_value_array
+from plasma.utils.hashing import myhash
 
 # class SignalCollection:
 #   """GA Data Obj"""
@@ -65,10 +66,8 @@ class Signal(object):
     def load_data_from_txt_safe(self, prepath, shot, dtype='float32'):
         file_path = self.get_file_path(prepath, shot.machine, shot.number)
         if not self.is_saved(prepath, shot):
-            print(
-                'Signal {}, shot {} was never downloaded'.format(
-                    self.description,
-                    shot.number))
+            print('Signal {}, shot {} was never downloaded'.format(
+                self.description, shot.number))
             return None, False
 
         if os.path.getsize(file_path) == 0:
@@ -79,15 +78,13 @@ class Signal(object):
         try:
             data = np.loadtxt(file_path, dtype=dtype)
             if np.all(data == get_missing_value_array()):
-                print(
-                    'Signal {}, shot {} contains no data'.format(
-                        self.description, shot.number))
+                print('Signal {}, shot {} contains no data'.format(
+                    self.description, shot.number))
                 return None, False
         except Exception as e:
             print(e)
-            print(
-                'Couldnt load signal {} shot {}. Removing.'.format(
-                    file_path, shot.number))
+            print('Couldnt load signal {} shot {}. Removing.'.format(
+                file_path, shot.number))
             os.remove(file_path)
             return None, False
 
@@ -210,9 +207,7 @@ class Signal(object):
             other.description_plus_paths())
 
     def __hash__(self):
-        import hashlib
-        return int(hashlib.md5(
-            self.description_plus_paths().encode('utf-8')).hexdigest(), 16)
+        return myhash(self.description_plus_paths())
 
     def __str__(self):
         return self.description

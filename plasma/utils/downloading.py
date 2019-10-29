@@ -6,9 +6,6 @@ import multiprocessing as mp
 import sys
 import time
 import numpy as np
-import dill
-import hashlib
-from copy import deepcopy
 # import gadata
 # from plasma.primitives.shots import ShotList
 
@@ -30,33 +27,6 @@ try:
     from MDSplus import Connection
 except ImportError:
     pass
-
-
-def general_object_hash(o):
-    """
-    Makes a hash from a dictionary, list, tuple or set to any level, that
-    contains only other hashable types (including any lists, tuples, sets, and
-    dictionaries). Relies on dill for serialization
-    """
-
-    if isinstance(o, (set, tuple, list)):
-        return tuple([general_object_hash(e) for e in o])
-
-    elif not isinstance(o, dict):
-        return myhash(o)
-
-    new_o = deepcopy(o)
-    # recursively call this function when given a dictionary
-    for k, v in new_o.items():
-        # replace the dict entry value with its hash
-        new_o[k] = general_object_hash(v)
-
-    return myhash(tuple(sorted(frozenset(new_o.items()))))
-
-
-def myhash(x):
-    return int(hashlib.md5((dill.dumps(x).decode('unicode_escape')).encode(
-        'utf-8')).hexdigest(), 16)
 
 
 def get_missing_value_array():

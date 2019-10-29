@@ -21,7 +21,8 @@ import os
 import sys
 import numpy as np
 from copy import deepcopy
-from plasma.utils.downloading import makedirs_process_safe, general_object_hash
+from plasma.utils.downloading import makedirs_process_safe
+from plasma.utils.hashing import general_object_hash
 
 
 class LossHistory(Callback):

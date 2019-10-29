@@ -1,12 +1,11 @@
 from plasma.primitives.shots import ShotListFiles
 import data.signals as sig
+from plasma.utils.hashing import myhash_signals
 # from data.signals import (
 #     all_signals, fully_defined_signals_1D,
 #     jet, d3d)  # nstx
 import getpass
 import yaml
-
-import hashlib
 
 
 def parameters(input_file):
@@ -28,7 +27,7 @@ def parameters(input_file):
         params['paths']['shot_list_dir'] = (
             base_path + params['paths']['shot_list_dir'])
         params['paths']['output_path'] = output_path
-        h = get_unique_signal_hash(sig.all_signals.values())
+        h = myhash_signals(sig.all_signals.values())
         params['paths']['global_normalizer_path'] = (
             output_path
             + '/normalization/normalization_signal_group_{}.npz'.format(h))
@@ -382,14 +381,6 @@ def parameters(input_file):
         assert isinstance(params['data']['augment_during_training'], bool)
 
     return params
-
-
-def get_unique_signal_hash(signals):
-    return int(hashlib.md5(''.join(tuple(map(lambda x: "{}".format(
-        x.__hash__()), sorted(signals)))).encode('utf-8')).hexdigest(), 16)
-    # return int(hashlib.md5(''.join(
-    #     tuple(map(lambda x: x.description, sorted(signals)))).encode(
-    #         'utf-8')).hexdigest(), 16)
 
 
 def sort_by_channels(list_of_signals):
