@@ -519,7 +519,7 @@ class MPIModel():
                 self.comm.Barrier()
                 sys.stdout.flush()
                 print_unique('Compilation finished in {:.2f}s'.format(
-                    time.time()-t0_comp))
+                    time.time() - t0_comp))
                 t_start = time.time()
                 sys.stdout.flush()
 
@@ -627,7 +627,8 @@ def add_params(params1, params2):
 
 
 def get_shot_list_path(conf):
-    # KGF: not compatible with flexible conf.py hierarchy
+    # TODO(KGF): incompatible with flexible conf.py hierarchy; see setting of
+    # 'normalizer_path', 'global_normalizer_path'
     return conf['paths']['base_path'] + '/normalization/shot_lists.npz'
 
 
@@ -761,6 +762,9 @@ def mpi_make_predictions_and_evaluate_multiple_times(conf, shot_list, loader,
 def mpi_train(conf, shot_list_train, shot_list_validate, loader,
               callbacks_list=None, shot_list_test=None):
     loader.set_inference_mode(False)
+
+    # TODO(KGF): this is not defined in conf.yaml, but added to processed dict
+    # for the first time here:
     conf['num_workers'] = comm.Get_size()
 
     specific_builder = builder.ModelBuilder(conf)
@@ -827,7 +831,7 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         cmp_fn = min
 
     while e < num_epochs-1:
-        print_unique("begin epoch {} 0".format(e))
+        print_unique("begin epoch {}".format(e))
         if task_index == 0:
             callbacks.on_epoch_begin(int(round(e)))
         mpi_model.set_lr(lr*lr_decay**e)
@@ -908,9 +912,8 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
                 tensorboard.on_epoch_end(val_generator, val_steps,
                                          int(round(e)), epoch_logs)
 
-        print_unique("end epoch {} 0".format(e))
         stop_training = comm.bcast(stop_training, root=0)
-        print_unique("end epoch {} 1".format(e))
+        print_unique("end epoch {}".format(e))
         if stop_training:
             print("Stopping training due to early stopping")
             break

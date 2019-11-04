@@ -10,6 +10,10 @@ import yaml
 
 def parameters(input_file):
     """Parse yaml file of configuration parameters."""
+    # TODO(KGF): the following line imports TensorFlow as a Keras backend
+    # by default (absent env variable KERAS_BACKEND and/or config file
+    # $HOME/.keras/keras.json) "from plasma.conf import conf"
+    # via "import keras.backend as K" in targets.py
     from plasma.models.targets import (
         HingeTarget, MaxHingeTarget, BinaryTarget,
         TTDTarget, TTDInvTarget, TTDLinearTarget
