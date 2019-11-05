@@ -4,7 +4,7 @@
 
 fs_path: '/tigress'
 target: 'hinge' # 'maxhinge' # 'maxhinge' # 'binary' # 'hinge'
-num_gpus: 4
+num_gpus: 4  # per node
 
 paths:
     signal_prepath: '/signal_data/' # /signal_data/jet/
@@ -105,7 +105,7 @@ model:
     stateful: True
     return_sequences: True
     dropout_prob: 0.1
-    # only relevant if we want to do mpi training. The number of steps with a single replica
+    # only relevant if we want to do MPI training. The number of steps with a single replica
     warmup_steps: 0
     ignore_timesteps: 100 # how many initial timesteps to ignore during evaluation (to let the internal state settle)
     backend: 'tensorflow'

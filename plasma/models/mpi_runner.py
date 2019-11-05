@@ -7,7 +7,6 @@ from plasma.models import builder
 from plasma.models.loader import ProcessGenerator
 from plasma.utils.state_reset import reset_states
 from plasma.conf import conf
-from pprint import pprint
 from mpi4py import MPI
 '''
 #########################################################
@@ -25,6 +24,7 @@ This work was supported by the DOE CSGF program.
 #########################################################
 '''
 
+
 import os
 import sys
 import time
@@ -36,6 +36,13 @@ from functools import partial
 from copy import deepcopy
 import socket
 sys.setrecursionlimit(10000)
+
+
+def pprint_unique(obj):
+    from pprint import pprint
+    if task_index == 0:
+        pprint(obj)
+
 
 # import keras sequentially because it otherwise reads from ~/.keras/keras.json
 # with too many threads:
@@ -80,8 +87,7 @@ for i in range(num_workers):
         import keras.callbacks as cbks
 
 
-if task_index == 0:
-    pprint(conf)
+pprint_unique(conf)
 
 
 class MPIOptimizer(object):
@@ -492,7 +498,7 @@ class MPIModel():
                 (batch_xs, batch_ys, batches_to_reset, num_so_far_curr,
                  num_total, is_warmup_period) = next(batch_iterator_func)
             except StopIteration:
-                print("Resetting batch iterator.")
+                print_unique("Resetting batch iterator.")
                 self.num_so_far_accum = self.num_so_far_indiv
                 self.set_batch_iterator_func()
                 batch_iterator_func = self.batch_iterator_func
@@ -535,13 +541,12 @@ class MPIModel():
                 t2 = time.time()
                 write_str_0 = self.calculate_speed(t0, t1, t2, num_replicas)
                 curr_loss = self.mpi_average_scalars(1.0*loss, num_replicas)
-                # if self.task_index == 0:
-                # print(self.model.get_weights()[0][0][:4])
+                # print_unique(self.model.get_weights()[0][0][:4])
                 loss_averager.add_val(curr_loss)
                 ave_loss = loss_averager.get_val()
-                eta = self.estimate_remaining_time(
-                    t0 - t_start,
-                    self.num_so_far - self.epoch*num_total, num_total)
+                eta = self.estimate_remaining_time(t0 - t_start,
+                                                   self.num_so_far - self.epoch*num_total,
+                                                   num_total)
                 write_str = (
                     '\r[{}] step: {} [ETA: {:.2f}s] [{:.2f}/{}], '.format(
                         self.task_index, step, eta,
@@ -793,13 +798,12 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         print("Optimizer not implemented yet")
         exit(1)
 
-    print('{} epochs left to go'.format(num_epochs - 1 - e))
+    print_unique('{} epochs left to go'.format(num_epochs - 1 - e))
 
-    batch_generator = partial(
-        loader.training_batch_generator_partial_reset,
-        shot_list=shot_list_train)
+    batch_generator = partial(loader.training_batch_generator_partial_reset,
+                              shot_list=shot_list_train)
 
-    print("warmup {}".format(warmup_steps))
+    print_unique("warmup steps = {}".format(warmup_steps))
     mpi_model = MPIModel(train_model, optimizer, comm, batch_generator,
                          batch_size, lr=lr, warmup_steps=warmup_steps,
                          num_batches_minimum=num_batches_minimum, conf=conf)
@@ -915,7 +919,7 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         stop_training = comm.bcast(stop_training, root=0)
         print_unique("end epoch {}".format(e))
         if stop_training:
-            print("Stopping training due to early stopping")
+            print_unique("Stopping training due to early stopping")
             break
 
     if task_index == 0:
