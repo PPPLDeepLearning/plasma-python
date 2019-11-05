@@ -70,44 +70,35 @@ if only_predict:
 #####################################################
 #                 NORMALIZATION                     #
 #####################################################
-# make sure preprocessing has been run, and is saved as a file
+normalizer = Normalizer(conf)
+
 if g.task_index == 0:
-    # TODO(KGF): check tuple unpack
+    # make sure preprocessing has been run, and results are saved to files
+    # if not, only master MPI rank spawns thread pool to perform preprocessing
     (shot_list_train, shot_list_validate,
      shot_list_test) = guarantee_preprocessed(conf)
+    # similarly, train normalizer (if necessary) w/ master MPI rank only
+    normalizer.train()
 g.comm.Barrier()
-# TODO(KGF): why call guarantee_preprocessed() a second time with all ranks?
+g.print_unique("begin preprocessor+normalization (all MPI ranks)...")
+# second call has ALL MPI ranks load preprocessed shots from .npz files
 (shot_list_train, shot_list_validate,
  shot_list_test) = guarantee_preprocessed(conf, verbose=True)
-
-# TODO(KGF): shouldn't normalize.train() be called like guaranteed_preprocessed
-# above? I.e. if Normalizer.previously_saved_stats() does not load a computed
-# normalizer for all machines ("loaded normalization data from {d3d: 3449, jet: 2918}  # noqa
-# shots ( {d3d: 810, jet: 74} disruptive )" ), then only the master MPI rank
-# calls normalizer.train() ???
-g.print_unique("begin normalization...")
-normalizer = Normalizer(conf)
+# second call to normalizer training
 normalizer.train()
 loader = Loader(conf, normalizer)
 g.print_unique("...done")
 
-# TODO(KGF): note, "python examples/guaranteed_preprocessed.py" does NOT train
-# the normalizer. Try deleting the previously-computed file, e.g.
-# normalization/normalization_signal_group_250640798211266795112500621861190558178.npz  # noqa
-# or set conf['data']['recompute_normalization'] = True to see example stdout
-
 # TODO(KGF): both preprocess.py and normalize.py are littered with print()
 # calls that should probably be replaced with print_unique() when they are not
 # purely loading previously-computed quantities from file
+# (or we can continue to ensure that they are only ever executed by 1 rank)
 
 #####################################################
 #                    TRAINING                       #
 #####################################################
 
 # ensure training has a separate random seed for every worker
-# TODO(KGF): can probably delete the next two lines. Check.
-np.random.seed(g.task_index)
-random.seed(g.task_index)
 if not only_predict:
     mpi_train(conf, shot_list_train, shot_list_validate, loader,
               shot_list_test=shot_list_test)

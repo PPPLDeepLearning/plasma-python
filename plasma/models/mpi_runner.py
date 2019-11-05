@@ -517,7 +517,8 @@ class MPIModel():
                     batch_xs, batch_ys, verbose)
                 self.comm.Barrier()
                 sys.stdout.flush()
-                g.print_unique('Compilation finished in {:.2f}s'.format(
+                # TODO(KGF): check line feed/carriage returns around this
+                g.print_unique('\nCompilation finished in {:.2f}s'.format(
                     time.time() - t0_comp))
                 t_start = time.time()
                 sys.stdout.flush()
