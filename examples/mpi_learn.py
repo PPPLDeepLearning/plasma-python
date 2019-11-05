@@ -95,7 +95,7 @@ comm.Barrier()
  shot_list_test) = guarantee_preprocessed(conf)
 
 
-print_unique("normalization", end='')
+print_unique("begin normalization...")  # , end='')
 normalizer = Normalizer(conf)
 normalizer.train()
 loader = Loader(conf, normalizer)
