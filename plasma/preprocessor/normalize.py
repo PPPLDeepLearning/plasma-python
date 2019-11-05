@@ -73,6 +73,10 @@ class Normalizer(object):
     def load_stats(self):
         pass
 
+    @abc.abstractmethod
+    def print_summary(self, action='loaded'):
+        pass
+
     def set_inference_mode(self, val):
         self.inference_mode = val
 
@@ -256,8 +260,9 @@ class MeanVarNormalizer(Normalizer):
                 self.stds[machine] = np.concatenate(
                     (self.stds[machine], stds), axis=0)
             self.num_processed[machine] = self.num_processed[machine] + 1
-            self.num_disruptive[machine] = self.num_disruptive[machine] + \
-                (1 if stats.is_disruptive else 0)
+            self.num_disruptive[machine] = (
+                self.num_disruptive[machine]
+                + (1 if stats.is_disruptive else 0))
 
     def apply(self, shot):
         apply_positivity(shot)
@@ -286,17 +291,10 @@ class MeanVarNormalizer(Normalizer):
         # num_processed = dat['num_processed']
         # num_disruptive = dat['num_disruptive']
         self.ensure_save_directory()
-        np.savez(
-            self.path,
-            means=self.means,
-            stds=self.stds,
-            num_processed=self.num_processed,
-            num_disruptive=self.num_disruptive,
-            machines=self.machines)
-        print(
-            'saved normalization data from {} shots ( {} disruptive )'.format(
-                self.num_processed,
-                self.num_disruptive))
+        np.savez(self.path, means=self.means, stds=self.stds,
+                 num_processed=self.num_processed,
+                 num_disruptive=self.num_disruptive, machines=self.machines)
+        self.print_summary(action='saved')
 
     def load_stats(self):
         assert self.previously_saved_stats()[0], "stats not saved before"
@@ -308,9 +306,11 @@ class MeanVarNormalizer(Normalizer):
         self.machines = dat['machines'][()]
         for machine in self.means:
             print('Machine {}:'.format(machine))
-            print('loaded normalization data from ',
-                  '{} shots ( {} disruptive )'.format(self.num_processed,
-                                                      self.num_disruptive))
+            self.print_summary()
+
+    def print_summary(self, action='loaded'):
+        print('{} normalization data from {} shots ( {} disruptive )'.format(
+            action, self.num_processed, self.num_disruptive))
 
 
 class VarNormalizer(MeanVarNormalizer):
@@ -416,8 +416,8 @@ class MinMaxNormalizer(Normalizer):
                 self.maximums[m] = (self.num_processed[m]*self.maximums
                                     + maximums)/(self.num_processed[m] + 1.0)
             self.num_processed[m] = self.num_processed[m] + 1
-            self.num_disruptive[m] = self.num_disruptive[m] + \
-                (1 if stats.is_disruptive else 0)
+            self.num_disruptive[m] = (self.num_disruptive[m]
+                                      + (1 if stats.is_disruptive else 0))
 
     def apply(self, shot):
         apply_positivity(shot)
