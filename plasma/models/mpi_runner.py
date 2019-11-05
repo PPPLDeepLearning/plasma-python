@@ -782,12 +782,12 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         print("Optimizer not implemented yet")
         exit(1)
 
-    g.write_unique('{} epochs left to go'.format(num_epochs - 1 - e))
+    g.print_unique('{} epochs left to go'.format(num_epochs - 1 - e))
 
     batch_generator = partial(loader.training_batch_generator_partial_reset,
                               shot_list=shot_list_train)
 
-    g.write_unique("warmup steps = {}".format(warmup_steps))
+    g.print_unique("warmup steps = {}".format(warmup_steps))
     mpi_model = MPIModel(train_model, optimizer, g.comm, batch_generator,
                          batch_size, lr=lr, warmup_steps=warmup_steps,
                          num_batches_minimum=num_batches_minimum, conf=conf)

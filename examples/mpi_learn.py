@@ -80,11 +80,25 @@ g.comm.Barrier()
 (shot_list_train, shot_list_validate,
  shot_list_test) = guarantee_preprocessed(conf, verbose=True)
 
+# TODO(KGF): shouldn't normalize.train() be called like guaranteed_preprocessed
+# above? I.e. if Normalizer.previously_saved_stats() does not load a computed
+# normalizer for all machines ("loaded normalization data from {d3d: 3449, jet: 2918}  # noqa
+# shots ( {d3d: 810, jet: 74} disruptive )" ), then only the master MPI rank
+# calls normalizer.train() ???
 g.print_unique("begin normalization...")
 normalizer = Normalizer(conf)
 normalizer.train()
 loader = Loader(conf, normalizer)
 g.print_unique("...done")
+
+# TODO(KGF): note, "python examples/guaranteed_preprocessed.py" does NOT train
+# the normalizer. Try deleting the previously-computed file, e.g.
+# normalization/normalization_signal_group_250640798211266795112500621861190558178.npz  # noqa
+# or set conf['data']['recompute_normalization'] = True to see example stdout
+
+# TODO(KGF): both preprocess.py and normalize.py are littered with print()
+# calls that should probably be replaced with print_unique() when they are not
+# purely loading previously-computed quantities from file
 
 #####################################################
 #                    TRAINING                       #

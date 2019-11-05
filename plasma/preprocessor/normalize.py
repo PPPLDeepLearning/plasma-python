@@ -9,6 +9,7 @@ This work was supported by the DOE CSGF program.
 '''
 
 from __future__ import print_function
+import plasma.global_vars as g
 import os
 import time
 import sys
@@ -74,7 +75,7 @@ class Normalizer(object):
         pass
 
     def print_summary(self, action='loaded'):
-        print('{} normalization data from {} shots ( {} disruptive )'.format(
+        g.print_unique('{} normalization data from {} shots ( {} disruptive )'.format(
             action, self.num_processed, self.num_disruptive))
 
     def set_inference_mode(self, val):
@@ -149,7 +150,7 @@ class Normalizer(object):
             self.save_stats()
         else:
             self.load_stats()
-        print(self)
+        g.print_unique(self)
 
     def cut_end_of_shot(self, shot):
         cut_shot_ends = self.conf['data']['cut_shot_ends']
@@ -222,7 +223,7 @@ class MeanVarNormalizer(Normalizer):
         for machine in self.means:
             means = np.median(self.means[machine], axis=0)
             stds = np.median(self.stds[machine], axis=0)
-            s += 'Machine: {}:\nMean Var Normalizer.\n'.format(machine)
+            s += 'Machine = {}:\nMean Var Normalizer.\n'.format(machine)
             s += 'means: {}\nstds: {}'.format(means, stds)
         return s
 
@@ -304,8 +305,8 @@ class MeanVarNormalizer(Normalizer):
         self.num_disruptive = dat['num_disruptive'][()]
         self.machines = dat['machines'][()]
         for machine in self.means:
-            print('Machine {}:'.format(machine))
-            self.print_summary()
+            g.print_unique('Machine = {}:'.format(machine))
+        self.print_summary()
 
 
 class VarNormalizer(MeanVarNormalizer):
@@ -452,7 +453,7 @@ class MinMaxNormalizer(Normalizer):
         self.num_disruptive = dat['num_disruptive'][()]
         self.machines = dat['machines'][()]
         for machine in self.means:
-            print('Machine {}:'.format(machine))
+            g.print_unique('Machine {}:'.format(machine))
             self.print_summary()
 
 
