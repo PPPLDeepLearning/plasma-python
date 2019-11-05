@@ -38,12 +38,6 @@ import socket
 sys.setrecursionlimit(10000)
 
 
-def pprint_unique(obj):
-    from pprint import pprint
-    if task_index == 0:
-        pprint(obj)
-
-
 # import keras sequentially because it otherwise reads from ~/.keras/keras.json
 # with too many threads:
 # from mpi_launch_tensorflow import get_mpi_task_index
@@ -51,12 +45,18 @@ comm = MPI.COMM_WORLD
 task_index = comm.Get_rank()
 num_workers = comm.Get_size()
 
-
 NUM_GPUS = conf['num_gpus']
 MY_GPU = task_index % NUM_GPUS
-
 backend = conf['model']['backend']
 
+
+def pprint_unique(obj):
+    from pprint import pprint
+    if task_index == 0:
+        pprint(obj)
+
+
+# initialization code for mpi_runner.py module:
 if backend == 'tf' or backend == 'tensorflow':
     if NUM_GPUS > 1:
         os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(MY_GPU)
@@ -544,13 +544,13 @@ class MPIModel():
                 # print_unique(self.model.get_weights()[0][0][:4])
                 loss_averager.add_val(curr_loss)
                 ave_loss = loss_averager.get_val()
-                eta = self.estimate_remaining_time(t0 - t_start,
-                                                   self.num_so_far - self.epoch*num_total,
-                                                   num_total)
+                eta = self.estimate_remaining_time(
+                    t0 - t_start, self.num_so_far - self.epoch*num_total,
+                    num_total)
                 write_str = (
                     '\r[{}] step: {} [ETA: {:.2f}s] [{:.2f}/{}], '.format(
-                        self.task_index, step, eta,
-                        1.0*self.num_so_far, num_total)
+                        self.task_index, step, eta, 1.0*self.num_so_far,
+                        num_total)
                     + 'loss: {:.5f} [{:.5f}] | '.format(ave_loss, curr_loss)
                     + 'walltime: {:.4f} | '.format(
                         time.time() - self.start_time))
@@ -834,7 +834,7 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         best_so_far = np.inf
         cmp_fn = min
 
-    while e < num_epochs-1:
+    while e < (num_epochs - 1):
         print_unique("begin epoch {}".format(e))
         if task_index == 0:
             callbacks.on_epoch_begin(int(round(e)))

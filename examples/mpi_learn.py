@@ -1,11 +1,12 @@
 from plasma.models.mpi_runner import (
-    mpi_train, mpi_make_predictions_and_evaluate
+    mpi_train, mpi_make_predictions_and_evaluate,
+    comm, task_index, print_unique
     )
-from mpi4py import MPI
+# from mpi4py import MPI
 from plasma.preprocessor.preprocess import guarantee_preprocessed
 from plasma.models.loader import Loader
 from plasma.conf import conf
-from pprint import pprint
+# from pprint import pprint
 '''
 #########################################################
 This file trains a deep learning model to predict
@@ -37,9 +38,8 @@ sys.setrecursionlimit(10000)
 
 
 if conf['model']['shallow']:
-    print(
-        "Shallow learning using MPI is not supported yet. ",
-        "Set conf['model']['shallow'] to False.")
+    print("Shallow learning using MPI is not supported yet. ",
+          "Set conf['model']['shallow'] to False.")
     exit(1)
 if conf['data']['normalizer'] == 'minmax':
     from plasma.preprocessor.normalize import MinMaxNormalizer as Normalizer
@@ -57,23 +57,29 @@ else:
     print('unkown normalizer. exiting')
     exit(1)
 
-comm = MPI.COMM_WORLD
-task_index = comm.Get_rank()
-num_workers = comm.Get_size()
-NUM_GPUS = conf['num_gpus']
-MY_GPU = task_index % NUM_GPUS
+# TODO(KGF): this part of the code is duplicated in mpi_runner.py
+# comm = MPI.COMM_WORLD
+# task_index = comm.Get_rank()
+# num_workers = comm.Get_size()
 
+# NUM_GPUS = conf['num_gpus']
+# MY_GPU = task_index % NUM_GPUS
+# backend = conf['model']['backend']
 
-np.random.seed(task_index)
-random.seed(task_index)
-if task_index == 0:
-    pprint(conf)
+# if task_index == 0:
+#     pprint(conf)
+
+# TODO(KGF): confirm that this second PRNG seed setting is not needed
+# (before normalization; done again before MPI training)
+# np.random.seed(task_index)
+# random.seed(task_index)
+
 
 only_predict = len(sys.argv) > 1
 custom_path = None
 if only_predict:
     custom_path = sys.argv[1]
-    print("predicting using path {}".format(custom_path))
+    print_unique("predicting using path {}".format(custom_path))
 
 
 #####################################################
@@ -89,11 +95,11 @@ comm.Barrier()
  shot_list_test) = guarantee_preprocessed(conf)
 
 
-print("normalization", end='')
+print_unique("normalization", end='')
 normalizer = Normalizer(conf)
 normalizer.train()
 loader = Loader(conf, normalizer)
-print("...done")
+print_unique("...done")
 
 # ensure training has a separate random seed for every worker
 np.random.seed(task_index)
@@ -104,7 +110,7 @@ if not only_predict:
 
 # load last model for testing
 loader.set_inference_mode(True)
-print('saving results')
+print_unique('saving results')
 y_prime = []
 y_gold = []
 disruptive = []
@@ -117,12 +123,11 @@ disruptive = []
  loss_test) = mpi_make_predictions_and_evaluate(conf, shot_list_test,
                                                 loader, custom_path)
 
-if task_index == 0:
-    print('=========Summary========')
-    print('Train Loss: {:.3e}'.format(loss_train))
-    print('Train ROC: {:.4f}'.format(roc_train))
-    print('Test Loss: {:.3e}'.format(loss_test))
-    print('Test ROC: {:.4f}'.format(roc_test))
+print_unique('=========Summary========')
+print_unique('Train Loss: {:.3e}'.format(loss_train))
+print_unique('Train ROC: {:.4f}'.format(roc_train))
+print_unique('Test Loss: {:.3e}'.format(loss_test))
+print_unique('Test ROC: {:.4f}'.format(roc_test))
 
 
 if task_index == 0:
@@ -156,5 +161,4 @@ if task_index == 0:
     # requirement for "allow_pickle=True" to savez() calls
 
 sys.stdout.flush()
-if task_index == 0:
-    print('finished.')
+print_unique('finished.')
