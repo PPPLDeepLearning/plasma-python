@@ -5,7 +5,8 @@ from plasma.utils.evaluation import (
     mse_np, binary_crossentropy_np, hinge_np,
     # mae_np, squared_hinge_np,
     )
-
+import keras.backend as K
+from keras.losses import hinge
 # Requirement: larger value must mean disruption more likely.
 
 
