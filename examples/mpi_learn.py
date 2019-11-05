@@ -1,6 +1,6 @@
+import plasma.global_vars as g
 from plasma.models.mpi_runner import (
-    mpi_train, mpi_make_predictions_and_evaluate,
-    comm, task_index, print_unique
+    mpi_train, mpi_make_predictions_and_evaluate
     )
 from plasma.preprocessor.preprocess import guarantee_preprocessed
 from plasma.models.loader import Loader
@@ -55,46 +55,55 @@ else:
     print('unkown normalizer. exiting')
     exit(1)
 
-# TODO(KGF): confirm that this second PRNG seed setting is not needed
-# (before normalization; done again before MPI training)
-# np.random.seed(task_index)
-# random.seed(task_index)
+# set PRNG seed, unique for each worker, based on MPI task index for
+# reproducible shuffling in guranteed_preprocessed() and training steps
+np.random.seed(g.task_index)
+random.seed(g.task_index)
 
 only_predict = len(sys.argv) > 1
 custom_path = None
 if only_predict:
     custom_path = sys.argv[1]
-    print_unique("predicting using path {}".format(custom_path))
+    g.print_unique("predicting using path {}".format(custom_path))
 
 
 #####################################################
 #                 NORMALIZATION                     #
 #####################################################
 # make sure preprocessing has been run, and is saved as a file
-if task_index == 0:
+if g.task_index == 0:
     # TODO(KGF): check tuple unpack
     (shot_list_train, shot_list_validate,
      shot_list_test) = guarantee_preprocessed(conf)
-comm.Barrier()
+g.comm.Barrier()
 (shot_list_train, shot_list_validate,
  shot_list_test) = guarantee_preprocessed(conf)
 
-print_unique("begin normalization...")
+g.print_unique("begin normalization...")
 normalizer = Normalizer(conf)
 normalizer.train()
 loader = Loader(conf, normalizer)
-print_unique("...done")
+g.print_unique("...done")
+
+#####################################################
+#                    TRAINING                       #
+#####################################################
 
 # ensure training has a separate random seed for every worker
-np.random.seed(task_index)
-random.seed(task_index)
+# TODO(KGF): can probably delete the next two lines. Check.
+np.random.seed(g.task_index)
+random.seed(g.task_index)
 if not only_predict:
     mpi_train(conf, shot_list_train, shot_list_validate, loader,
               shot_list_test=shot_list_test)
 
+#####################################################
+#                    TESTING                        #
+#####################################################
+
 # load last model for testing
 loader.set_inference_mode(True)
-print_unique('saving results')
+g.print_unique('saving results')
 y_prime = []
 y_gold = []
 disruptive = []
@@ -107,13 +116,13 @@ disruptive = []
  loss_test) = mpi_make_predictions_and_evaluate(conf, shot_list_test,
                                                 loader, custom_path)
 
-print_unique('=========Summary========')
-print_unique('Train Loss: {:.3e}'.format(loss_train))
-print_unique('Train ROC: {:.4f}'.format(roc_train))
-print_unique('Test Loss: {:.3e}'.format(loss_test))
-print_unique('Test ROC: {:.4f}'.format(roc_test))
+g.print_unique('=========Summary========')
+g.print_unique('Train Loss: {:.3e}'.format(loss_train))
+g.print_unique('Train ROC: {:.4f}'.format(roc_train))
+g.print_unique('Test Loss: {:.3e}'.format(loss_test))
+g.print_unique('Test ROC: {:.4f}'.format(roc_test))
 
-if task_index == 0:
+if g.task_index == 0:
     disruptive_train = np.array(disruptive_train)
     disruptive_test = np.array(disruptive_test)
 
@@ -144,4 +153,4 @@ if task_index == 0:
     # requirement for "allow_pickle=True" to savez() calls
 
 sys.stdout.flush()
-print_unique('finished.')
+g.print_unique('finished.')

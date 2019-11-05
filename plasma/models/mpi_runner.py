@@ -1,4 +1,5 @@
 from __future__ import print_function
+import plasma.global_vars as g
 from plasma.primitives.ops import mpi_sum_f16
 from plasma.utils.performance import PerformanceAnalyzer
 from plasma.utils.processing import concatenate_sublists
@@ -41,25 +42,16 @@ sys.setrecursionlimit(10000)
 # import keras sequentially because it otherwise reads from ~/.keras/keras.json
 # with too many threads:
 # from mpi_launch_tensorflow import get_mpi_task_index
-comm = MPI.COMM_WORLD
-task_index = comm.Get_rank()
-num_workers = comm.Get_size()
 
-NUM_GPUS = conf['num_gpus']
-MY_GPU = task_index % NUM_GPUS
-backend = conf['model']['backend']
-
-
-def pprint_unique(obj):
-    from pprint import pprint
-    if task_index == 0:
-        pprint(obj)
-
+# set global variables for entire module regarding MPI environment
+# TODO(KGF): consider moving this fn/init call to mpi_learn.py and/or
+# setting "mpi_initialized" global bool flag, since that is client-facing
+g.init_MPI()
 
 # initialization code for mpi_runner.py module:
-if backend == 'tf' or backend == 'tensorflow':
-    if NUM_GPUS > 1:
-        os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(MY_GPU)
+if g.backend == 'tf' or g.backend == 'tensorflow':
+    if g.NUM_GPUS > 1:
+        os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(g.MY_GPU)
         # ,mode=NanGuardMode'
     os.environ['KERAS_BACKEND'] = 'tensorflow'  # default setting
     import tensorflow as tf
@@ -71,23 +63,23 @@ if backend == 'tf' or backend == 'tensorflow':
 else:
     os.environ['KERAS_BACKEND'] = 'theano'
     base_compile_dir = '{}/tmp/{}-{}'.format(
-        conf['paths']['output_path'], socket.gethostname(), task_index)
+        conf['paths']['output_path'], socket.gethostname(), g.task_index)
     os.environ['THEANO_FLAGS'] = (
         'device=gpu{},floatX=float32,base_compiledir={}'.format(
-            MY_GPU, base_compile_dir))  # ,mode=NanGuardMode'
+            g.MY_GPU, base_compile_dir))  # ,mode=NanGuardMode'
     # import theano
     # import keras
-for i in range(num_workers):
-    comm.Barrier()
-    if i == task_index:
-        print('[{}] importing Keras'.format(task_index))
+for i in range(g.num_workers):
+    g.comm.Barrier()
+    if i == g.task_index:
+        print('[{}] importing Keras'.format(g.task_index))
         from keras import backend as K
         # from keras.optimizers import *
         from keras.utils.generic_utils import Progbar
         import keras.callbacks as cbks
 
 
-pprint_unique(conf)
+g.pprint_unique(conf)
 
 
 class MPIOptimizer(object):
@@ -108,8 +100,8 @@ class MPISGD(MPIOptimizer):
 
     def get_deltas(self, raw_deltas):
         deltas = []
-        for g in raw_deltas:
-            deltas.append(self.lr*g)
+        for grad in raw_deltas:
+            deltas.append(self.lr*grad)
 
         self.iterations += 1
         return deltas
@@ -126,9 +118,9 @@ class MPIMomentumSGD(MPIOptimizer):
         if self.iterations == 0:
             self.velocity_list = [np.zeros_like(g) for g in raw_deltas]
 
-        for (i, g) in enumerate(raw_deltas):
+        for (i, grad) in enumerate(raw_deltas):
             self.velocity_list[i] = (
-                self.momentum * self.velocity_list[i] + self.lr * g)
+                self.momentum * self.velocity_list[i] + self.lr * grad)
             deltas.append(self.velocity_list[i])
 
         self.iterations += 1
@@ -146,15 +138,15 @@ class MPIAdam(MPIOptimizer):
     def get_deltas(self, raw_deltas):
 
         if self.iterations == 0:
-            self.m_list = [np.zeros_like(g) for g in raw_deltas]
-            self.v_list = [np.zeros_like(g) for g in raw_deltas]
+            self.m_list = [np.zeros_like(grad) for grad in raw_deltas]
+            self.v_list = [np.zeros_like(grad) for grad in raw_deltas]
 
         t = self.iterations + 1
         lr_t = self.lr * np.sqrt(1-self.beta_2**t)/(1-self.beta_1**t)
         deltas = []
-        for (i, g) in enumerate(raw_deltas):
-            m_t = (self.beta_1 * self.m_list[i]) + (1 - self.beta_1) * g
-            v_t = (self.beta_2 * self.v_list[i]) + (1 - self.beta_2) * (g**2)
+        for (i, grad) in enumerate(raw_deltas):
+            m_t = (self.beta_1 * self.m_list[i]) + (1-self.beta_1) * grad
+            v_t = (self.beta_2 * self.v_list[i]) + (1-self.beta_2) * (grad**2)
             delta_t = lr_t * m_t / (np.sqrt(v_t) + self.eps)
             deltas.append(delta_t)
             self.m_list[i] = m_t
@@ -182,8 +174,8 @@ class MPIModel():
     def __init__(self, model, optimizer, comm, batch_iterator, batch_size,
                  num_replicas=None, warmup_steps=1000, lr=0.01,
                  num_batches_minimum=100, conf=None):
-        random.seed(task_index)
-        np.random.seed(task_index)
+        random.seed(g.task_index)
+        np.random.seed(g.task_index)
         self.conf = conf
         self.start_time = time.time()
         self.epoch = 0
@@ -194,12 +186,13 @@ class MPIModel():
         self.optimizer = optimizer
         self.max_lr = 0.1
         self.DUMMY_LR = 0.001
-        self.comm = comm
         self.batch_size = batch_size
         self.batch_iterator = batch_iterator
         self.set_batch_iterator_func()
         self.warmup_steps = warmup_steps
         self.num_batches_minimum = num_batches_minimum
+        # TODO(KGF): duplicate/may be in conflict with global_vars.py
+        self.comm = comm
         self.num_workers = comm.Get_size()
         self.task_index = comm.Get_rank()
         self.history = cbks.History()
@@ -265,11 +258,11 @@ class MPIModel():
         self.ensure_equal_weights()
 
     def ensure_equal_weights(self):
-        if task_index == 0:
+        if g.task_index == 0:
             new_weights = self.model.get_weights()
         else:
             new_weights = None
-        nw = comm.bcast(new_weights, root=0)
+        nw = g.comm.bcast(new_weights, root=0)
         self.model.set_weights(nw)
 
     def train_on_batch_and_get_deltas(self, X_batch, Y_batch, verbose=False):
@@ -498,7 +491,7 @@ class MPIModel():
                 (batch_xs, batch_ys, batches_to_reset, num_so_far_curr,
                  num_total, is_warmup_period) = next(batch_iterator_func)
             except StopIteration:
-                print_unique("Resetting batch iterator.")
+                g.print_unique("Resetting batch iterator.")
                 self.num_so_far_accum = self.num_so_far_indiv
                 self.set_batch_iterator_func()
                 batch_iterator_func = self.batch_iterator_func
@@ -524,7 +517,7 @@ class MPIModel():
                     batch_xs, batch_ys, verbose)
                 self.comm.Barrier()
                 sys.stdout.flush()
-                print_unique('Compilation finished in {:.2f}s'.format(
+                g.print_unique('Compilation finished in {:.2f}s'.format(
                     time.time() - t0_comp))
                 t_start = time.time()
                 sys.stdout.flush()
@@ -541,7 +534,7 @@ class MPIModel():
                 t2 = time.time()
                 write_str_0 = self.calculate_speed(t0, t1, t2, num_replicas)
                 curr_loss = self.mpi_average_scalars(1.0*loss, num_replicas)
-                # print_unique(self.model.get_weights()[0][0][:4])
+                # g.print_unique(self.model.get_weights()[0][0][:4])
                 loss_averager.add_val(curr_loss)
                 ave_loss = loss_averager.get_val()
                 eta = self.estimate_remaining_time(
@@ -554,16 +547,16 @@ class MPIModel():
                     + 'loss: {:.5f} [{:.5f}] | '.format(ave_loss, curr_loss)
                     + 'walltime: {:.4f} | '.format(
                         time.time() - self.start_time))
-                write_unique(write_str + write_str_0)
+                g.write_unique(write_str + write_str_0)
                 step += 1
             else:
-                write_unique('\r[{}] warmup phase, num so far: {}'.format(
+                g.write_unique('\r[{}] warmup phase, num so far: {}'.format(
                     self.task_index, self.num_so_far))
 
         effective_epochs = 1.0*self.num_so_far/num_total
         epoch_previous = self.epoch
         self.epoch = effective_epochs
-        write_unique('\nEpoch {:.2f} finished ({:.2f} epochs passed)'.format(
+        g.write_unique('\nEpoch {:.2f} finished ({:.2f} epochs passed)'.format(
             1.0 * self.epoch, self.epoch - epoch_previous)
                      + ' in {:.2f} seconds.\n'.format(t2 - t_start))
         return (step, ave_loss, curr_loss, self.num_so_far, effective_epochs)
@@ -576,9 +569,10 @@ class MPIModel():
     def get_effective_lr(self, num_replicas):
         effective_lr = self.lr * num_replicas
         if effective_lr > self.max_lr:
-            write_unique('Warning: effective learning rate set to {}, '.format(
-                effective_lr) + 'larger than maximum {}. Clipping.'.format(
-                    self.max_lr))
+            g.write_unique(
+                'Warning: effective learning rate set to {}, '.format(
+                    effective_lr)
+                + 'larger than maximum {}. Clipping.'.format(self.max_lr))
             effective_lr = self.max_lr
         return effective_lr
 
@@ -604,42 +598,8 @@ class MPIModel():
             effective_batch_size, self.batch_size, num_replicas,
             self.get_effective_lr(num_replicas), self.lr, num_replicas)
         if verbose:
-            write_unique(print_str)
+            g.write_unique(print_str)
         return print_str
-
-
-def print_unique(print_output, end='\n', flush=False):
-    """
-    Only master MPI rank 0 calls print().
-
-    Trivial wrapper function to print()
-    """
-    if task_index == 0:
-        print(print_output, end=end, flush=flush)
-
-
-def write_unique(write_str):
-    """
-    Only master MPI rank 0 writes to and flushes stdout.
-
-    A specialized case of print_unique(). Unlike print(), sys.stdout.write():
-    - Must pass a string; will not cast argument
-    - end='\n' kwarg of print() is not available
-    (often the argument here is prepended with \r=carriage return in order to
-    simulate a terminal output that overwrites itself)
-    """
-    # TODO(KGF): \r carriage returns appear as ^M in Unix-encoded .out files
-    # from non-interactive Slurm batch jobs. Convert these to true Unix
-    # line feeds / newlines (^J, \n) when we can detect such a stdout
-    if task_index == 0:
-        sys.stdout.write(write_str)
-        sys.stdout.flush()
-
-
-def write_all(write_str):
-    '''All MPI ranks write to stdout, appending [rank]'''
-    sys.stdout.write('[{}] '.format(task_index) + write_str)
-    sys.stdout.flush()
 
 
 def multiply_params(params, eps):
@@ -680,7 +640,7 @@ def load_shotlists(conf):
 
 def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
     loader.set_inference_mode(True)
-    np.random.seed(task_index)
+    np.random.seed(g.task_index)
     shot_list.sort()  # make sure all replicas have the same list
     specific_builder = builder.ModelBuilder(conf)
 
@@ -693,26 +653,26 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
 
     # broadcast model weights then set it explicitely: fix for Py3.6
     if sys.version_info[0] > 2:
-        if task_index == 0:
+        if g.task_index == 0:
             new_weights = model.get_weights()
         else:
             new_weights = None
-        nw = comm.bcast(new_weights, root=0)
+        nw = g.comm.bcast(new_weights, root=0)
         model.set_weights(nw)
 
     model.reset_states()
-    if task_index == 0:
+    if g.task_index == 0:
         pbar = Progbar(len(shot_list))
     shot_sublists = shot_list.sublists(conf['model']['pred_batch_size'],
                                        do_shuffle=False, equal_size=True)
     y_prime_global = []
     y_gold_global = []
     disruptive_global = []
-    if task_index != 0:
+    if g.task_index != 0:
         loader.verbose = False
 
     for (i, shot_sublist) in enumerate(shot_sublists):
-        if i % num_workers == task_index:
+        if i % g.num_workers == g.task_index:
             X, y, shot_lengths, disr = loader.load_as_X_y_pred(shot_sublist)
 
             # load data and fit on data
@@ -730,18 +690,19 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
             disruptive += disr
             # print_all('\nFinished with i = {}'.format(i))
 
-        if i % num_workers == num_workers - 1 or i == len(shot_sublists) - 1:
-            comm.Barrier()
-            y_prime_global += concatenate_sublists(comm.allgather(y_prime))
-            y_gold_global += concatenate_sublists(comm.allgather(y_gold))
+        if (i % g.num_workers == g.num_workers - 1
+                or i == len(shot_sublists) - 1):
+            g.comm.Barrier()
+            y_prime_global += concatenate_sublists(g.comm.allgather(y_prime))
+            y_gold_global += concatenate_sublists(g.comm.allgather(y_gold))
             disruptive_global += concatenate_sublists(
-                comm.allgather(disruptive))
-            comm.Barrier()
+                g.comm.allgather(disruptive))
+            g.comm.Barrier()
             y_prime = []
             y_gold = []
             disruptive = []
 
-        if task_index == 0:
+        if g.task_index == 0:
             pbar.add(1.0*len(shot_sublist))
 
     y_prime_global = y_prime_global[:len(shot_list)]
@@ -793,7 +754,7 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
 
     # TODO(KGF): this is not defined in conf.yaml, but added to processed dict
     # for the first time here:
-    conf['num_workers'] = comm.Get_size()
+    conf['num_workers'] = g.comm.Get_size()
 
     specific_builder = builder.ModelBuilder(conf)
     train_model = specific_builder.build_model(False)
@@ -821,19 +782,19 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         print("Optimizer not implemented yet")
         exit(1)
 
-    write_unique('{} epochs left to go'.format(num_epochs - 1 - e))
+    g.write_unique('{} epochs left to go'.format(num_epochs - 1 - e))
 
     batch_generator = partial(loader.training_batch_generator_partial_reset,
                               shot_list=shot_list_train)
 
-    write_unique("warmup steps = {}".format(warmup_steps))
-    mpi_model = MPIModel(train_model, optimizer, comm, batch_generator,
+    g.write_unique("warmup steps = {}".format(warmup_steps))
+    mpi_model = MPIModel(train_model, optimizer, g.comm, batch_generator,
                          batch_size, lr=lr, warmup_steps=warmup_steps,
                          num_batches_minimum=num_batches_minimum, conf=conf)
     mpi_model.compile(conf['model']['optimizer'], clipnorm,
                       conf['data']['target'].loss)
     tensorboard = None
-    if backend != "theano" and task_index == 0:
+    if g.backend != "theano" and g.task_index == 0:
         tensorboard_save_path = conf['paths']['tensorboard_save_path']
         write_grads = conf['callbacks']['write_grads']
         tensorboard = TensorBoard(log_dir=tensorboard_save_path,
@@ -842,7 +803,7 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         tensorboard.set_model(mpi_model.model)
         mpi_model.model.summary()
 
-    if task_index == 0:
+    if g.task_index == 0:
         callbacks = mpi_model.build_callbacks(conf, callbacks_list)
         callbacks.set_model(mpi_model.model)
         callback_metrics = conf['callbacks']['metrics']
@@ -858,18 +819,18 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         cmp_fn = min
 
     while e < (num_epochs - 1):
-        write_unique("begin epoch {}".format(e))
-        if task_index == 0:
+        g.write_unique("begin epoch {}".format(e))
+        if g.task_index == 0:
             callbacks.on_epoch_begin(int(round(e)))
         mpi_model.set_lr(lr*lr_decay**e)
-        write_unique('\nEpoch {}/{}'.format(e, num_epochs))
+        g.write_unique('\nEpoch {}/{}'.format(e, num_epochs))
 
         (step, ave_loss, curr_loss, num_so_far,
          effective_epochs) = mpi_model.train_epoch()
         e = e_old + effective_epochs
 
         loader.verbose = False  # True during the first iteration
-        if task_index == 0:
+        if g.task_index == 0:
             specific_builder.save_model_weights(train_model, int(round(e)))
 
         epoch_logs = {}
@@ -894,13 +855,13 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
             areas, _ = mpi_make_predictions_and_evaluate_multiple_times(
                 conf, shot_list_validate, loader, times)
             for roc, t in zip(areas, times):
-                write_unique('epoch {}, val_roc_{} = {}'.format(
+                g.write_unique('epoch {}, val_roc_{} = {}'.format(
                     int(round(e)), t, roc))
             if shot_list_test is not None:
                 areas, _ = mpi_make_predictions_and_evaluate_multiple_times(
                     conf, shot_list_test, loader, times)
                 for roc, t in zip(areas, times):
-                    write_unique('epoch {}, test_roc_{} = {}'.format(
+                    g.write_unique('epoch {}, test_roc_{} = {}'.format(
                         int(round(e)), t, roc))
 
         epoch_logs['val_roc'] = roc_area
@@ -909,7 +870,7 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         best_so_far = cmp_fn(epoch_logs[conf['callbacks']['monitor']],
                              best_so_far)
         stop_training = False
-        if task_index == 0:
+        if g.task_index == 0:
             print('=========Summary======== for epoch{}'.format(step))
             print('Training Loss numpy: {:.3e}'.format(ave_loss))
             print('Validation Loss: {:.3e}'.format(loss))
@@ -932,20 +893,19 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
                         train_model, int(round(e)))
 
             # tensorboard
-            if backend != 'theano':
+            if g.backend != 'theano':
                 val_generator = partial(loader.training_batch_generator,
                                         shot_list=shot_list_validate)()
                 val_steps = 1
                 tensorboard.on_epoch_end(val_generator, val_steps,
                                          int(round(e)), epoch_logs)
-
-        stop_training = comm.bcast(stop_training, root=0)
-        write_unique("end epoch {}".format(e))
+        stop_training = g.comm.bcast(stop_training, root=0)
+        g.write_unique("end epoch {}".format(e))
         if stop_training:
-            write_unique("Stopping training due to early stopping")
+            g.write_unique("Stopping training due to early stopping")
             break
 
-    if task_index == 0:
+    if g.task_index == 0:
         callbacks.on_train_end()
         tensorboard.on_train_end()
 
