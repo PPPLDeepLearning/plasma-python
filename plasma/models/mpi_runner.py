@@ -554,16 +554,16 @@ class MPIModel():
                     + 'loss: {:.5f} [{:.5f}] | '.format(ave_loss, curr_loss)
                     + 'walltime: {:.4f} | '.format(
                         time.time() - self.start_time))
-                print_unique(write_str + write_str_0)
+                write_unique(write_str + write_str_0)
                 step += 1
             else:
-                print_unique('\r[{}] warmup phase, num so far: {}'.format(
+                write_unique('\r[{}] warmup phase, num so far: {}'.format(
                     self.task_index, self.num_so_far))
 
         effective_epochs = 1.0*self.num_so_far/num_total
         epoch_previous = self.epoch
         self.epoch = effective_epochs
-        print_unique('\nEpoch {:.2f} finished ({:.2f} epochs passed)'.format(
+        write_unique('\nEpoch {:.2f} finished ({:.2f} epochs passed)'.format(
             1.0 * self.epoch, self.epoch - epoch_previous)
                      + ' in {:.2f} seconds.\n'.format(t2 - t_start))
         return (step, ave_loss, curr_loss, self.num_so_far, effective_epochs)
@@ -576,7 +576,7 @@ class MPIModel():
     def get_effective_lr(self, num_replicas):
         effective_lr = self.lr * num_replicas
         if effective_lr > self.max_lr:
-            print_unique('Warning: effective learning rate set to {}, '.format(
+            write_unique('Warning: effective learning rate set to {}, '.format(
                 effective_lr) + 'larger than maximum {}. Clipping.'.format(
                     self.max_lr))
             effective_lr = self.max_lr
@@ -604,18 +604,41 @@ class MPIModel():
             effective_batch_size, self.batch_size, num_replicas,
             self.get_effective_lr(num_replicas), self.lr, num_replicas)
         if verbose:
-            print_unique(print_str)
+            write_unique(print_str)
         return print_str
 
 
-def print_unique(print_str):
+def print_unique(print_output, end='\n', flush=False):
+    """
+    Only master MPI rank 0 calls print().
+
+    Trivial wrapper function to print()
+    """
     if task_index == 0:
-        sys.stdout.write(print_str)
+        print(print_output, end=end, flush=flush)
+
+
+def write_unique(write_str):
+    """
+    Only master MPI rank 0 writes to and flushes stdout.
+
+    A specialized case of print_unique(). Unlike print(), sys.stdout.write():
+    - Must pass a string; will not cast argument
+    - end='\n' kwarg of print() is not available
+    (often the argument here is prepended with \r=carriage return in order to
+    simulate a terminal output that overwrites itself)
+    """
+    # TODO(KGF): \r carriage returns appear as ^M in Unix-encoded .out files
+    # from non-interactive Slurm batch jobs. Convert these to true Unix
+    # line feeds / newlines (^J, \n) when we can detect such a stdout
+    if task_index == 0:
+        sys.stdout.write(write_str)
         sys.stdout.flush()
 
 
-def print_all(print_str):
-    sys.stdout.write('[{}] '.format(task_index) + print_str)
+def write_all(write_str):
+    '''All MPI ranks write to stdout, appending [rank]'''
+    sys.stdout.write('[{}] '.format(task_index) + write_str)
     sys.stdout.flush()
 
 
@@ -798,12 +821,12 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         print("Optimizer not implemented yet")
         exit(1)
 
-    print_unique('{} epochs left to go'.format(num_epochs - 1 - e))
+    write_unique('{} epochs left to go'.format(num_epochs - 1 - e))
 
     batch_generator = partial(loader.training_batch_generator_partial_reset,
                               shot_list=shot_list_train)
 
-    print_unique("warmup steps = {}".format(warmup_steps))
+    write_unique("warmup steps = {}".format(warmup_steps))
     mpi_model = MPIModel(train_model, optimizer, comm, batch_generator,
                          batch_size, lr=lr, warmup_steps=warmup_steps,
                          num_batches_minimum=num_batches_minimum, conf=conf)
@@ -835,11 +858,11 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         cmp_fn = min
 
     while e < (num_epochs - 1):
-        print_unique("begin epoch {}".format(e))
+        write_unique("begin epoch {}".format(e))
         if task_index == 0:
             callbacks.on_epoch_begin(int(round(e)))
         mpi_model.set_lr(lr*lr_decay**e)
-        print_unique('\nEpoch {}/{}'.format(e, num_epochs))
+        write_unique('\nEpoch {}/{}'.format(e, num_epochs))
 
         (step, ave_loss, curr_loss, num_so_far,
          effective_epochs) = mpi_model.train_epoch()
@@ -871,13 +894,13 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
             areas, _ = mpi_make_predictions_and_evaluate_multiple_times(
                 conf, shot_list_validate, loader, times)
             for roc, t in zip(areas, times):
-                print_unique('epoch {}, val_roc_{} = {}'.format(
+                write_unique('epoch {}, val_roc_{} = {}'.format(
                     int(round(e)), t, roc))
             if shot_list_test is not None:
                 areas, _ = mpi_make_predictions_and_evaluate_multiple_times(
                     conf, shot_list_test, loader, times)
                 for roc, t in zip(areas, times):
-                    print_unique('epoch {}, test_roc_{} = {}'.format(
+                    write_unique('epoch {}, test_roc_{} = {}'.format(
                         int(round(e)), t, roc))
 
         epoch_logs['val_roc'] = roc_area
@@ -917,9 +940,9 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
                                          int(round(e)), epoch_logs)
 
         stop_training = comm.bcast(stop_training, root=0)
-        print_unique("end epoch {}".format(e))
+        write_unique("end epoch {}".format(e))
         if stop_training:
-            print_unique("Stopping training due to early stopping")
+            write_unique("Stopping training due to early stopping")
             break
 
     if task_index == 0:

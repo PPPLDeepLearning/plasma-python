@@ -129,7 +129,6 @@ print_unique('Train ROC: {:.4f}'.format(roc_train))
 print_unique('Test Loss: {:.3e}'.format(loss_test))
 print_unique('Test ROC: {:.4f}'.format(roc_test))
 
-
 if task_index == 0:
     disruptive_train = np.array(disruptive_train)
     disruptive_test = np.array(disruptive_test)
