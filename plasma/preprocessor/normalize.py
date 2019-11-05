@@ -73,9 +73,9 @@ class Normalizer(object):
     def load_stats(self):
         pass
 
-    @abc.abstractmethod
     def print_summary(self, action='loaded'):
-        pass
+        print('{} normalization data from {} shots ( {} disruptive )'.format(
+            action, self.num_processed, self.num_disruptive))
 
     def set_inference_mode(self, val):
         self.inference_mode = val
@@ -132,8 +132,7 @@ class Normalizer(object):
             start_time = time.time()
 
             for (i, stats) in enumerate(pool.imap_unordered(
-                    self.train_on_single_shot,
-                    shot_list_picked)):
+                    self.train_on_single_shot, shot_list_picked)):
                 # for (i,stats) in
                 # enumerate(map(self.train_on_single_shot,shot_list_picked)):
                 if stats.machine in machines_to_compute:
@@ -308,10 +307,6 @@ class MeanVarNormalizer(Normalizer):
             print('Machine {}:'.format(machine))
             self.print_summary()
 
-    def print_summary(self, action='loaded'):
-        print('{} normalization data from {} shots ( {} disruptive )'.format(
-            action, self.num_processed, self.num_disruptive))
-
 
 class VarNormalizer(MeanVarNormalizer):
     def apply(self, shot):
@@ -341,7 +336,6 @@ class VarNormalizer(MeanVarNormalizer):
 
 
 class AveragingVarNormalizer(VarNormalizer):
-
     def apply(self, shot):
         apply_positivity(shot)
         super(AveragingVarNormalizer, self).apply(shot)
@@ -444,17 +438,10 @@ class MinMaxNormalizer(Normalizer):
         # num_processed = dat['num_processed']
         # num_disruptive = dat['num_disruptive']
         self.ensure_save_directory()
-        np.savez(
-            self.path,
-            minimums=self.minimums,
-            maximums=self.maximums,
-            num_processed=self.num_processed,
-            num_disruptive=self.num_disruptive,
-            machines=self.machines)
-        print(
-            'saved normalization data from {} shots ( {} disruptive )'.format(
-                self.num_processed,
-                self.num_disruptive))
+        np.savez(self.path, minimums=self.minimums, maximums=self.maximums,
+                 num_processed=self.num_processed,
+                 num_disruptive=self.num_disruptive, machines=self.machines)
+        self.print_summary(action='saved')
 
     def load_stats(self):
         assert(self.previously_saved_stats()[0])
@@ -464,10 +451,9 @@ class MinMaxNormalizer(Normalizer):
         self.num_processed = dat['num_processed'][()]
         self.num_disruptive = dat['num_disruptive'][()]
         self.machines = dat['machines'][()]
-        print(
-            'loaded normalization data from {} shots ( {} disruptive )'.format(
-                self.num_processed,
-                self.num_disruptive))
+        for machine in self.means:
+            print('Machine {}:'.format(machine))
+            self.print_summary()
 
 
 def get_individual_shot_file(prepath, shot_num, ext='.txt'):

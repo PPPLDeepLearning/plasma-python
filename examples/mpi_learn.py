@@ -2,11 +2,9 @@ from plasma.models.mpi_runner import (
     mpi_train, mpi_make_predictions_and_evaluate,
     comm, task_index, print_unique
     )
-# from mpi4py import MPI
 from plasma.preprocessor.preprocess import guarantee_preprocessed
 from plasma.models.loader import Loader
 from plasma.conf import conf
-# from pprint import pprint
 '''
 #########################################################
 This file trains a deep learning model to predict
@@ -57,23 +55,10 @@ else:
     print('unkown normalizer. exiting')
     exit(1)
 
-# TODO(KGF): this part of the code is duplicated in mpi_runner.py
-# comm = MPI.COMM_WORLD
-# task_index = comm.Get_rank()
-# num_workers = comm.Get_size()
-
-# NUM_GPUS = conf['num_gpus']
-# MY_GPU = task_index % NUM_GPUS
-# backend = conf['model']['backend']
-
-# if task_index == 0:
-#     pprint(conf)
-
 # TODO(KGF): confirm that this second PRNG seed setting is not needed
 # (before normalization; done again before MPI training)
 # np.random.seed(task_index)
 # random.seed(task_index)
-
 
 only_predict = len(sys.argv) > 1
 custom_path = None
@@ -94,8 +79,7 @@ comm.Barrier()
 (shot_list_train, shot_list_validate,
  shot_list_test) = guarantee_preprocessed(conf)
 
-
-print_unique("begin normalization...")  # , end='')
+print_unique("begin normalization...")
 normalizer = Normalizer(conf)
 normalizer.train()
 loader = Loader(conf, normalizer)
