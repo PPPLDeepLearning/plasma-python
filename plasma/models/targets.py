@@ -5,16 +5,6 @@ from plasma.utils.evaluation import (
     mse_np, binary_crossentropy_np, hinge_np,
     # mae_np, squared_hinge_np,
     )
-import warnings
-# TODO(KGF): temporarily suppress numpy>=1.17.0 warning with TF<2.0.0
-# ~6x tensorflow/python/framework/dtypes.py:529: FutureWarning ...
-with warnings.catch_warnings(record=True) as w:
-    warnings.filterwarnings('ignore',
-                            category=FutureWarning,
-                            message=r"passing \(type, 1\) or '1type' as a synonym of type is deprecated",  # noqa
-                            module="tensorflow")
-    import keras.backend as K  # noqa
-    from keras.losses import hinge  # noqa
 
 # Requirement: larger value must mean disruption more likely.
 
