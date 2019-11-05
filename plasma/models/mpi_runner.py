@@ -46,7 +46,7 @@ sys.setrecursionlimit(10000)
 # set global variables for entire module regarding MPI environment
 # TODO(KGF): consider moving this fn/init call to mpi_learn.py and/or
 # setting "mpi_initialized" global bool flag, since that is client-facing
-g.init_MPI()
+g.init_MPI(conf)
 
 # initialization code for mpi_runner.py module:
 if g.backend == 'tf' or g.backend == 'tensorflow':
