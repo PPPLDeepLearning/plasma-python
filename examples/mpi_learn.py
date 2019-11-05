@@ -76,8 +76,9 @@ if g.task_index == 0:
     (shot_list_train, shot_list_validate,
      shot_list_test) = guarantee_preprocessed(conf)
 g.comm.Barrier()
+# TODO(KGF): why call guarantee_preprocessed() a second time with all ranks?
 (shot_list_train, shot_list_validate,
- shot_list_test) = guarantee_preprocessed(conf)
+ shot_list_test) = guarantee_preprocessed(conf, verbose=True)
 
 g.print_unique("begin normalization...")
 normalizer = Normalizer(conf)
