@@ -75,8 +75,9 @@ class Normalizer(object):
         pass
 
     def print_summary(self, action='loaded'):
-        g.print_unique('{} normalization data from {} shots ( {} disruptive )'.format(
-            action, self.num_processed, self.num_disruptive))
+        g.print_unique(
+            '{} normalization data from {} shots ( {} disruptive )'.format(
+                action, self.num_processed, self.num_disruptive))
 
     def set_inference_mode(self, val):
         self.inference_mode = val
