@@ -77,7 +77,7 @@ if g.task_index == 0:
     (shot_list_train, shot_list_validate,
      shot_list_test) = guarantee_preprocessed(conf)
     # similarly, train normalizer (if necessary) w/ master MPI rank only
-    normalizer.train()
+    normalizer.train()  # verbose=False only suppresses if purely loading
 g.comm.Barrier()
 g.print_unique("begin preprocessor+normalization (all MPI ranks)...")
 # second call has ALL MPI ranks load preprocessed shots from .npz files
@@ -85,7 +85,7 @@ g.print_unique("begin preprocessor+normalization (all MPI ranks)...")
  shot_list_test) = guarantee_preprocessed(conf, verbose=True)
 # second call to normalizer training
 normalizer.conf['data']['recompute_normalization'] = False
-normalizer.train()
+normalizer.train(verbose=True)
 # KGF: may want to set it back...
 # normalizer.conf['data']['recompute_normalization'] = conf['data']['recompute_normalization']   # noqa
 loader = Loader(conf, normalizer)
