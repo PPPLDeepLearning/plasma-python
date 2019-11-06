@@ -105,6 +105,7 @@ for i in range(g.num_workers):
         from keras.utils.generic_utils import Progbar
         import keras.callbacks as cbks
 
+g.flush_all_inorder()
 g.pprint_unique(conf)
 g.flush_all_inorder()
 g.comm.Barrier()
@@ -164,11 +165,9 @@ class MPIAdam(MPIOptimizer):
         self.eps = 1e-8
 
     def get_deltas(self, raw_deltas):
-
         if self.iterations == 0:
             self.m_list = [np.zeros_like(grad) for grad in raw_deltas]
             self.v_list = [np.zeros_like(grad) for grad in raw_deltas]
-
         t = self.iterations + 1
         lr_t = self.lr * np.sqrt(1-self.beta_2**t)/(1-self.beta_1**t)
         deltas = []
@@ -179,7 +178,6 @@ class MPIAdam(MPIOptimizer):
             deltas.append(delta_t)
             self.m_list[i] = m_t
             self.v_list[i] = v_t
-
         self.iterations += 1
 
         return deltas
