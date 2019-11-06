@@ -365,7 +365,6 @@ def parameters(input_file):
                                 for k in params['paths']['specific_signals']}
             params['paths']['use_signals'] = sort_by_channels(
                 list(selected_signals.values()))
-
         else:
             # default case
             params['paths']['use_signals'] = sort_by_channels(
@@ -374,8 +373,8 @@ def parameters(input_file):
         params['paths']['all_signals'] = sort_by_channels(
             list(params['paths']['all_signals_dict'].values()))
 
-        g.print_unique("Selected signals (determines which signals are used",
-                       " for training):\n{}".format(
+        g.print_unique("Selected signals (determines which signals are used"
+                       + " for training):\n{}".format(
                            params['paths']['use_signals']))
         params['paths']['shot_files_all'] = (
             params['paths']['shot_files'] + params['paths']['shot_files_test'])
