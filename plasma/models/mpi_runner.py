@@ -9,6 +9,7 @@ from plasma.models.loader import ProcessGenerator
 from plasma.utils.state_reset import reset_states
 from plasma.conf import conf
 from mpi4py import MPI
+from pkg_resources import parse_version, get_distribution
 '''
 #########################################################
 This file trains a deep learning model to predict
@@ -54,7 +55,18 @@ if g.backend == 'tf' or g.backend == 'tensorflow':
         os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(g.MY_GPU)
         # ,mode=NanGuardMode'
     os.environ['KERAS_BACKEND'] = 'tensorflow'  # default setting
-    import tensorflow as tf
+    tf_ver = parse_version(get_distribution('tensorflow').version)
+    # compat/compat.py first committed on 2018-06-29 for Py 2 vs 3
+    # (around, but not present in, the release of v1.9.0)
+    # v2 compatiblity code added, then moved from compat.py in Nov and Dec 2018
+    # compat.v1 first mentioned in RELEASE.md in v1.13.0.
+    # But many TF deprecation warnings in 1.14.0, e.g.:
+    # "The name tf.GPUOptions is deprecated. Please use tf.compat.v1.GPUOptions
+    # instead". See tf_export.py
+    if tf_ver > parse_version('1.13.0'):
+        import tensorflow.compat.v1 as tf
+    else:
+        import tensorflow as tf
     from keras.backend.tensorflow_backend import set_session
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.95,
                                 allow_growth=True)

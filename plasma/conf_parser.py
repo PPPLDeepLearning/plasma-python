@@ -20,7 +20,6 @@ def parameters(input_file):
         )
     with open(input_file, 'r') as yaml_file:
         params = yaml.load(yaml_file, Loader=yaml.SafeLoader)
-
         params['user_name'] = getpass.getuser()
         output_path = params['fs_path'] + "/" + params['user_name']
         base_path = output_path
