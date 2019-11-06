@@ -1,4 +1,8 @@
-from __future__ import division
+from __future__ import division, print_function
+import plasma.global_vars as g
+# KGF: the first time Keras is ever imported via mpi_learn.py -> mpi_runner.py
+import keras.backend as K
+# KGF: see below synchronization--- output is launched here
 from keras.models import Sequential, Model
 from keras.layers import Input
 from keras.layers.core import (
@@ -14,8 +18,6 @@ from keras.layers.merge import Concatenate
 from keras.callbacks import Callback
 from keras.regularizers import l2  # l1, l1_l2
 
-import keras.backend as K
-
 import re
 import os
 import sys
@@ -23,6 +25,23 @@ import numpy as np
 from copy import deepcopy
 from plasma.utils.downloading import makedirs_process_safe
 from plasma.utils.hashing import general_object_hash
+
+# Synchronize 2x stderr msg from TensorFlow initialization via Keras backend
+# "Succesfully opened dynamic library... libcudart" "Using TensorFlow backend."
+if g.comm is not None:
+    g.flush_all_inorder()
+# if g.comm is not None:
+#     g.comm.Barrier()
+# if g.task_index == 0:
+#     sys.stdout.flush()
+#     sys.stderr.flush()
+# if g.comm is not None:
+#     g.comm.Barrier()
+# TODO(KGF): need to create wrapper .py file (or place in some __init__.py)
+# that detects, for an arbitrary import, if tensorflow has been initialized
+# either directly from "import tensorflow ..." and/or via backend of
+# "from keras.layers ..."
+# OR if this is the first time. See below "first_time" variable.
 
 
 class LossHistory(Callback):
@@ -262,6 +281,8 @@ class ModelBuilder(object):
             x_out = Dense(1, activation=output_activation)(x_in)
         model = Model(inputs=x_input, outputs=x_out)
         # bug with tensorflow/Keras
+        # TODO(KGF): what is this bug? this is the only direct "tensorflow"
+        # import outside of mpi_runner.py and runner.py
         if (conf['model']['backend'] == 'tf'
                 or conf['model']['backend'] == 'tensorflow'):
             first_time = "tensorflow" not in sys.modules

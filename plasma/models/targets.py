@@ -1,3 +1,5 @@
+from __future__ import print_function
+import plasma.global_vars as g
 import numpy as np
 import abc
 
@@ -7,9 +9,14 @@ from plasma.utils.evaluation import (
     )
 import keras.backend as K
 from keras.losses import hinge
+
+# synchronize output from TensorFlow initialization via Keras backend
+if g.comm is not None:
+    g.flush_all_inorder()
+    g.comm.Barrier()
+
+
 # Requirement: larger value must mean disruption more likely.
-
-
 class Target(object):
     activation = 'linear'
     loss = 'mse'

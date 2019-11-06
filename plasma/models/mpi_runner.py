@@ -4,9 +4,12 @@ from plasma.primitives.ops import mpi_sum_f16
 from plasma.utils.performance import PerformanceAnalyzer
 from plasma.utils.processing import concatenate_sublists
 from plasma.utils.evaluation import get_loss_from_list
+# KGF: this is the first module that imports Keras:
 from plasma.models import builder
 from plasma.models.loader import ProcessGenerator
 from plasma.utils.state_reset import reset_states
+# KGF: plasma.conf calls print_unique() for "Selected signals". Ensure that
+# Keras "Using TensorFlow backend" stderr messages do not interfere in stdout
 from plasma.conf import conf
 from mpi4py import MPI
 from pkg_resources import parse_version, get_distribution
@@ -39,6 +42,7 @@ from copy import deepcopy
 import socket
 sys.setrecursionlimit(10000)
 
+# TODO(KGF): remove the next 3 lines?
 # import keras sequentially because it otherwise reads from ~/.keras/keras.json
 # with too many threads:
 # from mpi_launch_tensorflow import get_mpi_task_index
@@ -48,6 +52,8 @@ g.init_GPU_backend(conf)
 # moved this fn/init call to client-facing mpi_learn.py
 # g.init_MPI()
 # TODO(KGF): set "mpi_initialized" global bool flag?
+
+g.flush_all_inorder()   # see above about conf_parser.py stdout writes
 
 # initialization code for mpi_runner.py module:
 if g.backend == 'tf' or g.backend == 'tensorflow':
@@ -67,11 +73,20 @@ if g.backend == 'tf' or g.backend == 'tensorflow':
         import tensorflow.compat.v1 as tf
     else:
         import tensorflow as tf
+    # TODO(KGF): above, builder.py (bug workaround), mpi_launch_tensorflow.py,
+    # and runner.py are the only files that import tensorflow directly
+
     from keras.backend.tensorflow_backend import set_session
+    # KGF: next 3 lines dump many TensorFlow diagnostics to stderr.
+    # All MPI ranks first "Successfully opened dynamic library libcuda"
+    # then, one by one: ID GPU, libcudart, libcublas, libcufft, ...
+    # Finally, "Device interconnect StreamExecutor with strength 1 edge matrix"
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.95,
                                 allow_growth=True)
     config = tf.ConfigProto(gpu_options=gpu_options)
     set_session(tf.Session(config=config))
+    g.flush_all_inorder()
+    g.comm.Barrier()
 else:
     os.environ['KERAS_BACKEND'] = 'theano'
     base_compile_dir = '{}/tmp/{}-{}'.format(
@@ -90,8 +105,9 @@ for i in range(g.num_workers):
         from keras.utils.generic_utils import Progbar
         import keras.callbacks as cbks
 
-
 g.pprint_unique(conf)
+g.flush_all_inorder()
+g.comm.Barrier()
 
 
 class MPIOptimizer(object):
