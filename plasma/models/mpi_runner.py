@@ -39,15 +39,15 @@ from copy import deepcopy
 import socket
 sys.setrecursionlimit(10000)
 
-
 # import keras sequentially because it otherwise reads from ~/.keras/keras.json
 # with too many threads:
 # from mpi_launch_tensorflow import get_mpi_task_index
 
-# set global variables for entire module regarding MPI environment
-# TODO(KGF): consider moving this fn/init call to mpi_learn.py and/or
-# setting "mpi_initialized" global bool flag, since that is client-facing
-g.init_MPI(conf)
+# set global variables for entire module regarding MPI & GPU environment
+g.init_GPU_backend(conf)
+# moved this fn/init call to client-facing mpi_learn.py
+# g.init_MPI()
+# TODO(KGF): set "mpi_initialized" global bool flag?
 
 # initialization code for mpi_runner.py module:
 if g.backend == 'tf' or g.backend == 'tensorflow':

@@ -1,4 +1,5 @@
 from __future__ import print_function
+import plasma.global_vars as g
 import numpy as np
 import sys
 
@@ -57,27 +58,27 @@ def fetch_d3d_data(signal_path, shot, c=None):
         found = True
 
     except Exception as e:
-        print(e)
+        g.print_unique(e)
         sys.stdout.flush()
         pass
 
     # Retrieve data from PTDATA if node not found
     if not found:
-        # print("not in full path {}".format(signal))
+        # g.print_unique("not in full path {}".format(signal))
         data = c.get('_s = ptdata2("'+signal+'",'+str(shot)+')').data()
         if len(data) != 1:
             rank = np.ndim(data)
             found = True
     # Retrieve data from Pseudo-pointname if not in ptdata
     if not found:
-        # print("not in PTDATA {}".format(signal))
+        # g.print_unique("not in PTDATA {}".format(signal))
         data = c.get('_s = pseudo("'+signal+'",'+str(shot)+')').data()
         if len(data) != 1:
             rank = np.ndim(data)
             found = True
     # this means the signal wasn't found
     if not found:
-        print("No such signal: {}".format(signal))
+        g.print_unique("No such signal: {}".format(signal))
         pass
 
     # get time base
@@ -125,7 +126,7 @@ def fetch_jet_data(signal_path, shot_num, c):
                     signal_path, shot_num)).data()
         found = True
     except Exception as e:
-        print(e)
+        g.print_unique(e)
         sys.stdout.flush()
         # pass
     return time, data, ydata, found
@@ -361,8 +362,9 @@ all_signals = {
 
 all_signals_restricted = all_signals
 
-print('All signals (determines which signals are downloaded & preprocessed):')
-print(all_signals.values())
+g.print_unique('All signals (determines which signals are downloaded'
+               ' & preprocessed):')
+g.print_unique(all_signals.values())
 
 fully_defined_signals = {
     sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if (

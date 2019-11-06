@@ -1,4 +1,5 @@
 import plasma.global_vars as g
+g.init_MPI()
 from plasma.models.mpi_runner import (
     mpi_train, mpi_make_predictions_and_evaluate
     )

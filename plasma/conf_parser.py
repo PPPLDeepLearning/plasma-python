@@ -1,3 +1,5 @@
+from __future__ import print_function
+import plasma.global_vars as g
 from plasma.primitives.shots import ShotListFiles
 import data.signals as sig
 from plasma.utils.hashing import myhash_signals
@@ -74,7 +76,7 @@ def parameters(input_file):
         elif params['target'] == 'ttdlinear':
             params['data']['target'] = TTDLinearTarget
         else:
-            print('Unkown type of target. Exiting')
+            g.print_unique('Unkown type of target. Exiting')
             exit(1)
 
         # params['model']['output_activation'] =
@@ -344,15 +346,17 @@ def parameters(input_file):
             params['paths']['use_signals_dict'] = sig.fully_defined_signals_1D
 
         else:
-            print("Unkown data set {}".format(params['paths']['data']))
+            g.print_unique("Unknown dataset {}".format(
+                params['paths']['data']))
             exit(1)
 
         if len(params['paths']['specific_signals']):
             for s in params['paths']['specific_signals']:
                 if s not in params['paths']['use_signals_dict'].keys():
-                    print("Signal {} is not fully defined for {} machine. ",
-                          "Skipping...".format(
-                              s, params['paths']['data'].split("_")[0]))
+                    g.print_unique(
+                        "Signal {} is not fully defined for {} machine. ",
+                        "Skipping...".format(
+                            s, params['paths']['data'].split("_")[0]))
             params['paths']['specific_signals'] = list(
                 filter(
                     lambda x: x in params['paths']['use_signals_dict'].keys(),
@@ -370,9 +374,9 @@ def parameters(input_file):
         params['paths']['all_signals'] = sort_by_channels(
             list(params['paths']['all_signals_dict'].values()))
 
-        print("Selected signals (determines which signals are used for",
-              "training):\n{}".format(params['paths']['use_signals']))
-
+        g.print_unique("Selected signals (determines which signals are used",
+                       " for training):\n{}".format(
+                           params['paths']['use_signals']))
         params['paths']['shot_files_all'] = (
             params['paths']['shot_files'] + params['paths']['shot_files_test'])
         params['paths']['all_machines'] = list(

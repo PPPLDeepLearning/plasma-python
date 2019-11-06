@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 
 # global variable defaults for non-MPI runs
@@ -9,15 +10,16 @@ MY_GPU = 0
 backend = ''
 
 
-def init_MPI(conf):
+def init_MPI():
     from mpi4py import MPI
     global comm, task_index, num_workers
-    global NUM_GPUS, MY_GPU, backend
-
     comm = MPI.COMM_WORLD
     task_index = comm.Get_rank()
     num_workers = comm.Get_size()
 
+
+def init_GPU_backend(conf):
+    global NUM_GPUS, MY_GPU, backend
     NUM_GPUS = conf['num_gpus']
     MY_GPU = task_index % NUM_GPUS
     backend = conf['model']['backend']
