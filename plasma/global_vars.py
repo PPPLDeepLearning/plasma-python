@@ -37,6 +37,7 @@ def print_unique(print_output, end='\n', flush=False):
 
     Trivial wrapper function to print()
     """
+    # TODO(KGF): maybe only allow end='','\r','\n' to prevent bugs?
     if task_index == 0:
         print(print_output, end=end, flush=flush)
 
@@ -63,3 +64,17 @@ def write_all(write_str):
     '''All MPI ranks write to stdout, appending [rank]'''
     sys.stdout.write('[{}] '.format(task_index) + write_str)
     sys.stdout.flush()
+
+
+def flush_all_inorder(stdout=True, stderr=True):
+    """Force each MPI rank to flush its buffered writes to one or both of
+    the standard streams, in order of rank.
+    """
+    for i in range(num_workers):
+        comm.Barrier()
+        if i == task_index:
+            if stdout:
+                sys.stdout.flush()
+            if stderr:
+                sys.stderr.flush()
+    comm.Barrier()
