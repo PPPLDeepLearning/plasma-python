@@ -9,6 +9,7 @@ This work was supported by the DOE CSGF program.
 '''
 
 from __future__ import print_function
+import plasma.global_vars as g
 from os import listdir  # , remove
 import time
 import sys
@@ -230,14 +231,16 @@ def apply_bleed_in(conf, shot_list_train, shot_list_validate, shot_list_test):
     return shot_list_train, shot_list_validate, shot_list_test
 
 
-def guarantee_preprocessed(conf):
+def guarantee_preprocessed(conf, verbose=False):
     pp = Preprocessor(conf)
     if pp.all_are_preprocessed():
-        print("shots already processed.")
+        if verbose:
+            g.print_unique("shots already processed.")
         (shot_list_train, shot_list_validate,
          shot_list_test) = pp.load_shotlists()
     else:
-        print("preprocessing all shots", end='')
+        if verbose:
+            g.print_unique("preprocessing all shots...")  # , end='')
         pp.clean_shot_lists()
         shot_list = pp.preprocess_all()
         shot_list.sort()
@@ -245,18 +248,20 @@ def guarantee_preprocessed(conf):
         # num_shots = len(shot_list_train) + len(shot_list_test)
         validation_frac = conf['training']['validation_frac']
         if validation_frac <= 0.05:
-            print('Setting validation to a minimum of 0.05')
+            if verbose:
+                g.print_unique('Setting validation to a minimum of 0.05')
             validation_frac = 0.05
         shot_list_train, shot_list_validate = shot_list_train.split_direct(
             1.0-validation_frac, do_shuffle=True)
         pp.save_shotlists(shot_list_train, shot_list_validate, shot_list_test)
     shot_list_train, shot_list_validate, shot_list_test = apply_bleed_in(
         conf, shot_list_train, shot_list_validate, shot_list_test)
-    print('validate: {} shots, {} disruptive'.format(
-        len(shot_list_validate), shot_list_validate.num_disruptive()))
-    print('training: {} shots, {} disruptive'.format(
-        len(shot_list_train), shot_list_train.num_disruptive()))
-    print('testing: {} shots, {} disruptive'.format(
-        len(shot_list_test), shot_list_test.num_disruptive()))
-    print("...done")
+    if verbose:
+        g.print_unique('validate: {} shots, {} disruptive'.format(
+            len(shot_list_validate), shot_list_validate.num_disruptive()))
+        g.print_unique('training: {} shots, {} disruptive'.format(
+            len(shot_list_train), shot_list_train.num_disruptive()))
+        g.print_unique('testing: {} shots, {} disruptive'.format(
+            len(shot_list_test), shot_list_test.num_disruptive()))
+        g.print_unique("...done")
     return shot_list_train, shot_list_validate, shot_list_test

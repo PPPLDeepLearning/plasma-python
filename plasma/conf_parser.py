@@ -1,23 +1,27 @@
+from __future__ import print_function
+import plasma.global_vars as g
 from plasma.primitives.shots import ShotListFiles
 import data.signals as sig
+from plasma.utils.hashing import myhash_signals
 # from data.signals import (
 #     all_signals, fully_defined_signals_1D,
 #     jet, d3d)  # nstx
 import getpass
 import yaml
 
-import hashlib
-
 
 def parameters(input_file):
     """Parse yaml file of configuration parameters."""
+    # TODO(KGF): the following line imports TensorFlow as a Keras backend
+    # by default (absent env variable KERAS_BACKEND and/or config file
+    # $HOME/.keras/keras.json) "from plasma.conf import conf"
+    # via "import keras.backend as K" in targets.py
     from plasma.models.targets import (
         HingeTarget, MaxHingeTarget, BinaryTarget,
         TTDTarget, TTDInvTarget, TTDLinearTarget
         )
     with open(input_file, 'r') as yaml_file:
         params = yaml.load(yaml_file, Loader=yaml.SafeLoader)
-
         params['user_name'] = getpass.getuser()
         output_path = params['fs_path'] + "/" + params['user_name']
         base_path = output_path
@@ -28,7 +32,7 @@ def parameters(input_file):
         params['paths']['shot_list_dir'] = (
             base_path + params['paths']['shot_list_dir'])
         params['paths']['output_path'] = output_path
-        h = get_unique_signal_hash(sig.all_signals.values())
+        h = myhash_signals(sig.all_signals.values())
         params['paths']['global_normalizer_path'] = (
             output_path
             + '/normalization/normalization_signal_group_{}.npz'.format(h))
@@ -72,7 +76,7 @@ def parameters(input_file):
         elif params['target'] == 'ttdlinear':
             params['data']['target'] = TTDLinearTarget
         else:
-            print('Unkown type of target. Exiting')
+            g.print_unique('Unkown type of target. Exiting')
             exit(1)
 
         # params['model']['output_activation'] =
@@ -342,15 +346,17 @@ def parameters(input_file):
             params['paths']['use_signals_dict'] = sig.fully_defined_signals_1D
 
         else:
-            print("Unkown data set {}".format(params['paths']['data']))
+            g.print_unique("Unknown dataset {}".format(
+                params['paths']['data']))
             exit(1)
 
         if len(params['paths']['specific_signals']):
             for s in params['paths']['specific_signals']:
                 if s not in params['paths']['use_signals_dict'].keys():
-                    print("Signal {} is not fully defined for {} machine. ",
-                          "Skipping...".format(
-                              s, params['paths']['data'].split("_")[0]))
+                    g.print_unique(
+                        "Signal {} is not fully defined for {} machine. ",
+                        "Skipping...".format(
+                            s, params['paths']['data'].split("_")[0]))
             params['paths']['specific_signals'] = list(
                 filter(
                     lambda x: x in params['paths']['use_signals_dict'].keys(),
@@ -359,7 +365,6 @@ def parameters(input_file):
                                 for k in params['paths']['specific_signals']}
             params['paths']['use_signals'] = sort_by_channels(
                 list(selected_signals.values()))
-
         else:
             # default case
             params['paths']['use_signals'] = sort_by_channels(
@@ -368,9 +373,9 @@ def parameters(input_file):
         params['paths']['all_signals'] = sort_by_channels(
             list(params['paths']['all_signals_dict'].values()))
 
-        print("Selected signals (determines which signals are used for ",
-              "training):\n{}".format(params['paths']['use_signals']))
-
+        g.print_unique("Selected signals (determines which signals are used"
+                       + " for training):\n{}".format(
+                           params['paths']['use_signals']))
         params['paths']['shot_files_all'] = (
             params['paths']['shot_files'] + params['paths']['shot_files_test'])
         params['paths']['all_machines'] = list(
@@ -382,14 +387,6 @@ def parameters(input_file):
         assert isinstance(params['data']['augment_during_training'], bool)
 
     return params
-
-
-def get_unique_signal_hash(signals):
-    return int(hashlib.md5(''.join(tuple(map(lambda x: "{}".format(
-        x.__hash__()), sorted(signals)))).encode('utf-8')).hexdigest(), 16)
-    # return int(hashlib.md5(''.join(
-    #     tuple(map(lambda x: x.description, sorted(signals)))).encode(
-    #         'utf-8')).hexdigest(), 16)
 
 
 def sort_by_channels(list_of_signals):

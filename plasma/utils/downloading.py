@@ -6,13 +6,10 @@ import multiprocessing as mp
 import sys
 import time
 import numpy as np
-import dill
-import hashlib
-from copy import deepcopy
 # import gadata
 # from plasma.primitives.shots import ShotList
 
-'''
+'''MDSplus references:
 http://www.mdsplus.org/index.php?title=Documentation:Tutorial:RemoteAccess&open=76203664636339686324830207&page=Documentation%2FThe+MDSplus+tutorial%2FRemote+data+access+in+MDSplus
 http://piscope.psfc.mit.edu/index.php/MDSplus_%26_python#Simple_example_of_reading_MDSplus_data
 http://www.mdsplus.org/documentation/beginners/expressions.shtml
@@ -30,35 +27,6 @@ try:
     from MDSplus import Connection
 except ImportError:
     pass
-
-
-def general_object_hash(o):
-    """
-    Makes a hash from a dictionary, list, tuple or set to any level, that
-    contains only other hashable types (including any lists, tuples, sets, and
-    dictionaries). Relies on dill for serialization
-"""
-
-    if isinstance(o, (set, tuple, list)):
-        return tuple([general_object_hash(e) for e in o])
-
-    elif not isinstance(o, dict):
-        return myhash(o)
-
-    new_o = deepcopy(o)
-    for k, v in new_o.items():
-        new_o[k] = general_object_hash(v)
-
-    return myhash(tuple(frozenset(sorted(new_o.items()))))
-
-
-def myhash(x):
-    return int(hashlib.md5((dill.dumps(x).decode('unicode_escape')).encode(
-        'utf-8')).hexdigest(), 16)
-    # return int(hashlib.md5((dill.dumps(x))).hexdigest(),16)
-    # return
-    # int(hashlib.md5((dill.dumps(x))))#.decode('unicode_escape')).encode(
-    # 'utf-8')).hexdigest(),16)
 
 
 def get_missing_value_array():
@@ -114,8 +82,8 @@ def save_shot(shot_num_queue, c, signals, save_prepath, machine, sentinel=-1):
         shot_complete = True
         for signal in signals:
             signal_path = signal.get_path(machine)
-            save_path_full = signal.get_file_path(
-                save_prepath, machine, shot_num)
+            save_path_full = signal.get_file_path(save_prepath, machine,
+                                                  shot_num)
             success = False
             mapping = None
             if os.path.isfile(save_path_full):
@@ -123,10 +91,9 @@ def save_shot(shot_num_queue, c, signals, save_prepath, machine, sentinel=-1):
                     print('-', end='')
                     success = True
                 else:
-                    print(
-                        'Signal {}, shot {} '.format(signal_path, shot_num),
-                        'was downloaded incorrectly (empty file). ',
-                        'Redownloading.')
+                    print('Signal {}, shot {} '.format(signal_path, shot_num),
+                          'was downloaded incorrectly (empty file). ',
+                          'Redownloading.')
             if not success:
                 try:
                     try:
@@ -161,9 +128,8 @@ def save_shot(shot_num_queue, c, signals, save_prepath, machine, sentinel=-1):
                                    fmt='%.5e')
                     print('.', end='')
                 except BaseException:
-                    print(
-                        'Could not save shot {}, signal {}'.format(
-                            shot_num, signal_path))
+                    print('Could not save shot {}, signal {}'.format(
+                        shot_num, signal_path))
                     print('Warning: Incomplete!!!')
                     raise
             sys.stdout.flush()
@@ -197,12 +163,8 @@ def download_shot_numbers(shot_numbers, save_prepath, machine, signals):
     for i in range(num_cores):
         queue.put(sentinel)
     connections = [Connection(machine.server) for _ in range(num_cores)]
-    processes = [
-        mp.Process(
-            target=fn,
-            args=(
-                queue,
-                connections[i])) for i in range(num_cores)]
+    processes = [mp.Process(target=fn, args=(queue, connections[i]))
+                 for i in range(num_cores)]
 
     print('running in parallel on {} processes'.format(num_cores))
 
@@ -212,13 +174,9 @@ def download_shot_numbers(shot_numbers, save_prepath, machine, signals):
         p.join()
 
 
-def download_all_shot_numbers(
-        prepath,
-        save_path,
-        shot_list_files,
-        signals_full):
+def download_all_shot_numbers(prepath, save_path, shot_list_files,
+                              signals_full):
     max_len = 30000
-
     machine = shot_list_files.machine
     signals = []
     for sig in signals_full:
@@ -228,18 +186,15 @@ def download_all_shot_numbers(
                     sig, machine))
         else:
             signals.append(sig)
-    save_prepath = prepath+save_path + '/'
+    save_prepath = prepath + save_path + '/'
     shot_numbers, _ = shot_list_files.get_shot_numbers_and_disruption_times()
     # can only use queue of max size 30000
     shot_numbers_chunks = [shot_numbers[i:i+max_len]
                            for i in np.xrange(0, len(shot_numbers), max_len)]
     start_time = time.time()
     for shot_numbers_chunk in shot_numbers_chunks:
-        download_shot_numbers(
-            shot_numbers_chunk,
-            save_prepath,
-            machine,
-            signals)
+        download_shot_numbers(shot_numbers_chunk, save_prepath, machine,
+                              signals)
 
     print('Finished downloading {} shots in {} seconds'.format(
         len(shot_numbers), time.time()-start_time))

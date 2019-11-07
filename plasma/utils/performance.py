@@ -359,10 +359,9 @@ class PerformanceAnalyzer():
         results_files = os.listdir(self.results_dir)
         print(results_files)
         dat = np.load(self.results_dir + results_files[self.i],
-                      allow_pickle=False)
+                      allow_pickle=True)
         print("Loading results file {}".format(
             self.results_dir + results_files[self.i]))
-
         if self.verbose:
             print('configuration: {} '.format(dat['conf']))
 
@@ -399,7 +398,7 @@ class PerformanceAnalyzer():
                 print(shot_list.shots[i].number)
                 print((s.shape, truth_arr[i].shape, disr_arr[i]))
             assert(truth_arr[i].shape[0] == s.shape[0]-30)
-        print("Same Shape!")
+        print("Same shape!")
 
     def print_conf(self):
         pprint(self.saved_conf)
@@ -505,26 +504,23 @@ class PerformanceAnalyzer():
                 P_thresh_opt = P_thresh_range[idx]
                 self.summarize_shot_prediction_stats_by_mode(
                     P_thresh_opt, mode, verbose=True)
-                print(
-                    '============= AT P_THRESH = {} ============='.format(
-                        P_thresh_opt))
+                print('============= AT P_THRESH = {} ============='.format(
+                    P_thresh_opt))
             else:
                 print('No such P_thresh found')
             print('')
 
         # last index where
         for missed_thresh in missed_threshs:
-            print(
-                '============= MISSED RATE < {} ============='.format(
-                    missed_thresh))
+            print('============= MISSED RATE < {} ============='.format(
+                missed_thresh))
             if(any(missed_range < missed_thresh)):
                 idx = np.where(missed_range <= missed_thresh)[0][-1]
                 P_thresh_opt = P_thresh_range[idx]
                 self.summarize_shot_prediction_stats_by_mode(
                     P_thresh_opt, mode, verbose=True)
-                print(
-                    '============= AT P_THRESH = {} ============='.format(
-                        P_thresh_opt))
+                print('============= AT P_THRESH = {} ============='.format(
+                    P_thresh_opt))
             else:
                 print('No such P_thresh found')
             print('')
@@ -554,7 +550,6 @@ class PerformanceAnalyzer():
 
         # first index where...
         for fp_thresh in fp_threshs:
-
             print('============= TRAINING FP RATE < {} ============='.format(
                 fp_thresh))
             print('============= TEST PERFORMANCE: =============')
@@ -660,7 +655,6 @@ class PerformanceAnalyzer():
     def get_prediction_type_for_individual_shot(self, P_thresh, shot,
                                                 mode='test'):
         p, t, is_disr = self.get_pred_truth_disr_by_shot(shot)
-
         TP, FP, FN, TN, early, late = self.get_shot_prediction_stats(
             P_thresh, p, t, is_disr)
         prediction_type = self.get_prediction_type(TP, FP, FN, TN, early, late)
@@ -687,7 +681,6 @@ class PerformanceAnalyzer():
             p = pred[i]
             is_disr = is_disruptive[i]
             shot = shot_list.shots[i]
-
             TP, FP, FN, TN, early, late = self.get_shot_prediction_stats(
                 P_thresh_opt, p, t, is_disr)
             prediction_type = self.get_prediction_type(
@@ -802,20 +795,12 @@ class PerformanceAnalyzer():
                 # ax.axvline(len(truth)-T_max_warn,color='r')#,label='max
                 # warning time')
                 # ,label='min warning time')
-                ax.axvline(
-                    len(truth)
-                    - self.T_min_warn,
-                    color='r',
-                    linewidth=0.5)
+                ax.axvline(len(truth) - self.T_min_warn, color='r',
+                           linewidth=0.5)
                 ax.set_xlabel('T [ms]', size=fontsize)
                 # ax.axvline(2400)
-                ax.legend(
-                    loc=(
-                        0.5,
-                        0.7),
-                    fontsize=fontsize-5,
-                    labelspacing=0.1,
-                    frameon=False)
+                ax.legend(loc=(0.5, 0.7), fontsize=fontsize-5,
+                          labelspacing=0.1, frameon=False)
                 plt.setp(ax.get_yticklabels(), fontsize=fontsize)
                 plt.setp(ax.get_xticklabels(), fontsize=fontsize)
                 # plt.xlim(0,200)
@@ -890,15 +875,10 @@ class PerformanceAnalyzer():
             # ax.set_ylim([1e-5,1.1e0])
             ax.set_ylim([-2, 2])
             if len(truth)-self.T_max_warn >= 0:
-                ax.axvline(
-                    len(truth)-self.T_max_warn,
-                    color='r',
-                    label='min warning time')
-            ax.axvline(
-                len(truth)
-                - self.T_min_warn,
-                color='r',
-                label='max warning time')
+                ax.axvline(len(truth)-self.T_max_warn, color='r',
+                           label='min warning time')
+            ax.axvline(len(truth) - self.T_min_warn, color='r',
+                       label='max warning time')
             ax.set_xlabel('T [ms]')
             # ax.legend(loc = 'lower left',fontsize=10)
             plt.setp(ax.get_yticklabels(), fontsize=7)

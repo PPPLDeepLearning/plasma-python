@@ -1,16 +1,22 @@
+from __future__ import print_function
+import plasma.global_vars as g
 import numpy as np
 import abc
 
-from keras.losses import hinge  # squared_hinge, mean_absolute_percentage_error
 from plasma.utils.evaluation import (
     mse_np, binary_crossentropy_np, hinge_np,
     # mae_np, squared_hinge_np,
     )
 import keras.backend as K
+from keras.losses import hinge
+
+# synchronize output from TensorFlow initialization via Keras backend
+if g.comm is not None:
+    g.flush_all_inorder()
+    g.comm.Barrier()
+
 
 # Requirement: larger value must mean disruption more likely.
-
-
 class Target(object):
     activation = 'linear'
     loss = 'mse'

@@ -1,4 +1,8 @@
-from __future__ import division
+from __future__ import division, print_function
+import plasma.global_vars as g
+# KGF: the first time Keras is ever imported via mpi_learn.py -> mpi_runner.py
+import keras.backend as K
+# KGF: see below synchronization--- output is launched here
 from keras.models import Sequential, Model
 from keras.layers import Input
 from keras.layers.core import (
@@ -14,14 +18,23 @@ from keras.layers.merge import Concatenate
 from keras.callbacks import Callback
 from keras.regularizers import l2  # l1, l1_l2
 
-import keras.backend as K
-
 import re
 import os
 import sys
 import numpy as np
 from copy import deepcopy
-from plasma.utils.downloading import makedirs_process_safe, general_object_hash
+from plasma.utils.downloading import makedirs_process_safe
+from plasma.utils.hashing import general_object_hash
+
+# Synchronize 2x stderr msg from TensorFlow initialization via Keras backend
+# "Succesfully opened dynamic library... libcudart" "Using TensorFlow backend."
+if g.comm is not None:
+    g.flush_all_inorder()
+# TODO(KGF): need to create wrapper .py file (or place in some __init__.py)
+# that detects, for an arbitrary import, if tensorflow has been initialized
+# either directly from "import tensorflow ..." and/or via backend of
+# "from keras.layers ..."
+# OR if this is the first time. See below "first_time" variable.
 
 
 class LossHistory(Callback):
@@ -37,15 +50,12 @@ class ModelBuilder(object):
         self.conf = conf
 
     def get_unique_id(self):
-        # num_epochs = self.conf['training']['num_epochs']
         this_conf = deepcopy(self.conf)
-        # don't make hash dependent on number of epochs or T_min_warn
-        # (they can both be modified)
+        # ignore hash depednecy on number of epochs or T_min_warn (they are
+        # both modifiable). Map local copy of all confs to the same values
         this_conf['training']['num_epochs'] = 0
         this_conf['data']['T_min_warn'] = 30
         unique_id = general_object_hash(this_conf)
-        # unique_id = int(hashlib.md5((dill.dumps(this_conf).decode(
-        #     'unicode_escape')).encode('utf-8')).hexdigest(), 16)
         return unique_id
 
     def get_0D_1D_indices(self):
@@ -74,9 +84,8 @@ class ModelBuilder(object):
                 num_0D += 1
                 is_1D_region = False
             curr_idx += num_channels
-        return np.array(indices_0d).astype(
-            np.int32), np.array(indices_1d).astype(
-            np.int32), num_0D, num_1D
+        return (np.array(indices_0d).astype(np.int32),
+                np.array(indices_1d).astype(np.int32), num_0D, num_1D)
 
     def build_model(self, predict, custom_batch_size=None):
         conf = self.conf
@@ -265,6 +274,8 @@ class ModelBuilder(object):
             x_out = Dense(1, activation=output_activation)(x_in)
         model = Model(inputs=x_input, outputs=x_out)
         # bug with tensorflow/Keras
+        # TODO(KGF): what is this bug? this is the only direct "tensorflow"
+        # import outside of mpi_runner.py and runner.py
         if (conf['model']['backend'] == 'tf'
                 or conf['model']['backend'] == 'tensorflow'):
             first_time = "tensorflow" not in sys.modules
@@ -300,20 +311,23 @@ class ModelBuilder(object):
         if custom_path is None:
             epochs = self.get_all_saved_files()
             if len(epochs) == 0:
-                print('no previous checkpoint found')
-                return -1
+                g.write_all('no previous checkpoint found\n')
+                # TODO(KGF): port indexing change (from "return -1") to parts
+                # of the code other than mpi_runner.py
+                return 0
             else:
                 max_epoch = max(epochs)
-                print('loading from epoch {}'.format(max_epoch))
+                g.write_all('loading from epoch {}\n'.format(max_epoch))
                 model.load_weights(self.get_save_path(max_epoch))
                 return max_epoch
         else:
             epoch = self.extract_id_and_epoch_from_filename(
                 os.path.basename(custom_path))[1]
             model.load_weights(custom_path)
-            print("Loading from custom epoch {}".format(epoch))
+            g.write_all("Loading from custom epoch {}\n".format(epoch))
             return epoch
 
+    # TODO(KGF): method only called in non-MPI runner.py. Deduplicate?
     def get_latest_save_path(self):
         epochs = self.get_all_saved_files()
         if len(epochs) == 0:

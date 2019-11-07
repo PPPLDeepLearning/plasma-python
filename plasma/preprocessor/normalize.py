@@ -9,6 +9,7 @@ This work was supported by the DOE CSGF program.
 '''
 
 from __future__ import print_function
+import plasma.global_vars as g
 import os
 import time
 import sys
@@ -66,12 +67,17 @@ class Normalizer(object):
         pass
 
     @abc.abstractmethod
-    def save_stats(self):
+    def save_stats(self, verbose=False):
         pass
 
     @abc.abstractmethod
-    def load_stats(self):
+    def load_stats(self, verbose=False):
         pass
+
+    def print_summary(self, action='loaded'):
+        g.print_unique(
+            '{} normalization data from {} shots ( {} disruptive )'.format(
+                action, self.num_processed, self.num_disruptive))
 
     def set_inference_mode(self, val):
         self.inference_mode = val
@@ -82,7 +88,7 @@ class Normalizer(object):
             self.num_disruptive[machine] = 0
     # Modify the above to change the specifics of the normalization scheme
 
-    def train(self):
+    def train(self, verbose=False):
         conf = self.conf
         # only use training shots here!! "Don't touch testing shots"
         # + conf['paths']['shot_files_test']
@@ -100,9 +106,11 @@ class Normalizer(object):
 
         # shot_list_dir = conf['paths']['shot_list_dir']
         use_shots = max(400, conf['data']['use_shots'])
-        return self.train_on_files(shot_files_use, use_shots, all_machines)
+        return self.train_on_files(shot_files_use, use_shots, all_machines,
+                                   verbose=verbose)
 
-    def train_on_files(self, shot_files, use_shots, all_machines):
+    def train_on_files(self, shot_files, use_shots, all_machines,
+                       verbose=False):
         conf = self.conf
         all_signals = conf['paths']['all_signals']
         shot_list = ShotList()
@@ -115,10 +123,9 @@ class Normalizer(object):
         if recompute:
             machines_to_compute = all_machines
             previously_saved = False
-
         if not previously_saved or len(machines_to_compute) > 0:
             if previously_saved:
-                self.load_stats()
+                self.load_stats(verbose=True)
             print('computing normalization for machines {}'.format(
                 machines_to_compute))
             use_cores = max(1, mp.cpu_count()-2)
@@ -128,8 +135,7 @@ class Normalizer(object):
             start_time = time.time()
 
             for (i, stats) in enumerate(pool.imap_unordered(
-                    self.train_on_single_shot,
-                    shot_list_picked)):
+                    self.train_on_single_shot, shot_list_picked)):
                 # for (i,stats) in
                 # enumerate(map(self.train_on_single_shot,shot_list_picked)):
                 if stats.machine in machines_to_compute:
@@ -137,16 +143,18 @@ class Normalizer(object):
                     self.machines.add(stats.machine)
                 sys.stdout.write('\r'
                                  + '{}/{}'.format(i, len(shot_list_picked)))
-
             pool.close()
             pool.join()
-            print('Finished Training Normalizer on ',
+            print('\nFinished Training Normalizer on ',
                   '{} files in {} seconds'.format(len(shot_list_picked),
                                                   time.time()-start_time))
-            self.save_stats()
+            self.save_stats(verbose=True)
         else:
-            self.load_stats()
-        print(self)
+            self.load_stats(verbose=verbose)
+        # print representation of trained Normalizer to stdout:
+        # Machine, NormalizerName, per-signal normalization stats/params
+        if verbose:
+            g.print_unique(self)
 
     def cut_end_of_shot(self, shot):
         cut_shot_ends = self.conf['data']['cut_shot_ends']
@@ -219,7 +227,7 @@ class MeanVarNormalizer(Normalizer):
         for machine in self.means:
             means = np.median(self.means[machine], axis=0)
             stds = np.median(self.stds[machine], axis=0)
-            s += 'Machine: {}:\nMean Var Normalizer.\n'.format(machine)
+            s += 'Machine = {}:\nMean Var Normalizer.\n'.format(machine)
             s += 'means: {}\nstds: {}'.format(means, stds)
         return s
 
@@ -256,8 +264,9 @@ class MeanVarNormalizer(Normalizer):
                 self.stds[machine] = np.concatenate(
                     (self.stds[machine], stds), axis=0)
             self.num_processed[machine] = self.num_processed[machine] + 1
-            self.num_disruptive[machine] = self.num_disruptive[machine] + \
-                (1 if stats.is_disruptive else 0)
+            self.num_disruptive[machine] = (
+                self.num_disruptive[machine]
+                + (1 if stats.is_disruptive else 0))
 
     def apply(self, shot):
         apply_positivity(shot)
@@ -281,24 +290,18 @@ class MeanVarNormalizer(Normalizer):
         # self.apply_positivity_mask(shot)
         # self.apply_mask(shot)
 
-    def save_stats(self):
+    def save_stats(self, verbose=False):
         # standard_deviations = dat['standard_deviations']
         # num_processed = dat['num_processed']
         # num_disruptive = dat['num_disruptive']
         self.ensure_save_directory()
-        np.savez(
-            self.path,
-            means=self.means,
-            stds=self.stds,
-            num_processed=self.num_processed,
-            num_disruptive=self.num_disruptive,
-            machines=self.machines)
-        print(
-            'saved normalization data from {} shots ( {} disruptive )'.format(
-                self.num_processed,
-                self.num_disruptive))
+        np.savez(self.path, means=self.means, stds=self.stds,
+                 num_processed=self.num_processed,
+                 num_disruptive=self.num_disruptive, machines=self.machines)
+        if verbose:
+            self.print_summary(action='saved')
 
-    def load_stats(self):
+    def load_stats(self, verbose=False):
         assert self.previously_saved_stats()[0], "stats not saved before"
         dat = np.load(self.path, encoding="latin1", allow_pickle=True)
         self.means = dat['means'][()]
@@ -306,11 +309,10 @@ class MeanVarNormalizer(Normalizer):
         self.num_processed = dat['num_processed'][()]
         self.num_disruptive = dat['num_disruptive'][()]
         self.machines = dat['machines'][()]
-        for machine in self.means:
-            print('Machine {}:'.format(machine))
-            print('loaded normalization data from ',
-                  '{} shots ( {} disruptive )'.format(self.num_processed,
-                                                      self.num_disruptive))
+        # for machine in self.means:
+        #     g.print_unique('Machine = {}:'.format(machine))
+        if verbose:
+            self.print_summary()
 
 
 class VarNormalizer(MeanVarNormalizer):
@@ -341,7 +343,6 @@ class VarNormalizer(MeanVarNormalizer):
 
 
 class AveragingVarNormalizer(VarNormalizer):
-
     def apply(self, shot):
         apply_positivity(shot)
         super(AveragingVarNormalizer, self).apply(shot)
@@ -416,8 +417,8 @@ class MinMaxNormalizer(Normalizer):
                 self.maximums[m] = (self.num_processed[m]*self.maximums
                                     + maximums)/(self.num_processed[m] + 1.0)
             self.num_processed[m] = self.num_processed[m] + 1
-            self.num_disruptive[m] = self.num_disruptive[m] + \
-                (1 if stats.is_disruptive else 0)
+            self.num_disruptive[m] = (self.num_disruptive[m]
+                                      + (1 if stats.is_disruptive else 0))
 
     def apply(self, shot):
         apply_positivity(shot)
@@ -439,24 +440,18 @@ class MinMaxNormalizer(Normalizer):
         # self.apply_positivity_mask(shot)
         # self.apply_mask(shot)
 
-    def save_stats(self):
+    def save_stats(self, verbose=False):
         # standard_deviations = dat['standard_deviations']
         # num_processed = dat['num_processed']
         # num_disruptive = dat['num_disruptive']
         self.ensure_save_directory()
-        np.savez(
-            self.path,
-            minimums=self.minimums,
-            maximums=self.maximums,
-            num_processed=self.num_processed,
-            num_disruptive=self.num_disruptive,
-            machines=self.machines)
-        print(
-            'saved normalization data from {} shots ( {} disruptive )'.format(
-                self.num_processed,
-                self.num_disruptive))
+        np.savez(self.path, minimums=self.minimums, maximums=self.maximums,
+                 num_processed=self.num_processed,
+                 num_disruptive=self.num_disruptive, machines=self.machines)
+        if verbose:
+            self.print_summary(action='saved')
 
-    def load_stats(self):
+    def load_stats(self, verbose=False):
         assert(self.previously_saved_stats()[0])
         dat = np.load(self.path, encoding="latin1", allow_pickle=True)
         self.minimums = dat['minimums'][()]
@@ -464,10 +459,10 @@ class MinMaxNormalizer(Normalizer):
         self.num_processed = dat['num_processed'][()]
         self.num_disruptive = dat['num_disruptive'][()]
         self.machines = dat['machines'][()]
-        print(
-            'loaded normalization data from {} shots ( {} disruptive )'.format(
-                self.num_processed,
-                self.num_disruptive))
+        # for machine in self.means:
+        #     g.print_unique('Machine {}:'.format(machine))
+        if verbose:
+            self.print_summary()
 
 
 def get_individual_shot_file(prepath, shot_num, ext='.txt'):
