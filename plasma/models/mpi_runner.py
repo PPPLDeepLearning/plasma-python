@@ -69,7 +69,7 @@ if g.backend == 'tf' or g.backend == 'tensorflow':
     # But many TF deprecation warnings in 1.14.0, e.g.:
     # "The name tf.GPUOptions is deprecated. Please use tf.compat.v1.GPUOptions
     # instead". See tf_export.py
-    if tf_ver > parse_version('1.13.0'):
+    if tf_ver >= parse_version('1.13.0'):
         import tensorflow.compat.v1 as tf
     else:
         import tensorflow as tf
@@ -86,7 +86,6 @@ if g.backend == 'tf' or g.backend == 'tensorflow':
     config = tf.ConfigProto(gpu_options=gpu_options)
     set_session(tf.Session(config=config))
     g.flush_all_inorder()
-    g.comm.Barrier()
 else:
     os.environ['KERAS_BACKEND'] = 'theano'
     base_compile_dir = '{}/tmp/{}-{}'.format(
@@ -143,7 +142,6 @@ class MPIMomentumSGD(MPIOptimizer):
 
     def get_deltas(self, raw_deltas):
         deltas = []
-
         if self.iterations == 0:
             self.velocity_list = [np.zeros_like(g) for g in raw_deltas]
 
@@ -784,7 +782,34 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
     conf['num_workers'] = g.comm.Get_size()
 
     specific_builder = builder.ModelBuilder(conf)
+
+    # TODO(KGF): next line suppresses ALL info and warning messages, not just
+    # deprecation warnings...
+    # tf.logging.set_verbosity(tf.logging.ERROR)
+
+    # Internal TensorFlow flags, subject to change (v1.14.0+ only?)
+    try:
+        from tensorflow.python.util import module_wrapper as deprecation
+    except ImportError:
+        from tensorflow.python.util import deprecation_wrapper as deprecation
+    # deprecation._PRINT_DEPRECATION_WARNINGS = False  # does nothing
+    deprecation._PER_MODULE_WARNING_LIMIT = 0
+    # Suppresses warnings from "keras/backend/tensorflow_backend.py", except:
+    # "Rate should be set to `rate = 1 - keep_prob`"
+    # Also suppresses warnings from "keras/optimizers.py
+    # does NOT suppresses warn from "/tensorflow/python/ops/math_grad.py"
+
+    # TODO(KGF): for TF>v1.13.0 (esp v1.14.0), this next line prompts a ton of
+    # deprecation warnings with externally-packaged Keras, e.g.:
+    # WARNING:tensorflow:From  .../keras/backend/tensorflow_backend.py:174:
+    # The name tf.get_default_session is deprecated.
+    # Please use tf.compat.v1.get_default_session instead.
     train_model = specific_builder.build_model(False)
+    # Cannot fix these Keras internals via "import tensorflow.compat.v1 as tf"
+    #
+    # TODO(KGF): note, these are different than C-based info diagnostics e.g.:
+    # 2019-11-06 18:27:31.698908: I ...  dynamic library libcublas.so.10
+    # which are NOT suppressed by set_verbosity. See top level __init__.py
 
     # load the latest epoch we did. Returns -1 if none exist yet
     e = specific_builder.load_model_weights(train_model)
