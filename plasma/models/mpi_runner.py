@@ -450,7 +450,6 @@ class MPIModel():
             os.makedirs(csvlog_save_path)
 
         callbacks_list = conf['callbacks']['list']
-
         callbacks = [cbks.BaseLogger()]
         callbacks += [self.history]
         callbacks += [cbks.CSVLogger("{}callbacks-{}.log".format(
@@ -581,9 +580,10 @@ class MPIModel():
         effective_epochs = 1.0*self.num_so_far/num_total
         epoch_previous = self.epoch
         self.epoch = effective_epochs
-        g.write_unique('\nEpoch {:.2f} finished ({:.2f} epochs passed)'.format(
-            1.0 * self.epoch, self.epoch - epoch_previous)
-                     + ' in {:.2f} seconds.\n'.format(t2 - t_start))
+        g.write_unique(
+            '\nEpoch {:.2f} finished training ({:.2f} epochs passed)'.format(
+                1.0 * self.epoch, self.epoch - epoch_previous)
+            + ' in {:.2f} seconds.\n'.format(t2 - t_start))
         return (step, ave_loss, curr_loss, self.num_so_far, effective_epochs)
 
     def estimate_remaining_time(self, time_so_far, work_so_far, work_total):
@@ -687,6 +687,10 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
 
     model.reset_states()
     if g.task_index == 0:
+        # TODO(KGF): this appears to prepend a \n, resulting in:
+        # [2] loading from epoch 7
+        #
+        # 128/862 [===>..........................] - ETA: 2:20
         pbar = Progbar(len(shot_list))
     shot_sublists = shot_list.sublists(conf['model']['pred_batch_size'],
                                        do_shuffle=False, equal_size=True)
@@ -870,12 +874,13 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         cmp_fn = min
 
     while e < (num_epochs - 1):
-        g.write_unique("begin epoch {}".format(e))
+        g.write_unique('\nBegin training from epoch {:.2f}/{}'.format(
+            e, num_epochs))
         if g.task_index == 0:
             callbacks.on_epoch_begin(int(round(e)))
         mpi_model.set_lr(lr*lr_decay**e)
-        g.write_unique('\nEpoch {}/{}'.format(e, num_epochs))
 
+        # KGF: core work of loop performed in next line
         (step, ave_loss, curr_loss, num_so_far,
          effective_epochs) = mpi_model.train_epoch()
         e = e_old + effective_epochs
@@ -885,9 +890,16 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
             specific_builder.save_model_weights(train_model, int(round(e)))
 
         epoch_logs = {}
+        g.write_unique('Begin evaluation of epoch {:.2f}/{}\n'.format(
+            e, num_epochs))
+        # TODO(KGF): flush output/ MPI barrier?
+        # g.flush_all_inorder()
 
+        # TODO(KGF): is there a way to avoid Keras.Models.load_weights()
+        # repeated calls throughout mpi_make_pred*() fn calls?
         _, _, _, roc_area, loss = mpi_make_predictions_and_evaluate(
             conf, shot_list_validate, loader)
+
         if conf['training']['ranking_difficulty_fac'] != 1.0:
             (_, _, _, roc_area_train,
              loss_train) = mpi_make_predictions_and_evaluate(
@@ -905,15 +917,18 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
             times = conf['callbacks']['monitor_times']
             areas, _ = mpi_make_predictions_and_evaluate_multiple_times(
                 conf, shot_list_validate, loader, times)
-            for roc, t in zip(areas, times):
-                g.write_unique('epoch {}, val_roc_{} = {}'.format(
-                    int(round(e)), t, roc))
+            epoch_str = 'epoch {}, '.format(int(round(e)))
+            g.write_unique(epoch_str + ' '.join(
+                ['val_roc_{} = {}'.format(t, roc) for t, roc in zip(
+                    times, areas)]
+                ) + '\n')
             if shot_list_test is not None:
                 areas, _ = mpi_make_predictions_and_evaluate_multiple_times(
                     conf, shot_list_test, loader, times)
-                for roc, t in zip(areas, times):
-                    g.write_unique('epoch {}, test_roc_{} = {}'.format(
-                        int(round(e)), t, roc))
+                g.write_unique(epoch_str + ' '.join(
+                    ['test_roc_{} = {}'.format(t, roc) for t, roc in zip(
+                        times, areas)]
+                    ) + '\n')
 
         epoch_logs['val_roc'] = roc_area
         epoch_logs['val_loss'] = loss
@@ -921,15 +936,16 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         best_so_far = cmp_fn(epoch_logs[conf['callbacks']['monitor']],
                              best_so_far)
         stop_training = False
+        g.flush_all_inorder()
         if g.task_index == 0:
-            print('=========Summary======== for epoch{}'.format(step))
+            print('=========Summary======== for epoch {:.2f}'.format(e))
             print('Training Loss numpy: {:.3e}'.format(ave_loss))
             print('Validation Loss: {:.3e}'.format(loss))
             print('Validation ROC: {:.4f}'.format(roc_area))
             if conf['training']['ranking_difficulty_fac'] != 1.0:
                 print('Training Loss: {:.3e}'.format(loss_train))
                 print('Training ROC: {:.4f}'.format(roc_area_train))
-
+            print('======================== ')
             callbacks.on_epoch_end(int(round(e)), epoch_logs)
             if hasattr(mpi_model.model, 'stop_training'):
                 stop_training = mpi_model.model.stop_training
@@ -951,7 +967,10 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
                 tensorboard.on_epoch_end(val_generator, val_steps,
                                          int(round(e)), epoch_logs)
         stop_training = g.comm.bcast(stop_training, root=0)
-        g.write_unique("end epoch {}".format(e))
+        g.write_unique('Finished evaluation of epoch {:.2f}/{}'.format(
+            e, num_epochs))
+        # TODO(KGF): compare to old diagnostic:
+        # g.write_unique("end epoch {}".format(e_old))
         if stop_training:
             g.write_unique("Stopping training due to early stopping")
             break
