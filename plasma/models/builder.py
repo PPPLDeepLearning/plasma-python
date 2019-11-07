@@ -30,13 +30,6 @@ from plasma.utils.hashing import general_object_hash
 # "Succesfully opened dynamic library... libcudart" "Using TensorFlow backend."
 if g.comm is not None:
     g.flush_all_inorder()
-# if g.comm is not None:
-#     g.comm.Barrier()
-# if g.task_index == 0:
-#     sys.stdout.flush()
-#     sys.stderr.flush()
-# if g.comm is not None:
-#     g.comm.Barrier()
 # TODO(KGF): need to create wrapper .py file (or place in some __init__.py)
 # that detects, for an arbitrary import, if tensorflow has been initialized
 # either directly from "import tensorflow ..." and/or via backend of
@@ -318,20 +311,21 @@ class ModelBuilder(object):
         if custom_path is None:
             epochs = self.get_all_saved_files()
             if len(epochs) == 0:
-                print('no previous checkpoint found')
+                g.write_all('no previous checkpoint found\n')
                 return -1
             else:
                 max_epoch = max(epochs)
-                print('loading from epoch {}'.format(max_epoch))
+                g.write_all('loading from epoch {}\n'.format(max_epoch))
                 model.load_weights(self.get_save_path(max_epoch))
                 return max_epoch
         else:
             epoch = self.extract_id_and_epoch_from_filename(
                 os.path.basename(custom_path))[1]
             model.load_weights(custom_path)
-            print("Loading from custom epoch {}".format(epoch))
+            g.write_all("Loading from custom epoch {}\n".format(epoch))
             return epoch
 
+    # TODO(KGF): method only called in non-MPI runner.py. Deduplicate?
     def get_latest_save_path(self):
         epochs = self.get_all_saved_files()
         if len(epochs) == 0:
