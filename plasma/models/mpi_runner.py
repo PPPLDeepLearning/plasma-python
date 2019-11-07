@@ -581,9 +581,14 @@ class MPIModel():
         epoch_previous = self.epoch
         self.epoch = effective_epochs
         g.write_unique(
-            '\nEpoch {:.2f} finished training ({:.2f} epochs passed)'.format(
-                1.0 * self.epoch, self.epoch - epoch_previous)
-            + ' in {:.2f} seconds.\n'.format(t2 - t_start))
+            # TODO(KGF): "a total of X epochs within this session" ?
+            '\nFinished training epoch {:.2f} '.format(self.epoch)
+            # TODO(KGF): "precisely/exactly X epochs just passed"?
+            + 'during this session ({:.2f} epochs passed)'.format(
+                self.epoch - epoch_previous)
+            # '\nEpoch {:.2f} finished training ({:.2f} epochs passed)'.format(
+            #     1.0 * self.epoch, self.epoch - epoch_previous)
+            + ' in {:.2f} seconds\n'.format(t2 - t_start))
         return (step, ave_loss, curr_loss, self.num_so_far, effective_epochs)
 
     def estimate_remaining_time(self, time_so_far, work_so_far, work_total):
@@ -884,7 +889,10 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         (step, ave_loss, curr_loss, num_so_far,
          effective_epochs) = mpi_model.train_epoch()
         e = e_old + effective_epochs
+        g.write_unique('Finished training of epoch {:.2f}/{}\n'.format(
+            e, num_epochs))
 
+        # TODO(KGF): add diagnostic about "saving to epoch X"?
         loader.verbose = False  # True during the first iteration
         if g.task_index == 0:
             specific_builder.save_model_weights(train_model, int(round(e)))

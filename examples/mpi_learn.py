@@ -67,7 +67,6 @@ if only_predict:
     custom_path = sys.argv[1]
     g.print_unique("predicting using path {}".format(custom_path))
 
-
 #####################################################
 #                 NORMALIZATION                     #
 #####################################################
@@ -101,10 +100,16 @@ g.print_unique("...done")
 #                    TRAINING                       #
 #####################################################
 
-# ensure training has a separate random seed for every worker
+# Prevent Keras TF backend deprecation messages from mpi_train() from
+# appearing jumbled with stdout, stderr msgs from above steps
+g.comm.Barrier()
+g.flush_all_inorder()
+
+# reminder: ensure training has a separate random seed for every worker
 if not only_predict:
     mpi_train(conf, shot_list_train, shot_list_validate, loader,
               shot_list_test=shot_list_test)
+g.flush_all_inorder()
 
 #####################################################
 #                    TESTING                        #
