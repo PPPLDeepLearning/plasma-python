@@ -61,7 +61,7 @@ if g.backend == 'tf' or g.backend == 'tensorflow':
         os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(g.MY_GPU)
         # ,mode=NanGuardMode'
     os.environ['KERAS_BACKEND'] = 'tensorflow'  # default setting
-    tf_ver = parse_version(get_distribution('tensorflow').version)
+    g.tf_ver = parse_version(get_distribution('tensorflow').version)
     # compat/compat.py first committed on 2018-06-29 for Py 2 vs 3
     # (around, but not present in, the release of v1.9.0)
     # v2 compatiblity code added, then moved from compat.py in Nov and Dec 2018
@@ -69,7 +69,7 @@ if g.backend == 'tf' or g.backend == 'tensorflow':
     # But many TF deprecation warnings in 1.14.0, e.g.:
     # "The name tf.GPUOptions is deprecated. Please use tf.compat.v1.GPUOptions
     # instead". See tf_export.py
-    if tf_ver >= parse_version('1.13.0'):
+    if g.tf_ver >= parse_version('1.14.0'):
         import tensorflow.compat.v1 as tf
     else:
         import tensorflow as tf
@@ -782,23 +782,22 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
     conf['num_workers'] = g.comm.Get_size()
 
     specific_builder = builder.ModelBuilder(conf)
-
-    # TODO(KGF): next line suppresses ALL info and warning messages, not just
-    # deprecation warnings...
-    # tf.logging.set_verbosity(tf.logging.ERROR)
-
-    # Internal TensorFlow flags, subject to change (v1.14.0+ only?)
-    try:
-        from tensorflow.python.util import module_wrapper as deprecation
-    except ImportError:
-        from tensorflow.python.util import deprecation_wrapper as deprecation
-    # deprecation._PRINT_DEPRECATION_WARNINGS = False  # does nothing
-    deprecation._PER_MODULE_WARNING_LIMIT = 0
-    # Suppresses warnings from "keras/backend/tensorflow_backend.py", except:
-    # "Rate should be set to `rate = 1 - keep_prob`"
-    # Also suppresses warnings from "keras/optimizers.py
-    # does NOT suppresses warn from "/tensorflow/python/ops/math_grad.py"
-
+    if g.tf_ver >= parse_version('1.14.0'):
+        # Internal TensorFlow flags, subject to change (v1.14.0+ only?)
+        try:
+            from tensorflow.python.util import module_wrapper as depr
+        except ImportError:
+            from tensorflow.python.util import deprecation_wrapper as depr
+        # depr._PRINT_DEPRECATION_WARNINGS = False  # does nothing
+        depr._PER_MODULE_WARNING_LIMIT = 0
+        # Suppresses warnings from "keras/backend/tensorflow_backend.py"
+        # except: "Rate should be set to `rate = 1 - keep_prob`"
+        # Also suppresses warnings from "keras/optimizers.py
+        # does NOT suppresses warn from "/tensorflow/python/ops/math_grad.py"
+    else:
+        # TODO(KGF): next line suppresses ALL info and warning messages,
+        # not just deprecation warnings...
+        tf.logging.set_verbosity(tf.logging.ERROR)
     # TODO(KGF): for TF>v1.13.0 (esp v1.14.0), this next line prompts a ton of
     # deprecation warnings with externally-packaged Keras, e.g.:
     # WARNING:tensorflow:From  .../keras/backend/tensorflow_backend.py:174:

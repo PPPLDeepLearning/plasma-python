@@ -8,6 +8,7 @@ num_workers = 1
 NUM_GPUS = 0
 MY_GPU = 0
 backend = ''
+tf_ver = None
 
 
 def init_MPI():
