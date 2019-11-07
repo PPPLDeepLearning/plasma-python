@@ -312,7 +312,9 @@ class ModelBuilder(object):
             epochs = self.get_all_saved_files()
             if len(epochs) == 0:
                 g.write_all('no previous checkpoint found\n')
-                return -1
+                # TODO(KGF): port indexing change (from "return -1") to parts
+                # of the code other than mpi_runner.py
+                return 0
             else:
                 max_epoch = max(epochs)
                 g.write_all('loading from epoch {}\n'.format(max_epoch))

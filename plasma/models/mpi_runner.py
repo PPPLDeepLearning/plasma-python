@@ -819,7 +819,7 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
     # 2019-11-06 18:27:31.698908: I ...  dynamic library libcublas.so.10
     # which are NOT suppressed by set_verbosity. See top level __init__.py
 
-    # load the latest epoch we did. Returns -1 if none exist yet
+    # load the latest epoch we did. Returns 0 if none exist yet
     e = specific_builder.load_model_weights(train_model)
     e_old = e
 
