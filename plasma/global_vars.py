@@ -62,8 +62,14 @@ def write_unique(write_str):
 
 
 def write_all(write_str):
-    '''All MPI ranks write to stdout, appending [rank]'''
-    sys.stdout.write('[{}] '.format(task_index) + write_str)
+    '''All MPI ranks write to stdout, appending [rank].
+
+    No MPI barriers, no guaranteed ordering of output.
+    '''
+    if comm is not None:
+        sys.stdout.write('[{}] '.format(task_index) + write_str)
+    else:
+        sys.stdout.write(write_str)
     sys.stdout.flush()
 
 
