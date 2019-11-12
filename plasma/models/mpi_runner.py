@@ -311,6 +311,9 @@ class MPIModel():
         '''
         weights_before_update = self.model.get_weights()
 
+        return_sequences = self.conf['model']['return_sequences']
+        if not return_sequences:
+           Y_batch=Y_batch[:,-1,:]
         loss = self.model.train_on_batch(X_batch, Y_batch)
 
         weights_after_update = self.model.get_weights()
@@ -861,6 +864,12 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
                                   histogram_freq=1, write_graph=True,
                                   write_grads=write_grads)
         tensorboard.set_model(mpi_model.model)
+        fr=open('model_architecture.log','a')
+        ori=sys.stdout
+        sys.stdout=fr
+        mpi_model.model.summary()
+        sys.stdout=ori
+        fr.close()        
         mpi_model.model.summary()
 
     if g.task_index == 0:

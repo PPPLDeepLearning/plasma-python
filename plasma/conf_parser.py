@@ -136,6 +136,7 @@ def parameters(input_file):
             sig.d3d, params['paths']['shot_list_dir'],
             ['d3d_clear_data_avail.txt', 'd3d_disrupt_data_avail.txt'],
             'd3d data since shot 125500')
+        d3d_full_new = ShotListFiles(sig.d3d,params['paths']['shot_list_dir'],['shots_since_2016_clear.txt','shots_since_2016_disrupt.txt'],'d3d data since shot 125500')
         d3d_jenkins = ShotListFiles(
             sig.d3d, params['paths']['shot_list_dir'],
             ['jenkins_d3d_clear.txt', 'jenkins_d3d_disrupt.txt'],
@@ -206,6 +207,27 @@ def parameters(input_file):
         elif params['paths']['data'] == 'd3d_data':
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = []
+            params['paths']['use_signals_dict'] = {
+                'q95': sig.q95,
+                'li': sig.li,
+                'ip': sig.ip,
+                'lm': sig.lm,
+                'betan': sig.betan,
+                'energy': sig.energy,
+                'dens': sig.dens,
+                'pradcore': sig.pradcore,
+                'pradedge': sig.pradedge,
+                'pin': sig.pin,
+                'torquein': sig.torquein,
+                'ipdirect': sig.ipdirect,
+                'iptarget': sig.iptarget,
+                'iperr': sig.iperr,
+                'etemp_profile': sig.etemp_profile,
+                'edens_profile': sig.edens_profile,
+            }
+        elif params['paths']['data'] == 'd3d_data_new':
+            params['paths']['shot_files'] = [d3d_full_new]
+            params['paths']['shot_files_test'] = [] 
             params['paths']['use_signals_dict'] = {
                 'q95': sig.q95,
                 'li': sig.li,

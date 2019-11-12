@@ -11,7 +11,7 @@
 # Each node = 2.4 GHz Xeon Broadwell E5-2680 v4 + 4x 1328 MHz P100 GPU
 
 module load anaconda3
-conda activate my_env
+conda activate pplori
 module load cudatoolkit
 module load cudnn
 module load openmpi/cuda-8.0/intel-17.0/3.0.0/64

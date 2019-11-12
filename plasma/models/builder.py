@@ -159,8 +159,12 @@ class ModelBuilder(object):
             # slicer_output_shape(s,indices_0d))(pre_rnn_input)
             pre_rnn_1D = Reshape((num_1D, len(indices_1d)//num_1D))(pre_rnn_1D)
             pre_rnn_1D = Permute((2, 1))(pre_rnn_1D)
-
-            for i in range(model_conf['num_conv_layers']):
+            if 'simple_conv' in model_conf.keys() and model_conf['simple_conv']==True:
+              for i in range(model_conf['num_conv_layers']):
+                pre_rnn_1D = Convolution1D(num_conv_filters,size_conv_filters,padding='valid',activation='relu') (pre_rnn_1D)
+                pre_rnn_1D = MaxPooling1D(pool_size) (pre_rnn_1D) 
+            else:
+              for i in range(model_conf['num_conv_layers']):
                 div_fac = 2**i
                 '''The first conv layer learns `num_conv_filters//div_fac`
                 filters (aka kernels), each of size
@@ -254,9 +258,25 @@ class ModelBuilder(object):
                 activity_regularizer=l2(dense_regularization))(pre_rnn)
 
         pre_rnn_model = Model(inputs=pre_rnn_input, outputs=pre_rnn)
+        from mpi4py import MPI
+        comm = MPI.COMM_WORLD
+        task_index = comm.Get_rank()
+        if not predict and task_index==0 :
+          print('Printingout pre_rnn model.........')
+          fr=open('model_architecture.log','w')
+          ori=sys.stdout
+          sys.stdout=fr
+          pre_rnn_model.summary()
+          sys.stdout=ori
+          fr.close()        
         # pre_rnn_model.summary()
         x_input = Input(batch_shape=batch_input_shape)
-        x_in = TimeDistributed(pre_rnn_model)(x_input)
+        if num_1D>0 or (
+                'extra_dense_input' in model_conf.keys()
+                and model_conf['extra_dense_input']):
+            x_in = TimeDistributed(pre_rnn_model)(x_input)
+        else:
+            x_in=x_input
         for _ in range(model_conf['rnn_layers']):
             x_in = rnn_model(
                 rnn_size, return_sequences=return_sequences,
