@@ -13,6 +13,7 @@ from plasma.utils.state_reset import reset_states
 from plasma.conf import conf
 from mpi4py import MPI
 from pkg_resources import parse_version, get_distribution
+import random
 '''
 #########################################################
 This file trains a deep learning model to predict
@@ -466,7 +467,18 @@ class MPIModel():
             pass
 
         return cbks.CallbackList(callbacks)
-
+    def add_noise(self,X):
+        if self.conf['training']['noise']==True:
+           prob=0.05
+        else:
+           prob=self.conf['training']['noise']
+        for i in range(0,X.shape[0]):
+            for j in range(0,X.shape[2]):
+                a=random.randint(0,100)
+                if a<prob*100:
+                   X[i,:,j]=0.0
+        return X
+             
     def train_epoch(self):
         '''
         The purpose of the method is to perform distributed mini-batch SGD for
@@ -539,6 +551,8 @@ class MPIModel():
             if first_run:
                 first_run = False
                 t0_comp = time.time()
+             #   print('input_dimension:',batch_xs.shape)
+             #   print('output_dimension:',batch_ys.shape)
                 _, _ = self.train_on_batch_and_get_deltas(
                     batch_xs, batch_ys, verbose)
                 self.comm.Barrier()
@@ -551,7 +565,8 @@ class MPIModel():
 
             if np.any(batches_to_reset):
                 reset_states(self.model, batches_to_reset)
-
+            if 'noise' in self.conf['training'].keys() and self.conf['training']['noise']!=False:
+                batch_xs=self.add_noise(batch_xs)
             t0 = time.time()
             deltas, loss = self.train_on_batch_and_get_deltas(
                 batch_xs, batch_ys, verbose)
