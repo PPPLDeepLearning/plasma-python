@@ -124,8 +124,8 @@ def create_slurm_script(
         idx,
         executable_name,
         use_mpi,
-        env_name="frnn",
-        env_type="anaconda"):
+        env_name="ppltest",
+        env_type="anaconda3"):
     filename = "run_{}_nodes.cmd".format(num_nodes)
     filepath = subdir+filename
     # user = getpass.getuser()
@@ -134,14 +134,14 @@ def create_slurm_script(
         for line in sbatch_header:
             f.write(line)
         f.write('module load '+env_type+'\n')
-        f.write('source activate '+env_name+'\n')
+        f.write('conda activate '+env_name+'\n')
         f.write((
-            'module load cudatoolkit/8.0 cudnn/cuda-8.0/6.0 '
-            'openmpi/cuda-8.0/intel-17.0/2.1.0/64\n'))
-        f.write('module load intel/17.0/64/17.0.5.239 intel-mkl/2017.3/4/64\n')
+            'module load cudatoolkit \n'))
+        f.write((
+            'module load openmpi/gcc/3.1.4/64 \n'))
+        f.write((
+            'module load hdf5/gcc/openmpi-3.1.4/1.10.5 \n'))
         # f.write('rm -f /tigress/{}/model_checkpoints/*.h5\n'.format(user))
-        f.write('cd {}\n'.format(subdir))
-        f.write('export OMPI_MCA_btl=\"tcp,self,sm\"\n')
         f.write('srun python {}\n'.format(executable_name))
         f.write('echo "done."')
 
@@ -183,7 +183,7 @@ def create_slurm_header(num_nodes, use_mpi, idx):
         assert(num_nodes == 1)
     lines = []
     lines.append('#!/bin/bash\n')
-    lines.append('#SBATCH -t 20:00:00\n')
+    lines.append('#SBATCH -t 24:00:00\n')
     lines.append('#SBATCH -N '+str(num_nodes)+'\n')
     if use_mpi:
         lines.append('#SBATCH --ntasks-per-node=4\n')

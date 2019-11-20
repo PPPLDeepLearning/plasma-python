@@ -27,12 +27,21 @@ def parameters(input_file):
         base_path = output_path
 
         params['paths']['base_path'] = base_path
-        params['paths']['signal_prepath'] = (
-            base_path + params['paths']['signal_prepath'])
+        if isinstance(params['paths']['signal_prepath'],list):
+            print('reading from multiple data folder!**********************************************')
+        
+            params['paths']['signal_prepath'] = [base_path+s for s in params['paths']['signal_prepath']]
+        else:
+            params['paths']['signal_prepath']=base_path+params['paths']['signal_prepath']
         params['paths']['shot_list_dir'] = (
             base_path + params['paths']['shot_list_dir'])
         params['paths']['output_path'] = output_path
-        h = myhash_signals(sig.all_signals.values())
+        if params['paths']['data']=='d3d_data_gar18':
+           h = myhash_signals(sig.all_signals_gar18.values())
+        elif params['paths']['data']=='d3d_data_garbage':
+           h = myhash_signals(sig.all_signals_gar18.values())*2
+        else:   
+           h = myhash_signals(sig.all_signals.values())
         params['paths']['global_normalizer_path'] = (
             output_path
             + '/normalization/normalization_signal_group_{}.npz'.format(h))
@@ -85,7 +94,11 @@ def parameters(input_file):
         # params['model']['loss'] = params['data']['target'].loss
 
         # signals
-        params['paths']['all_signals_dict'] = sig.all_signals
+        if params['paths']['data'] in ['d3d_data_gar18','d3d_data_garbage']:
+           params['paths']['all_signals_dict'] = sig.all_signals_gar18
+        else:
+           params['paths']['all_signals_dict'] = sig.all_signals
+           
         # assert order
         # q95, li, ip, lm, betan, energy, dens, pradcore, pradedge, pin,
         # pechin, torquein, ipdirect, etemp_profile, edens_profile
@@ -225,6 +238,28 @@ def parameters(input_file):
                 'etemp_profile': sig.etemp_profile,
                 'edens_profile': sig.edens_profile,
             }
+        elif params['paths']['data'] in ['d3d_data_gar18','d3d_data_garbage']:
+            params['paths']['shot_files'] = [d3d_full_new]
+            params['paths']['shot_files_test'] = []
+            params['paths']['use_signals_dict'] = {
+                'q95t': sig.q95t,
+                'lit': sig.lit,
+                'ipt': sig.ipt,
+                'lmt': sig.lmt,
+                'betant': sig.betant,
+                'energyt': sig.energyt,
+                'denst': sig.denst,
+                'pradcoret': sig.pradcoret,
+                'pradedget': sig.pradedget,
+                'pint': sig.pint,
+                'torqueint': sig.torqueint,
+                'ipdirectt': sig.ipdirectt,
+                'iptargett': sig.iptargett,
+                'iperrt': sig.iperrt,
+                'etemp_profilet': sig.etemp_profilet,
+                'edens_profilet': sig.edens_profilet,
+            }
+
         elif params['paths']['data'] == 'd3d_data_new':
             params['paths']['shot_files'] = [d3d_full_new]
             params['paths']['shot_files_test'] = [] 

@@ -25,6 +25,7 @@ import numpy as np
 from copy import deepcopy
 from plasma.utils.downloading import makedirs_process_safe
 from plasma.utils.hashing import general_object_hash
+from plasma.models.tcn import TCN
 
 # Synchronize 2x stderr msg from TensorFlow initialization via Keras backend
 # "Succesfully opened dynamic library... libcudart" "Using TensorFlow backend."
@@ -277,7 +278,29 @@ class ModelBuilder(object):
             x_in = TimeDistributed(pre_rnn_model)(x_input)
         else:
             x_in=x_input
-        for _ in range(model_conf['rnn_layers']):
+
+###################TCN model##################################
+        if 'keras_tcn' in model_conf.keys() and model_conf['keras_tcn']==True:
+          print('Building TCN model....')
+          tcn_layers=model_conf['tcn_layers']
+          tcn_dropout=model_conf['tcn_dropout']
+          nb_filters=model_conf['tcn_hidden']
+          kernel_size=model_conf['kernel_size_temporal']
+          nb_stacks=model_conf['tcn_nbstacks']
+          use_skip_connections=model_conf['tcn_skip_connect']
+          activation=model_conf['tcn_activation']
+          use_batch_norm=model_conf['tcn_batch_norm']
+          for _ in range(model_conf['tcn_pack_layers']):
+            x_in=TCN(
+               use_batch_norm=use_batch_norm,activation=activation,
+               use_skip_connections=use_skip_connections,
+               nb_stacks=nb_stacks,kernel_size=kernel_size,
+               nb_filters=nb_filters,num_layers=tcn_layers,
+               dropout_rate=tcn_dropout)(x_in)
+            x_in = Dropout(dropout_prob) (x_in)
+        else: 
+###################TCN model##################################
+          for _ in range(model_conf['rnn_layers']):
             x_in = rnn_model(
                 rnn_size, return_sequences=return_sequences,
                 # batch_input_shape=batch_input_shape,

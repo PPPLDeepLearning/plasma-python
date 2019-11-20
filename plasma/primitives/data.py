@@ -105,7 +105,7 @@ class Signal(object):
             region = np.where(np.abs(sig) >= shot.machine.current_threshold)[0]
             if len(region) == 0:
                 print('shot {} has no current'.format(shot.number))
-                return None, None, False
+                return None, sig.shape, False
             first_idx = region[0]
             last_idx = region[-1]
             # add 50 ms to cover possible disruption event
@@ -126,7 +126,7 @@ class Signal(object):
                 print(
                     'Signal {}, shot {} contains no data'.format(
                         self.description, shot.number))
-            return None, None, False
+            return None, sig.shape, False
 
         # make sure data doesn't contain nan
         if np.any(np.isnan(t)) or np.any(np.isnan(sig)):
@@ -134,7 +134,7 @@ class Signal(object):
                 'Signal {}, shot {} contains NAN'.format(
                     self.description,
                     shot.number))
-            return None, None, False
+            return None, sig.shape, False
 
         return t, sig, True
 

@@ -397,15 +397,34 @@ class Shot(object):
         # t_thresh = -1
         signal_arrays = []
         time_arrays = []
-
+        garbage=False
         # disruptive = self.t_disrupt >= 0
-
+        if conf['paths']['data'] =='d3d_data_garbage':
+            garbage=True
+        non_valid_signals=0
         signal_prepath = conf['paths']['signal_prepath']
+        if self.number in [127613,129423,125726,126662]:
+             return None, None, None, None, False
         for (i, signal) in enumerate(self.signals):
-            t, sig, valid_signal = signal.load_data(
+            if isinstance(signal_prepath,list):
+              for prepath in signal_prepath:
+                t, sig, valid_signal = signal.load_data(
+                prepath, self, conf['data']['floatx'])
+                if valid_signal:
+                   break
+            else:
+              t, sig, valid_signal = signal.load_data(
                 signal_prepath, self, conf['data']['floatx'])
             if not valid_signal:
-                return None, None, None, None, False
+                if signal.is_ip or ('q95' in signal.description) or garbage==False or sig==None:
+                   ########################Not allow a shot if it is missing plasma current information, or q95 is missing 
+                   return None, None, None, None, False
+                else:
+                   t=np.arange(0,20,0.001)
+                   sig=np.zeros((t.shape[0],sig[1]))
+                   non_valid_signals+=1
+                   signal_arrays.append(sig)
+                   time_arrays.append(t)
             else:
                 assert(len(sig.shape) == 2)
                 assert(len(t.shape) == 1)
@@ -413,18 +432,25 @@ class Shot(object):
                 t_min = max(t_min, np.min(t))
                 signal_arrays.append(sig)
                 time_arrays.append(t)
+                
                 if self.is_disruptive and self.t_disrupt > np.max(t):
                     t_max_total = (
                         np.max(t) + signal.get_data_avail_tolerance(
                             self.machine)
                     )
                     if (self.t_disrupt > t_max_total):
-                        print('Shot {}: disruption event '.format(self.number),
+                        if garbage==False:
+                            print('Shot {}: disruption event '.format(self.number),
                               'is not contained in valid time region of ',
                               'signal {} by {}s, omitting.'.format(
                                   self.number, signal,
                                   self.t_disrupt - np.max(t)))
-                        valid = False
+                            valid = False
+                        else:
+                            non_valid_signals+=1
+                            t=np.arange(0,20,0.001)
+                            sig=np.zeros((t.shape[0],sig.shape[1]))
+                            #Setting the entire channel to zero to prevent any peeking into possible disruptions from this early ended channel
                     else:
                         t_max = np.max(
                             t) + signal.get_data_avail_tolerance(self.machine)
@@ -447,6 +473,12 @@ class Shot(object):
         if self.is_disruptive:
             assert(self.t_disrupt <= t_max or not valid)
             t_max = self.t_disrupt
+        if non_valid_signals>3:
+            print('Shot {}:  '.format(self.number),
+                              'is REALLY garbabge (More than three channels are contaminated......) ')
+
+            #Omit a shot if more than 3 channels are bad channels....
+            valid=False
 
         return time_arrays, signal_arrays, t_min, t_max, valid
 

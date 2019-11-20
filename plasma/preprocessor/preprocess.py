@@ -264,4 +264,7 @@ def guarantee_preprocessed(conf, verbose=False):
         g.print_unique('testing: {} shots, {} disruptive'.format(
             len(shot_list_test), shot_list_test.num_disruptive()))
         g.print_unique("...done")
+    #    g.print_unique("...printing test shot list:")
+    #    for s in shot_list_test:
+    #       g.print_unique(str(s.number))
     return shot_list_train, shot_list_validate, shot_list_test
