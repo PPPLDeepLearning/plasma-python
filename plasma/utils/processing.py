@@ -90,15 +90,15 @@ def train_test_split_robust(x, frac, do_shuffle=False):
     return train, test
 
 
-def train_test_split_all(x, frac, do_shuffle=True):
-    groups = []
-    length = len(x[0])
-    mask = np.array(range(length)) < frac*length
-    if do_shuffle:
-        np.random.shuffle(mask)
-    for item in x:
-        groups.append((item[mask], item[~mask]))
-    return groups
+# def train_test_split_all(x, frac, do_shuffle=True):
+#     groups = []
+#     length = len(x[0])
+#     mask = np.array(range(length)) < frac*length
+#     if do_shuffle:
+#         np.random.shuffle(mask)
+#     for item in x:
+#         groups.append((item[mask], item[~mask]))
+#     return groups
 
 
 def concatenate_sublists(superlist):
