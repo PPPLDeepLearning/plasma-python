@@ -5,6 +5,7 @@ import torch.optim as opt
 from torch.autograd import Variable
 import torch.nn as nn
 import torch
+from plasma.utils.diagnostics import print_shot_list_sizes
 from plasma.utils.downloading import makedirs_process_safe
 from plasma.utils.performance import PerformanceAnalyzer
 from plasma.utils.evaluation import get_loss_from_list
@@ -414,10 +415,7 @@ def train(conf, shot_list_train, shot_list_validate, loader):
     data_gen = partial(
         loader.training_batch_generator_full_shot_partial_reset,
         shot_list=shot_list_train)()
-    print('training: {} shots, {} disruptive'.format(
-        len(shot_list_train), shot_list_train.num_disruptive()))
-    print('validate: {} shots, {} disruptive'.format(
-        len(shot_list_validate), shot_list_validate.num_disruptive()))
+    print_shot_list_sizes(shot_list_train, shot_list_validate)
     loader.set_inference_mode(False)
 
     train_model = build_torch_model(conf)

@@ -1,6 +1,7 @@
 from plasma.utils.state_reset import reset_states
 from plasma.utils.evaluation import get_loss_from_list
 from plasma.utils.performance import PerformanceAnalyzer
+from plasma.utils.diagnostics import print_shot_list_sizes
 from plasma.models.loader import Loader, ProcessGenerator
 from plasma.conf import conf
 import pathos.multiprocessing as mp
@@ -29,10 +30,7 @@ def train(conf, shot_list_train, shot_list_validate, loader,
     validation_losses = []
     validation_roc = []
     training_losses = []
-    print('training: {} shots, {} disruptive'.format(
-        len(shot_list_train), shot_list_train.num_disruptive()))
-    print('validate: {} shots, {} disruptive'.format(
-        len(shot_list_validate), shot_list_validate.num_disruptive()))
+    print_shot_list_sizes(shot_list_train, shot_list_validate)
 
     if backend == 'tf' or backend == 'tensorflow':
         first_time = "tensorflow" not in sys.modules
