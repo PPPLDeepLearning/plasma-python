@@ -108,7 +108,7 @@ class Preprocessor(object):
         print('Omitted {} shots of {} total.'.format(
             len(shot_list_picked) - len(used_shots), len(shot_list_picked)))
         print('Omitted {} disruptive shots of {} total disruptive.'.format(
-            shot_list_picked.num_disruptive() - used_shots.num_disruptive,
+            shot_list_picked.num_disruptive() - used_shots.num_disruptive(),
             shot_list_picked.num_disruptive()))
 
         if len(used_shots) == 0:
