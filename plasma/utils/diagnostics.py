@@ -17,7 +17,7 @@ def print_shot_list_sizes(shot_list_train, shot_list_validate,
         nshots += len(shot_list_test)
         nshots_disrupt += shot_list_test.num_disruptive()
     g.print_unique('total: {} shots, {} disruptive'.format(nshots,
-                                                           nshots_disrupt)
+                                                           nshots_disrupt))
     g.print_unique('training: {} shots, {} disruptive'.format(
         len(shot_list_train), shot_list_train.num_disruptive()))
     g.print_unique('validate: {} shots, {} disruptive'.format(
