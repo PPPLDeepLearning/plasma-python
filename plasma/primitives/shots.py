@@ -121,7 +121,6 @@ class ShotList(object):
 
         shot_numbers_train = [shot.number for shot in shot_list_train]
         shot_numbers_test = [shot.number for shot in shot_list_test]
-        print(len(shot_numbers_train), len(shot_numbers_test))
         # make sure we only use pre-filtered valid shots
         shots_train = self.filter_by_number(shot_numbers_train)
         shots_test = self.filter_by_number(shot_numbers_test)
