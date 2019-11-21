@@ -262,10 +262,10 @@ def guarantee_preprocessed(conf, verbose=False):
             shot_list_validate.num_disruptive()
             + shot_list_train.num_disruptive()
             + shot_list_test.num_disruptive()))
-        g.print_unique('validate: {} shots, {} disruptive'.format(
-            len(shot_list_validate), shot_list_validate.num_disruptive()))
         g.print_unique('training: {} shots, {} disruptive'.format(
             len(shot_list_train), shot_list_train.num_disruptive()))
+        g.print_unique('validate: {} shots, {} disruptive'.format(
+            len(shot_list_validate), shot_list_validate.num_disruptive()))
         g.print_unique('testing: {} shots, {} disruptive'.format(
             len(shot_list_test), shot_list_test.num_disruptive()))
         g.print_unique("...done")

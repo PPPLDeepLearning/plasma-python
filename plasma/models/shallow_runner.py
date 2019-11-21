@@ -324,12 +324,12 @@ def build_callbacks(conf):
 def train(conf, shot_list_train, shot_list_validate, loader,
           shot_list_test=None):
     np.random.seed(1)
-    print('validate: {} shots, {} disruptive'.format(
-        len(shot_list_validate),
-        shot_list_validate.num_disruptive()))
     print('training: {} shots, {} disruptive'.format(
         len(shot_list_train),
         shot_list_train.num_disruptive()))
+    print('validate: {} shots, {} disruptive'.format(
+        len(shot_list_validate),
+        shot_list_validate.num_disruptive()))
 
     num_samples = conf['model']['shallow_model']['num_samples']
     feature_extractor = FeatureExtractor(loader)

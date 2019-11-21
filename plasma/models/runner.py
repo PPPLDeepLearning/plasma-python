@@ -29,10 +29,10 @@ def train(conf, shot_list_train, shot_list_validate, loader,
     validation_losses = []
     validation_roc = []
     training_losses = []
-    print('validate: {} shots, {} disruptive'.format(
-        len(shot_list_validate), shot_list_validate.num_disruptive()))
     print('training: {} shots, {} disruptive'.format(
         len(shot_list_train), shot_list_train.num_disruptive()))
+    print('validate: {} shots, {} disruptive'.format(
+        len(shot_list_validate), shot_list_validate.num_disruptive()))
 
     if backend == 'tf' or backend == 'tensorflow':
         first_time = "tensorflow" not in sys.modules

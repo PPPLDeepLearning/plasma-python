@@ -414,11 +414,10 @@ def train(conf, shot_list_train, shot_list_validate, loader):
     data_gen = partial(
         loader.training_batch_generator_full_shot_partial_reset,
         shot_list=shot_list_train)()
-    print('validate: {} shots, {} disruptive'.format(
-        len(shot_list_validate), shot_list_validate.num_disruptive()))
     print('training: {} shots, {} disruptive'.format(
         len(shot_list_train), shot_list_train.num_disruptive()))
-
+    print('validate: {} shots, {} disruptive'.format(
+        len(shot_list_validate), shot_list_validate.num_disruptive()))
     loader.set_inference_mode(False)
 
     train_model = build_torch_model(conf)
