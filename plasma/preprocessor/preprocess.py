@@ -101,15 +101,17 @@ class Preprocessor(object):
 
         pool.close()
         pool.join()
-        print('Finished preprocessing {} files in {} seconds'.format(
+        print('\nFinished preprocessing {} files in {} seconds'.format(
             len(shot_list_picked), time.time() - start_time))
-        print('Using {}/{} disruptive shots'.format(
-            used_shots.num_disruptive(), len(used_shots)))
-        print('Omitted {} shots of {} total.'.format(
+        print('Using {} shots ({} disruptive shots)'.format(
+            len(used_shots), used_shots.num_disruptive()))
+        print('Omitted {} shots of {} total shots'.format(
             len(shot_list_picked) - len(used_shots), len(shot_list_picked)))
-        print('Omitted {} disruptive shots of {} total disruptive.'.format(
-            shot_list_picked.num_disruptive() - used_shots.num_disruptive(),
-            shot_list_picked.num_disruptive()))
+        print(
+            'Omitted {} disruptive shots of {} total disruptive shots'.format(
+                shot_list_picked.num_disruptive()
+                - used_shots.num_disruptive(),
+                shot_list_picked.num_disruptive()))
 
         if len(used_shots) == 0:
             print("WARNING: All shots were omitted, please ensure raw data "
