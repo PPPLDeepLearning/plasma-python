@@ -7,135 +7,144 @@ target: 'hinge' # 'maxhinge' # 'maxhinge' # 'binary' # 'hinge'
 num_gpus: 4  # per node
 
 paths:
-    signal_prepath: '/signal_data/' # /signal_data/jet/
-    shot_list_dir: '/shot_lists/'
-    tensorboard_save_path: '/Graph/'
-    data: d3d_data_0D
-    # if specific_signals: [] left empty, it will use all valid signals defined on a machine. Only use if need a custom set
-    specific_signals: [] # ['q95','li','ip','betan','energy','lm','pradcore','pradedge','pradtot','pin','torquein','tmamp1','tmamp2','tmfreq1','tmfreq2','pechin','energydt','ipdirect','etemp_profile','edens_profile']
-    executable: "mpi_learn.py"
-    shallow_executable: "learn.py"
+  signal_prepath: '/signal_data/' # /signal_data/jet/
+  shot_list_dir: '/shot_lists/'
+  tensorboard_save_path: '/Graph/'
+  data: d3d_data_0D
+  # if specific_signals: [] left empty, it will use all valid signals defined on a machine. Only use if need a custom set
+  specific_signals: [] # ['q95','li','ip','betan','energy','lm','pradcore','pradedge','pradtot','pin','torquein','tmamp1','tmamp2','tmfreq1','tmfreq2','pechin','energydt','ipdirect','etemp_profile','edens_profile']
+  executable: "mpi_learn.py"
+  shallow_executable: "learn.py"
 
 data:
-    bleed_in: 0 # how many shots from the test set to use in training?
-    bleed_in_repeat_fac: 1 # how many times to repeat shots in training and validation?
-    bleed_in_remove_from_test: True
-    bleed_in_equalize_sets: False
-    # TODO(KGF): make next parameter use 'none' instead of None for consistency
-    signal_to_augment: None # 'plasma current' # or None
-    augmentation_mode: 'none'
-    augment_during_training: False
-    cut_shot_ends: True
-    T_min_warn: 30
-    recompute: False
-    recompute_normalization: False
-    # specifies which of the signals in the signals_dirs order contains the plasma current info
-    current_index: 0
-    plotting: False
-    # how many shots to use
-    use_shots: 200000 # 1000 # 200000
-    positive_example_penalty: 1.0 # by what factor to upweight positive examples?
-    # normalization timescale
-    dt: 0.001
-    # maximum TTD considered
-    T_max: 1000.0
-    # The shortest works best so far: less overfitting. log TTd prediction also works well. 0.5 better than 0.2
-    T_warning: 1.024 # 1.024 # 1.024 # 0.512 # 0.25 # 1.0 # 1.0 # warning time in seconds
-    current_thresh: 750000
-    current_end_thresh: 10000
-    # the characteristic decay length of the decaying moving average window
-    window_decay: 2
-    # the width of the actual window
-    window_size: 10
-    # TODO(KGF): optimize the normalizer parameters
-    normalizer: 'var'
-    norm_stat_range: 100.0
-    equalize_classes: False
-    #  shallow_sample_prob: 0.01 # the fraction of samples with which to train the shallow model
-    floatx: 'float32'
+  bleed_in: 0 # how many shots from the test set to use in training?
+  bleed_in_repeat_fac: 1 # how many times to repeat shots in training and validation?
+  bleed_in_remove_from_test: True
+  bleed_in_equalize_sets: False
+  # TODO(KGF): make next parameter use 'none' instead of None for consistency
+  signal_to_augment: None # 'plasma current'
+  augmentation_mode: 'none'
+  augment_during_training: False
+  cut_shot_ends: True
+  T_min_warn: 30
+  recompute: False
+  recompute_normalization: False
+  # specifies which of the signals in the signals_dirs order contains the plasma current info
+  current_index: 0
+  plotting: False
+  # maximum number of shots to use
+  use_shots: 200000 # 1000
+  positive_example_penalty: 1.0 # by what factor to upweight positive examples?
+  # normalization timescale
+  dt: 0.001
+  # maximum TTD considered
+  T_max: 1000.0
+  # warning time in seconds
+  # The shortest works best so far: less overfitting. log TTd prediction also works well. 0.5 better than 0.2
+  T_warning: 1.024 # 0.512 # 0.25 # 1.0
+  current_thresh: 750000
+  current_end_thresh: 10000
+  # the characteristic decay length of the decaying moving average window
+  window_decay: 2
+  # the width of the actual window
+  window_size: 10
+  # TODO(KGF): optimize the normalizer parameters
+  normalizer: 'var'
+  norm_stat_range: 100.0
+  equalize_classes: False
+  # the fraction of samples with which to train the shallow model
+  #  shallow_sample_prob: 0.01
+  floatx: 'float32'
 
 model:
-    loss_scale_factor: 1.0
-    use_batch_norm: false
-    torch: False
-    shallow: False
-    shallow_model:
-        num_samples: 1000000 # 1000000 # the number of samples to use for training
-        type: "xgboost" # "xgboost" #"random_forest"
-        n_estimators: 100 # for random forest
-        max_depth: 3 # for random forest and xgboost (def = 3)
-        C: 1.0 # for svm
-        kernel: "rbf" # rbf, sigmoid, linear, poly, for svm
-        learning_rate: 0.1 # used in xgboost
-        scale_pos_weight: 10.0 # used in xgboost
-        final_hidden_layer_size: 10 # final layers has this many neurons, every layer before twice as many
-        num_hidden_layers: 3
-        learning_rate_mlp: 0.0001
-        mlp_regularization: 0.0001
-        skip_train: False # should a finished model be loaded if available
-    # length of LSTM memory
-    pred_length: 200
-    pred_batch_size: 128
-    # TODO(KGF): optimize length of LSTM memory
-    length: 128
-    skip: 1
-    # hidden layer size
-    # TODO(KGF): optimize size of RNN layers
-    rnn_size: 200
-    # size 100 slight overfitting, size 20 no overfitting. 200 is not better than 100. Prediction much better with size 100, size 20 cannot capture the data.
-    rnn_type: 'LSTM'
-    # TODO(KGF): optimize number of RNN layers
-    rnn_layers: 2
-    num_conv_filters: 128
-    size_conv_filters: 3
-    num_conv_layers: 3
-    pool_size: 2
-    dense_size: 128
-    extra_dense_input: False
-    # have not found a difference yet
-    optimizer: 'adam'
-    clipnorm: 10.0
-    regularization: 0.001
-    dense_regularization: 0.001
-    # lr=1e-4 is too high, 5e-7 is too low. 5e-5 seems best at 256 batch size, full dataset
-    # and ~10 epochs, and lr decay of 0.90
-    # lr=1e-4 also works well if we decay a lot (i.e ~0.7 or more)
-    lr: 0.00002 # 0.00001 # 0.0005 # for adam plots 0.0000001 # 0.00005 # 0.00005 # 0.00005
-    lr_decay: 0.97 # 0.98 # 0.9
-    stateful: True
-    return_sequences: True
-    dropout_prob: 0.1
-    # only relevant if we want to do MPI training. The number of steps with a single replica
-    warmup_steps: 0
-    ignore_timesteps: 100 # how many initial timesteps to ignore during evaluation (to let the internal state settle)
-    backend: 'tensorflow'
+  loss_scale_factor: 1.0
+  use_batch_norm: false
+  torch: False
+  shallow: False
+  shallow_model:
+    type: "xgboost" # "random_forest"
+    # the number of samples to use for training
+    num_samples: 1000000 # 1000000
+    n_estimators: 100 # used in random forest
+    max_depth: 3 # used in random forest and xgboost (def = 3)
+    C: 1.0 # used in svm
+    kernel: "rbf" # rbf, sigmoid, linear, poly, for svm
+    learning_rate: 0.1 # used in xgboost
+    scale_pos_weight: 10.0 # used in xgboost
+    # final layer has this many neurons, every layer before has twice as many
+    final_hidden_layer_size: 10
+    num_hidden_layers: 3
+    learning_rate_mlp: 0.0001
+    mlp_regularization: 0.0001
+    # should a finished model be loaded if available?
+    skip_train: False
+  # length of LSTM memory
+  pred_length: 200
+  pred_batch_size: 128
+  # TODO(KGF): optimize length of LSTM memory
+  length: 128
+  skip: 1
+  # hidden layer size
+  # TODO(KGF): optimize size of RNN layers
+  # size 100 slight overfitting, size 20 no overfitting. 200 is not better than 100.
+  # Prediction is much better with size 100, size 20 cannot capture the data.
+  rnn_size: 200
+  rnn_type: 'LSTM'
+  # TODO(KGF): optimize number of RNN layers
+  rnn_layers: 2
+  num_conv_filters: 128
+  size_conv_filters: 3
+  num_conv_layers: 3
+  pool_size: 2
+  dense_size: 128
+  extra_dense_input: False
+  # have not found a difference yet
+  optimizer: 'adam'
+  clipnorm: 10.0
+  regularization: 0.001
+  dense_regularization: 0.001
+  # lr=1e-4 is too high, 5e-7 is too low. 5e-5 seems best at 256 batch size, full dataset
+  # and ~10 epochs, and lr decay of 0.90
+  # lr=1e-4 also works well if we decay a lot (i.e ~0.7 or more)
+  lr: 0.00002 # 0.00001 # 0.0005 # for adam plots 0.0000001
+  lr_decay: 0.97 # 0.98 # 0.9
+  stateful: True
+  return_sequences: True
+  dropout_prob: 0.1
+  # only relevant if we want to do MPI training. The number of steps with a single replica
+  warmup_steps: 0
+  # how many initial timesteps to ignore during evaluation (to let the internal state settle)
+  ignore_timesteps: 100
+  backend: 'tensorflow'
 training:
-    as_array_of_shots: True
-    shuffle_training: True
-    train_frac: 0.75
-    validation_frac: 0.33
-    batch_size: 128 # 256
-    # THE MAX_PATCH_LENGTH WAS THE CULPRIT FOR NO TRAINING! Lower than 1000 performs very poorly
-    max_patch_length: 100000
-    # How many shots are we loading at once?
-    num_shots_at_once: 200
-    num_epochs: 1000   # large number = maximum number of epochs. Early stopping will occur if loss does not decrease
-    use_mock_data: False
-    data_parallel: False
-    hyperparam_tuning: False
-    batch_generator_warmup_steps: 0
-    use_process_generator: False
-    num_batches_minimum: 20 # minimum number of batches per epoch
-    ranking_difficulty_fac: 1.0 # how much to upweight incorrectly classified shots during training
+  as_array_of_shots: True
+  shuffle_training: True
+  train_frac: 0.75
+  validation_frac: 0.33
+  batch_size: 128 # 256
+  # THE MAX_PATCH_LENGTH WAS THE CULPRIT FOR NO TRAINING! Lower than 1000 performs very poorly
+  max_patch_length: 100000
+  # How many shots are we loading at once?
+  num_shots_at_once: 200
+  # large number = maximum number of epochs.
+  # Early stopping will occur if loss does not decrease, after some patience # of epochs
+  num_epochs: 1000
+  use_mock_data: False
+  data_parallel: False
+  hyperparam_tuning: False
+  batch_generator_warmup_steps: 0
+  use_process_generator: False
+  num_batches_minimum: 20 # minimum number of batches per epoch
+  ranking_difficulty_fac: 1.0 # how much to upweight incorrectly classified shots during training
 callbacks:
-    list: ['earlystop']
-    metrics: ['val_loss','val_roc','train_loss']
-    mode: 'max'
-    monitor: 'val_roc'
-    patience: 5
-    write_grads: False
-    monitor_test: True
-    monitor_times: [30,70,200,500,1000]
+  list: ['earlystop']
+  metrics: ['val_loss','val_roc','train_loss']
+  mode: 'max'
+  monitor: 'val_roc'
+  patience: 5
+  write_grads: False
+  monitor_test: True
+  monitor_times: [30,70,200,500,1000]
 env:
-    name: 'frnn'
-    type: 'anaconda'
+  name: 'frnn'
+  type: 'anaconda'
