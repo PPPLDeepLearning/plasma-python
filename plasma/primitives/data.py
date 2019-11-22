@@ -5,7 +5,6 @@ import os
 import re
 
 from scipy.interpolate import UnivariateSpline
-
 from plasma.utils.processing import get_individual_shot_file
 from plasma.utils.downloading import get_missing_value_array
 from plasma.utils.hashing import myhash
@@ -123,17 +122,14 @@ class Signal(object):
             if self.is_ip:
                 print('shot {} has no current'.format(shot.number))
             else:
-                print(
-                    'Signal {}, shot {} contains no data'.format(
-                        self.description, shot.number))
+                print('Signal {}, shot {} contains no data'.format(
+                    self.description, shot.number))
             return None, None, False
 
         # make sure data doesn't contain nan
         if np.any(np.isnan(t)) or np.any(np.isnan(sig)):
-            print(
-                'Signal {}, shot {} contains NAN'.format(
-                    self.description,
-                    shot.number))
+            print('Signal {}, shot {} contains NAN'.format(
+                self.description, shot.number))
             return None, None, False
 
         return t, sig, True
@@ -278,8 +274,8 @@ class ProfileSignal(Signal):
         return t, sig_interp, True
 
     def fetch_data(self, machine, shot_num, c):
-        time, data, mapping, success = self.fetch_data_basic(machine, shot_num,
-                                                             c)
+        time, data, mapping, success = self.fetch_data_basic(
+            machine, shot_num, c)
         path = self.get_path(machine)
         mapping_path = self.get_mapping_path(machine)
 

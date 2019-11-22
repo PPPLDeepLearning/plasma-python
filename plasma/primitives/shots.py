@@ -13,7 +13,6 @@ import os
 import os.path
 import sys
 import random as rnd
-
 import numpy as np
 
 from plasma.utils.processing import train_test_split, cut_and_resample_signal
@@ -36,11 +35,9 @@ class ShotListFiles(object):
         return self.__str__()
 
     def get_single_shot_numbers_and_disruption_times(self, full_path):
-        data = np.loadtxt(
-            full_path, ndmin=1, dtype={
-                'names': (
-                    'num', 'disrupt_times'), 'formats': (
-                    'i4', 'f4')})
+        data = np.loadtxt(full_path, ndmin=1,
+                          dtype={'names': ('num', 'disrupt_times'),
+                                 'formats': ('i4', 'f4')})
         shots = np.array(list(zip(*data))[0])
         disrupt_times = np.array(list(zip(*data))[1])
         return shots, disrupt_times
@@ -77,21 +74,18 @@ class ShotList(object):
             assert(all([isinstance(shot, Shot) for shot in shots]))
             self.shots = [shot for shot in shots]
 
-    def load_from_shot_list_files_object(
-            self, shot_list_files_object, signals):
+    def load_from_shot_list_files_object(self, shot_list_files_object,
+                                         signals):
         machine = shot_list_files_object.machine
         shot_numbers, disruption_times = (
             shot_list_files_object.get_shot_numbers_and_disruption_times())
         for number, t in list(zip(shot_numbers, disruption_times)):
-            self.append(
-                Shot(number=number, t_disrupt=t, machine=machine,
-                     signals=[s for s in signals if
-                              s.is_defined_on_machine(machine)]
-                     )
-                )
+            self.append(Shot(number=number, t_disrupt=t, machine=machine,
+                             signals=[s for s in signals if
+                                      s.is_defined_on_machine(machine)]))
 
-    def load_from_shot_list_files_objects(
-            self, shot_list_files_objects, signals):
+    def load_from_shot_list_files_objects(self, shot_list_files_objects,
+                                          signals):
         for obj in shot_list_files_objects:
             self.load_from_shot_list_files_object(obj, signals)
 
@@ -276,16 +270,9 @@ class Shot(object):
     property.
     '''
 
-    def __init__(
-            self,
-            number=None,
-            machine=None,
-            signals=None,
-            signals_dict=None,
-            ttd=None,
-            valid=None,
-            is_disruptive=None,
-            t_disrupt=None):
+    def __init__(self, number=None, machine=None, signals=None,
+                 signals_dict=None, ttd=None, valid=None, is_disruptive=None,
+                 t_disrupt=None):
         '''
         Shot objects contain following attributes:
 
@@ -415,8 +402,7 @@ class Shot(object):
                 if self.is_disruptive and self.t_disrupt > np.max(t):
                     t_max_total = (
                         np.max(t) + signal.get_data_avail_tolerance(
-                            self.machine)
-                    )
+                            self.machine))
                     if (self.t_disrupt > t_max_total):
                         print('Shot {}: disruption event '.format(self.number),
                               'is not contained in valid time region of ',
@@ -425,8 +411,8 @@ class Shot(object):
                                   self.t_disrupt - np.max(t)))
                         valid = False
                     else:
-                        t_max = np.max(
-                            t) + signal.get_data_avail_tolerance(self.machine)
+                        t_max = np.max(t) + signal.get_data_avail_tolerance(
+                            self.machine)
                 else:
                     t_max = min(t_max, np.max(t))
 
@@ -449,13 +435,8 @@ class Shot(object):
 
         return time_arrays, signal_arrays, t_min, t_max, valid
 
-    def cut_and_resample_signals(
-            self,
-            time_arrays,
-            signal_arrays,
-            t_min,
-            t_max,
-            conf):
+    def cut_and_resample_signals(self, time_arrays, signal_arrays, t_min,
+                                 t_max, conf):
         dt = conf['data']['dt']
         signals_dict = dict()
 
