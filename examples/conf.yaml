@@ -10,18 +10,18 @@ paths:
     signal_prepath: '/signal_data/' # /signal_data/jet/
     shot_list_dir: '/shot_lists/'
     tensorboard_save_path: '/Graph/'
-    data: d3d_data_0D # 'd3d_to_jet_data' # 'd3d_to_jet_data' #  'jet_to_d3d_data' # jet_data
+    data: d3d_data_0D
     # if specific_signals: [] left empty, it will use all valid signals defined on a machine. Only use if need a custom set
     specific_signals: [] # ['q95','li','ip','betan','energy','lm','pradcore','pradedge','pradtot','pin','torquein','tmamp1','tmamp2','tmfreq1','tmfreq2','pechin','energydt','ipdirect','etemp_profile','edens_profile']
     executable: "mpi_learn.py"
     shallow_executable: "learn.py"
 
 data:
-    bleed_in: 0 # how many shots from the test sit to use in training?
+    bleed_in: 0 # how many shots from the test set to use in training?
     bleed_in_repeat_fac: 1 # how many times to repeat shots in training and validation?
     bleed_in_remove_from_test: True
     bleed_in_equalize_sets: False
-    # TODO(KGF): make next parameter use 'none' instead of None
+    # TODO(KGF): make next parameter use 'none' instead of None for consistency
     signal_to_augment: None # 'plasma current' # or None
     augmentation_mode: 'none'
     augment_during_training: False
