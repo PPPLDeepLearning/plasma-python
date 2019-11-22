@@ -97,10 +97,12 @@ class ShotList(object):
         shuffle_training = conf['training']['shuffle_training']
         use_shots = conf['data']['use_shots']
         all_signals = conf['paths']['all_signals']
-        # split randomly
+        # split "maximum number of shots to use" into:
+        # test vs. (train U validate)
         use_shots_train = int(round(train_frac*use_shots))
         use_shots_test = int(round((1-train_frac)*use_shots))
         if len(shot_files_test) == 0:
+            # split randomly
             shot_list_train, shot_list_test = train_test_split(
                 self.shots, train_frac, shuffle_training)
         # train and test list given
