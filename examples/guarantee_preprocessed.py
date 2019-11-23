@@ -11,4 +11,4 @@ pprint(conf)
 #####################################################
 np.random.seed(0)
 random.seed(0)
-guarantee_preprocessed(conf)
+guarantee_preprocessed(conf, verbose=True)

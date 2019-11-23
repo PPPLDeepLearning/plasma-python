@@ -102,10 +102,12 @@ class ShotList(object):
         use_shots_train = int(round(train_frac*use_shots))
         use_shots_test = int(round((1-train_frac)*use_shots))
         if len(shot_files_test) == 0:
-            # split randomly
+            # split randomly, e.g. sample both sets from same distribution
+            # such as D3D test and train
             shot_list_train, shot_list_test = train_test_split(
                 self.shots, train_frac, shuffle_training)
-        # train and test list given
+        # train and test list given, e.g. they are sampled from separate
+        # distributions such as train=CW and test=ILW for JET
         else:
             shot_list_train = ShotList()
             shot_list_train.load_from_shot_list_files_objects(
