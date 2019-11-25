@@ -404,13 +404,13 @@ class Shot(object):
                 signal_arrays.append(sig)
                 time_arrays.append(t)
                 if self.is_disruptive and self.t_disrupt > np.max(t):
-                    t_max_total = (
-                        np.max(t) + signal.get_data_avail_tolerance(
-                            self.machine))
+                    t_max_total = (np.max(t)
+                                   + signal.get_data_avail_tolerance(
+                                       self.machine))
                     if (self.t_disrupt > t_max_total):
                         print('Shot {}: disruption event '.format(self.number),
                               'is not contained in valid time region of ',
-                              'signal {} by {}s, omitting.'.format(
+                              'signal {} by {}s [omit]'.format(
                                   self.number, signal,
                                   self.t_disrupt - np.max(t)))
                         valid = False
@@ -424,9 +424,8 @@ class Shot(object):
         dt = conf['data']['dt']
         if (t_max - t_min)/dt <= (2*conf['model']
                                   ['length']+conf['data']['T_min_warn']):
-            print(
-                'Shot {} contains insufficient data, omitting.'.format(
-                    self.number))
+            print('Shot {} contains insufficient data [omit]'.format(
+                self.number))
             valid = False
 
         assert(

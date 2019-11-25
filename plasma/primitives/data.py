@@ -65,24 +65,24 @@ class Signal(object):
     def load_data_from_txt_safe(self, prepath, shot, dtype='float32'):
         file_path = self.get_file_path(prepath, shot.machine, shot.number)
         if not self.is_saved(prepath, shot):
-            print('Signal {}, shot {} was never downloaded'.format(
+            print('Signal {}, shot {} was never downloaded [omit]'.format(
                 self.description, shot.number))
             return None, False
 
         if os.path.getsize(file_path) == 0:
             print('Signal {}, shot {} '.format(self.description, shot.number),
-                  'was downloaded incorrectly (empty file). Removing.')
+                  'was downloaded incorrectly (empty file) [omit]')
             os.remove(file_path)
             return None, False
         try:
             data = np.loadtxt(file_path, dtype=dtype)
             if np.all(data == get_missing_value_array()):
-                print('Signal {}, shot {} contains no data'.format(
+                print('Signal {}, shot {} contains no data [omit]'.format(
                     self.description, shot.number))
                 return None, False
         except Exception as e:
             print(e)
-            print('Couldnt load signal {} shot {}. Removing.'.format(
+            print('Cannot load signal {} shot {} [omit]'.format(
                 file_path, shot.number))
             os.remove(file_path)
             return None, False
@@ -103,7 +103,7 @@ class Signal(object):
         if self.is_ip:  # restrict shot to current threshold
             region = np.where(np.abs(sig) >= shot.machine.current_threshold)[0]
             if len(region) == 0:
-                print('shot {} has no current'.format(shot.number))
+                print('Shot {} has no current [omit]'.format(shot.number))
                 return None, None, False
             first_idx = region[0]
             last_idx = region[-1]
@@ -120,15 +120,15 @@ class Signal(object):
         # make sure shot is not garbage data
         if len(t) <= 1 or (np.max(sig) == 0.0 and np.min(sig) == 0.0):
             if self.is_ip:
-                print('shot {} has no current'.format(shot.number))
+                print('Shot {} has no current [omit]'.format(shot.number))
             else:
-                print('Signal {}, shot {} contains no data'.format(
+                print('Signal {}, shot {} contains no data [omit]'.format(
                     self.description, shot.number))
             return None, None, False
 
         # make sure data doesn't contain nan
         if np.any(np.isnan(t)) or np.any(np.isnan(sig)):
-            print('Signal {}, shot {} contains NAN'.format(
+            print('Signal {}, shot {} contains NaN [omit]'.format(
                 self.description, shot.number))
             return None, None, False
 
@@ -243,15 +243,16 @@ class ProfileSignal(Signal):
             print('Signal {}, shot {} '.format(self.description, shot.number),
                   'should be profile but has only one channel. Possibly only ',
                   'one profile fit was run for the duration of the shot and ',
-                  'was transposed during downloading. Need at least 2.')
+                  'was transposed during downloading. Need at least 2 channels'
+                  ' [omit]')
             return None, None, False
         if len(t) <= 1 or (np.max(sig) == 0.0 and np.min(sig) == 0.0):
             print('Signal {}, shot {} '.format(self.description, shot.number),
-                  'contains no data.')
+                  'contains no data [omit]')
             return None, None, False
         if np.any(np.isnan(t)) or np.any(np.isnan(sig)):
             print('Signal {}, shot {} '.format(self.description, shot.number),
-                  'contains NaN value(s).')
+                  'contains NaN value(s) [omit]')
             return None, None, False
 
         timesteps = len(t)
@@ -268,7 +269,8 @@ class ProfileSignal(Signal):
                 print('Signal {}, shot {} '.format(self.description,
                                                    shot.number),
                       'has insufficient points for linear interpolation. ',
-                      'dfitpack.error: (m>k) failed for hidden m: fpcurf0:m=1')
+                      'dfitpack.error: (m>k) failed for hidden m: fpcurf0:m=1 '
+                      '[omit]')
                 return None, None, False
 
         return t, sig_interp, True
@@ -349,7 +351,7 @@ class ChannelSignal(Signal):
         if channel_num is not None and success:
             if np.ndim(data) != 2:
                 print("Channel Signal {} expected 2D array for shot {}".format(
-                    self, self.shot_number))
+                    self, self.shot_number), ' [omit]')
                 success = False
             else:
                 data = data[channel_num, :]  # extract channel of interest
