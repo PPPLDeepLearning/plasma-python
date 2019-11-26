@@ -126,7 +126,7 @@ class Signal(object):
                     self.description, shot.number))
             return None, None, False
 
-        # make sure data doesn't contain nan
+        # make sure data doesn't contain NaN values
         if np.any(np.isnan(t)) or np.any(np.isnan(sig)):
             print('Signal {}, shot {} contains NaN [omit]'.format(
                 self.description, shot.number))

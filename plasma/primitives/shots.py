@@ -318,10 +318,8 @@ class Shot(object):
 
     def __hash__(self):
         import hashlib
-        return int(
-            hashlib.md5(
-                self.get_id_str().encode('utf-8')).hexdigest(),
-            16)
+        return int(hashlib.md5(
+            self.get_id_str().encode('utf-8')).hexdigest(), 16)
 
     def __str__(self):
         string = 'number: {}\n'.format(self.number)
@@ -422,8 +420,8 @@ class Shot(object):
 
         # make sure the shot is long enough.
         dt = conf['data']['dt']
-        if (t_max - t_min)/dt <= (2*conf['model']
-                                  ['length']+conf['data']['T_min_warn']):
+        if (t_max - t_min)/dt <= (2*conf['model']['length']
+                                  + conf['data']['T_min_warn']):
             print('Shot {} contains insufficient data [omit]'.format(
                 self.number))
             valid = False
