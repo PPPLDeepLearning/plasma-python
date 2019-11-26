@@ -1,4 +1,6 @@
 # conf.py will parse the yaml and extract parameters based on what is specified
+# note, the YAML parser will NOT evaluate expressions in the value fields.
+# e.g. "validation_frac: 1.0/3.0" will result in str value "1.0/3.0"
 
 # will do stuff in fs_path / [username] / signal_data | shot_lists | processed shots, etc.
 
@@ -121,7 +123,7 @@ training:
   shuffle_training: True
   # used iff 1) test & 2) (train U validate) are both sampled from the same distribution/source lists of shots:
   train_frac: 0.75
-  validation_frac: 1.0/3.0
+  validation_frac: 0.3333333333333333
   batch_size: 128 # 256
   # THE MAX_PATCH_LENGTH WAS THE CULPRIT FOR NO TRAINING! Lower than 1000 performs very poorly
   max_patch_length: 100000
