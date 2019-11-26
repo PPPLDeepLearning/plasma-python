@@ -181,9 +181,8 @@ def download_all_shot_numbers(prepath, save_path, shot_list_files,
     signals = []
     for sig in signals_full:
         if not sig.is_defined_on_machine(machine):
-            print(
-                'Signal {} not defined on machine {}, omitting'.format(
-                    sig, machine))
+            print('Signal {} not defined on machine {} [omit]'.format(
+                sig, machine))
         else:
             signals.append(sig)
     save_prepath = prepath + save_path + '/'

@@ -260,7 +260,7 @@ class ShotList(object):
             self.append(shot)
             return True
         else:
-            # print('Warning: shot {} not valid, omitting'.format(shot.number))
+            # print('Warning: shot {} not valid [omit]'.format(shot.number))
             return False
 
 
