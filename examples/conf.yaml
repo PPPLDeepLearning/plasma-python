@@ -119,8 +119,9 @@ model:
 training:
   as_array_of_shots: True
   shuffle_training: True
+  # used iff 1) test & 2) (train U validate) are both sampled from the same distribution/source lists of shots:
   train_frac: 0.75
-  validation_frac: 0.33
+  validation_frac: 1.0/3.0
   batch_size: 128 # 256
   # THE MAX_PATCH_LENGTH WAS THE CULPRIT FOR NO TRAINING! Lower than 1000 performs very poorly
   max_patch_length: 100000
