@@ -68,9 +68,14 @@ def append_to_filename(path, to_append):
 
 
 def train_test_split(x, frac, do_shuffle=False):
+    # TODO(KGF): rename these 2x fns; used for generic ShotList.split_direct
     if not isinstance(x, np.ndarray):
+        print("x is not an instance of np.ndarray")
         return train_test_split_robust(x, frac, do_shuffle)
     mask = np.array(range(len(x))) < frac*len(x)
+    # Note, these functions do not directly split the "disruptive" subset of
+    # ShotLists; they are only applied to the overall sets and rely on random
+    # shuffling to produce the correct disruptive split in large N sample limit
     if do_shuffle:
         np.random.shuffle(mask)
     return x[mask], x[~mask]
