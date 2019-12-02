@@ -173,6 +173,7 @@ class ShotList(object):
         return self.sample_weighted_given_arr(p)
 
     def get_weights_d_nd(self):
+        # TODO(KGF): only called in above sample_equal_classes()
         num_total = len(self)
         num_d = self.num_disruptive()
         num_nd = num_total - num_d
