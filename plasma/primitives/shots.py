@@ -479,7 +479,7 @@ class Shot(object):
 
     def get_save_path(self, prepath):
         return get_individual_shot_file(prepath, self.machine, self.number,
-                                        '.npz')
+                                        ext='.npz')
 
     def restore(self, prepath, light=False):
         assert self.previously_saved(prepath), 'shot was never saved'

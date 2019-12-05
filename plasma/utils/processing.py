@@ -10,7 +10,7 @@ This work was supported by the DOE CSGF program.
 
 from __future__ import print_function
 import itertools
-
+import os
 import numpy as np
 # from scipy.interpolate import UnivariateSpline
 
@@ -61,9 +61,9 @@ def get_individual_shot_file(prepath, machine, shot_num, raw_signal=False,
                              ext='.txt'):
     """Return filepath of raw input .txt shot signal or processed .npz shot"""
     if raw_signal:
-        return prepath + str(shot_num) + ext
+        return os.path.join(prepath, str(shot_num) + ext)
     else:
-        return prepath + machine + '_' + str(shot_num) + ext
+        return os.path.join(prepath, str(machine) + '_' + str(shot_num) + ext)
 
 
 def append_to_filename(path, to_append):
