@@ -57,8 +57,13 @@ def cut_and_resample_signal(t, sig, tmin, tmax, dt, precision_str):
     return resample_signal(t, sig, tmin, tmax, dt, precision_str)
 
 
-def get_individual_shot_file(prepath, shot_num, ext='.txt'):
-    return prepath + str(shot_num) + ext
+def get_individual_shot_file(prepath, machine, shot_num, raw_signal=False,
+                             ext='.txt'):
+    """Return filepath of raw input .txt shot signal or processed .npz shot"""
+    if raw_signal:
+        return prepath + str(shot_num) + ext
+    else:
+        return prepath + machine + '_' + str(shot_num) + ext
 
 
 def append_to_filename(path, to_append):

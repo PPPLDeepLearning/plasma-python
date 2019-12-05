@@ -50,9 +50,10 @@ class Signal(object):
         return self.is_ip
 
     def get_file_path(self, prepath, machine, shot_number):
-        dirname = self.get_path(machine)
-        return get_individual_shot_file(prepath + '/' + machine.name + '/'
-                                        + dirname + '/', shot_number)
+        signal_dirname = self.get_path(machine)
+        dirname = os.path.join(prepath, machine.name, signal_dirname)
+        return get_individual_shot_file(dirname, machine.name, shot_number,
+                                        raw_signal=True)
 
     def is_valid(self, prepath, shot, dtype='float32'):
         t, data, exists = self.load_data(prepath, shot, dtype)
@@ -358,12 +359,14 @@ class ChannelSignal(Signal):
         return time, data, mapping, success
 
     def get_file_path(self, prepath, machine, shot_number):
-        dirname = self.get_path(machine)
+        signal_dirname = self.get_path(machine)
         num = self.get_channel_num(machine)
         if num is not None:
-            dirname += "/channel{}".format(num)
-        return get_individual_shot_file(prepath + '/' + machine.name + '/'
-                                        + dirname + '/', shot_number)
+            # TODO(KGF): deduplicate with parent class fn. Only difference:
+            signal_dirname += "/channel{}".format(num)
+        dirname = os.path.join(prepath, machine.name, signal_dirname)
+        return get_individual_shot_file(dirname, machine.name, shot_number,
+                                        raw_signal=True)
 
 
 class Machine(object):

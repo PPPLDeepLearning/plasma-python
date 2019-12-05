@@ -15,7 +15,10 @@ import sys
 import random as rnd
 import numpy as np
 
-from plasma.utils.processing import train_test_split, cut_and_resample_signal
+from plasma.utils.processing import (
+    train_test_split, cut_and_resample_signal,
+    get_individual_shot_file
+    )
 from plasma.utils.downloading import makedirs_process_safe
 
 
@@ -475,7 +478,8 @@ class Shot(object):
         print('...saved shot {}'.format(self.number))
 
     def get_save_path(self, prepath):
-        return get_individual_shot_file(prepath, self.number, '.npz')
+        return get_individual_shot_file(prepath, self.machine, self.number,
+                                        '.npz')
 
     def restore(self, prepath, light=False):
         assert self.previously_saved(prepath), 'shot was never saved'
@@ -503,9 +507,3 @@ class Shot(object):
     @staticmethod
     def is_disruptive_given_disruption_time(t):
         return t >= 0
-
-# it used to be in utilities, but can't import globals in multiprocessing
-
-
-def get_individual_shot_file(prepath, shot_num, ext='.txt'):
-    return prepath + str(shot_num) + ext

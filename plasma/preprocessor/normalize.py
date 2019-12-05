@@ -465,10 +465,6 @@ class MinMaxNormalizer(Normalizer):
             self.print_summary()
 
 
-def get_individual_shot_file(prepath, shot_num, ext='.txt'):
-    return prepath + str(shot_num) + ext
-
-
 def apply_positivity(shot):
     for (i, sig) in enumerate(shot.signals):
         if hasattr(sig, "is_strictly_positive"):
