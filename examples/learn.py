@@ -39,7 +39,9 @@ elif conf['model']['shallow']:
         train, make_predictions_and_evaluate_gpu
         )
 else:
-    from plasma.models.runner import train, make_predictions_and_evaluate_gpu
+    print('unknown driver. exiting')
+    exit(1)
+    # from plasma.models.runner import train, make_predictions_and_evaluate_gpu
 
 if conf['data']['normalizer'] == 'minmax':
     from plasma.preprocessor.normalize import MinMaxNormalizer as Normalizer
