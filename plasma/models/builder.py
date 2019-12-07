@@ -3,13 +3,14 @@ import plasma.global_vars as g
 # KGF: the first time Keras is ever imported via mpi_learn.py -> mpi_runner.py
 import keras.backend as K
 # KGF: see below synchronization--- output is launched here
-from keras.models import Sequential, Model
+from keras.models import Model  # , Sequential
+# KGF: (was used only in hyper_build_model())
 from keras.layers import Input
 from keras.layers.core import (
     Dense, Activation, Dropout, Lambda,
     Reshape, Flatten, Permute,  # RepeatVector
     )
-from keras.layers import LSTM, SimpleRNN, BatchNormalization
+from keras.layers import LSTM, CuDNNLSTM, SimpleRNN, BatchNormalization
 from keras.layers.convolutional import Convolution1D
 from keras.layers.pooling import MaxPooling1D
 # from keras.utils.data_utils import get_file
@@ -25,6 +26,9 @@ import numpy as np
 from copy import deepcopy
 from plasma.utils.downloading import makedirs_process_safe
 from plasma.utils.hashing import general_object_hash
+# TODO(KGF): perhaps relax the requirement of thse dependencies with try/except
+import keras2onnx
+import onnx
 
 # Synchronize 2x stderr msg from TensorFlow initialization via Keras backend
 # "Succesfully opened dynamic library... libcudart" "Using TensorFlow backend."
@@ -128,6 +132,8 @@ class ModelBuilder(object):
 
         if rnn_type == 'LSTM':
             rnn_model = LSTM
+        elif rnn_type == 'CuDNNLSTM':
+            rnn_model = CuDNNLSTM
         elif rnn_type == 'SimpleRNN':
             rnn_model = SimpleRNN
         else:
@@ -257,14 +263,20 @@ class ModelBuilder(object):
         # pre_rnn_model.summary()
         x_input = Input(batch_shape=batch_input_shape)
         x_in = TimeDistributed(pre_rnn_model)(x_input)
+        model_kwargs = dict(return_sequences=return_sequences,
+                            # batch_input_shape=batch_input_shape,
+                            stateful=stateful,
+                            kernel_regularizer=l2(regularization),
+                            recurrent_regularizer=l2(regularization),
+                            bias_regularizer=l2(regularization),
+                            )
+        if rnn_type != 'CuDNNLSTM':
+            # Dropout is unsupported in CuDNN library
+            model_kwargs['dropout'] = dropout_prob
+            model_kwargs['recurrent_dropout'] = dropout_prob
+            # LSTM in ONNX: "The maximum opset needed by this model is only 9."
         for _ in range(model_conf['rnn_layers']):
-            x_in = rnn_model(
-                rnn_size, return_sequences=return_sequences,
-                # batch_input_shape=batch_input_shape,
-                stateful=stateful, kernel_regularizer=l2(regularization),
-                recurrent_regularizer=l2(regularization),
-                bias_regularizer=l2(regularization), dropout=dropout_prob,
-                recurrent_dropout=dropout_prob)(x_in)
+            x_in = rnn_model(rnn_size, **model_kwargs)(x_in)
             x_in = Dropout(dropout_prob)(x_in)
         if return_sequences:
             # x_out = TimeDistributed(Dense(100,activation='tanh')) (x_in)
@@ -292,16 +304,28 @@ class ModelBuilder(object):
     def save_model_weights(self, model, epoch):
         save_path = self.get_save_path(epoch)
         model.save_weights(save_path, overwrite=True)
+        try:
+            save_path = self.get_save_path(epoch, ext='onnx')
+            onnx_model = keras2onnx.convert_keras(model, model.name,
+                                                  target_opset=10)
+            onnx.save_model(onnx_model, save_path)
+        except Exception as e:
+            print(e)
+            return
 
     def delete_model_weights(self, model, epoch):
         save_path = self.get_save_path(epoch)
         assert(os.path.exists(save_path))
         os.remove(save_path)
 
-    def get_save_path(self, epoch):
+    def get_save_path(self, epoch, ext='h5'):
         unique_id = self.get_unique_id()
-        return (self.conf['paths']['model_save_path']
-                + 'model.{}._epoch_.{}.h5'.format(unique_id, epoch))
+        dir_path = self.conf['paths']['model_save_path']
+        # TODO(KGF): consider storing .onnx files in subdirectory away from .h5
+        # if ext == 'onnx':
+        #     os.path.join(dir_path, 'onnx/')
+        return os.path.join(
+            dir_path, 'model.{}._epoch_.{}.{}'.format(unique_id, epoch, ext))
 
     def ensure_save_directory(self):
         prepath = self.conf['paths']['model_save_path']
@@ -327,28 +351,30 @@ class ModelBuilder(object):
             g.write_all("Loading from custom epoch {}\n".format(epoch))
             return epoch
 
-    # TODO(KGF): method only called in non-MPI runner.py. Deduplicate?
-    def get_latest_save_path(self):
-        epochs = self.get_all_saved_files()
-        if len(epochs) == 0:
-            print('no previous checkpoint found')
-            return ''
-        else:
-            max_epoch = max(epochs)
-            print('loading from epoch {}'.format(max_epoch))
-            return self.get_save_path(max_epoch)
+    # TODO(KGF): method was only called in non-MPI runner.py. Remove.
+    # def get_latest_save_path(self):
+    #     epochs = self.get_all_saved_files()
+    #     if len(epochs) == 0:
+    #         print('no previous checkpoint found')
+    #         return ''
+    #     else:
+    #         max_epoch = max(epochs)
+    #         print('loading from epoch {}'.format(max_epoch))
+    #         return self.get_save_path(max_epoch)
 
     def extract_id_and_epoch_from_filename(self, filename):
         regex = re.compile(r'-?\d+')
         numbers = [int(x) for x in regex.findall(filename)]
-        assert(len(numbers) == 3)  # id,epoch number and extension
-        assert(numbers[2] == 5)  # .h5 extension
+        if filename[-3:] == '.h5':
+            assert len(numbers) == 3  # id, epoch number, and .h5 extension
+            assert numbers[2] == 5  # .h5 extension
         return numbers[0], numbers[1]
 
     def get_all_saved_files(self):
         self.ensure_save_directory()
         unique_id = self.get_unique_id()
         path = self.conf['paths']['model_save_path']
+        # TODO(KGF): probably should only list .h5 file, not ONNX right now
         filenames = [name for name in os.listdir(path)
                      if os.path.isfile(os.path.join(path, name))]
         epochs = []
@@ -358,66 +384,71 @@ class ModelBuilder(object):
                 epochs.append(epoch)
         return epochs
 
-    # FIXME this is essentially the ModelBuilder.build_model
-        # in the long run we want to replace the space dictionary with the
-        # regular conf file - I am sure there is a way to accomodate
-    def hyper_build_model(self, space, predict, custom_batch_size=None):
-        conf = self.conf
-        model_conf = conf['model']
-        rnn_size = model_conf['rnn_size']
-        rnn_type = model_conf['rnn_type']
-        regularization = model_conf['regularization']
+    # TODO(felker): remove the following code or use as template for DeepHyper
+    # plugin. Formerly was only used in single-GPU runner.py with hyperopt
 
-        dropout_prob = model_conf['dropout_prob']
-        length = model_conf['length']
-        pred_length = model_conf['pred_length']
-        # skip = model_conf['skip']
-        stateful = model_conf['stateful']
-        return_sequences = model_conf['return_sequences']
-        # model_conf['output_activation']
-        output_activation = conf['data']['target'].activation
-        num_signals = conf['data']['num_signals']
+    # TODO(alexeys): this is essentially the ModelBuilder.build_model
+    # in the long run we want to replace the space dictionary with the
+    # regular conf file - I am sure there is a way to accomodate
+    # def hyper_build_model(self, space, predict, custom_batch_size=None):
+    #     conf = self.conf
+    #     model_conf = conf['model']
+    #     rnn_size = model_conf['rnn_size']
+    #     rnn_type = model_conf['rnn_type']
+    #     regularization = model_conf['regularization']
 
-        batch_size = self.conf['training']['batch_size']
-        if predict:
-            batch_size = self.conf['model']['pred_batch_size']
-            # so we can predict with one time point at a time!
-            if return_sequences:
-                length = pred_length
-            else:
-                length = 1
+    #     dropout_prob = model_conf['dropout_prob']
+    #     length = model_conf['length']
+    #     pred_length = model_conf['pred_length']
+    #     # skip = model_conf['skip']
+    #     stateful = model_conf['stateful']
+    #     return_sequences = model_conf['return_sequences']
+    #     # model_conf['output_activation']
+    #     output_activation = conf['data']['target'].activation
+    #     num_signals = conf['data']['num_signals']
 
-        if custom_batch_size is not None:
-            batch_size = custom_batch_size
+    #     batch_size = self.conf['training']['batch_size']
+    #     if predict:
+    #         batch_size = self.conf['model']['pred_batch_size']
+    #         # so we can predict with one time point at a time!
+    #         if return_sequences:
+    #             length = pred_length
+    #         else:
+    #             length = 1
 
-        if rnn_type == 'LSTM':
-            rnn_model = LSTM
-        elif rnn_type == 'SimpleRNN':
-            rnn_model = SimpleRNN
-        else:
-            print('Unkown Model Type, exiting.')
-            exit(1)
+    #     if custom_batch_size is not None:
+    #         batch_size = custom_batch_size
 
-        batch_input_shape = (batch_size, length, num_signals)
-        model = Sequential()
+    #     if rnn_type == 'LSTM':
+    #         rnn_model = CuDNNLSTM
+    #     elif rnn_type == 'SimpleRNN':
+    #         rnn_model = SimpleRNN
+    #     else:
+    #         print('Unkown Model Type, exiting.')
+    #         exit(1)
 
-        for _ in range(model_conf['rnn_layers']):
-            model.add(
-                rnn_model(
-                    rnn_size,
-                    return_sequences=return_sequences,
-                    batch_input_shape=batch_input_shape,
-                    stateful=stateful,
-                    kernel_regularizer=l2(regularization),
-                    recurrent_regularizer=l2(regularization),
-                    bias_regularizer=l2(regularization),
-                    dropout=dropout_prob,
-                    recurrent_dropout=dropout_prob))
-            model.add(Dropout(space['Dropout']))
-        if return_sequences:
-            model.add(TimeDistributed(Dense(1, activation=output_activation)))
-        else:
-            model.add(Dense(1, activation=output_activation))
-        model.reset_states()
+    #     batch_input_shape = (batch_size, length, num_signals)
+    #     model = Sequential()
 
-        return model
+    #     for _ in range(model_conf['rnn_layers']):
+    #         model.add(
+    #             rnn_model(
+    #                 rnn_size,
+    #                 return_sequences=return_sequences,
+    #                 batch_input_shape=batch_input_shape,
+    #                 stateful=stateful,
+    #                 kernel_regularizer=l2(regularization),
+    #                 recurrent_regularizer=l2(regularization),
+    #                 bias_regularizer=l2(regularization),
+    #                 # dropout=dropout_prob,
+    #                 # recurrent_dropout=dropout_prob
+    #             ))
+    #         model.add(Dropout(space['Dropout']))
+    #     if return_sequences:
+    #         model.add(TimeDistributed(Dense(1, activation=output_activation)
+    # ))
+    #     else:
+    #         model.add(Dense(1, activation=output_activation))
+    #     model.reset_states()
+
+    #     return model
