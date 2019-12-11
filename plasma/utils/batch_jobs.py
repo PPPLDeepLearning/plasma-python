@@ -124,7 +124,7 @@ def create_slurm_script(
         idx,
         executable_name,
         use_mpi,
-        env_name="ppltest",
+        env_name="frnn",
         env_type="anaconda3"):
     filename = "run_{}_nodes.cmd".format(num_nodes)
     filepath = subdir+filename

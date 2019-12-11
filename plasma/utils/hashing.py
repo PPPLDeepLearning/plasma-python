@@ -74,7 +74,9 @@ def myhash_signals(signals):
     (descriptions), concatenate their hexadecimal hashes (converted to
     base-10), and hash the resulting str
     '''
-    return myhash(''.join((map(lambda x: x.description, sorted(signals)))))
+    return myhash(''.join(tuple(map(lambda x: "{}".format(x.__hash__()),
+                                    sorted(signals)))))
+
 
 def myhash(x):
     '''
