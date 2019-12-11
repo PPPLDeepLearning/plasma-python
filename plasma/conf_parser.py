@@ -149,7 +149,9 @@ def parameters(input_file):
         # nstx_full = ShotListFiles(
         #     nstx, params['paths']['shot_list_dir'],
         #     ['disrupt_nstx.txt'], 'nstx shots (all are disruptive')
-
+        # ==================
+        # JET DATASETS
+        # ==================
         if params['paths']['data'] == 'jet_all':
             params['paths']['shot_files'] = [jet_carbon_wall]
             params['paths']['shot_files_test'] = [jet_iterlike_wall]
@@ -203,7 +205,7 @@ def parameters(input_file):
             params['paths']['shot_files_test'] = [jet_iterlike_wall]
             params['paths']['use_signals_dict'] = sig.fully_defined_signals_0D
         # ==================
-        # START D3D DATASETS
+        # D3D DATASETS
         # ==================
         elif params['paths']['data'] == 'd3d_all':
             params['paths']['shot_files'] = [d3d_full]
@@ -318,13 +320,14 @@ def parameters(input_file):
             params['paths']['shot_files_test'] = []
             params['paths']['use_signals_dict'] = {
                 'edens_profile': sig.edens_profile}  # fully_defined_signals_0D
-
-        # cross-machine
-        elif params['paths']['data'] == 'jet_to_d3d':
+        # ======================
+        # CROSS-MACHINE DATASETS
+        # ======================
+        elif params['paths']['data'] == 'jet_to_d3d_all':
             params['paths']['shot_files'] = [jet_full]
             params['paths']['shot_files_test'] = [d3d_full]
             params['paths']['use_signals_dict'] = sig.fully_defined_signals
-        elif params['paths']['data'] == 'd3d_to_jet':
+        elif params['paths']['data'] == 'd3d_to_jet_all':
             params['paths']['shot_files'] = [d3d_full]
             params['paths']['shot_files_test'] = [jet_iterlike_wall]
             params['paths']['use_signals_dict'] = sig.fully_defined_signals
