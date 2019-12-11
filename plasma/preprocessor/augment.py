@@ -135,8 +135,9 @@ class Augmentator(AbstractAugmentator):
         elif self.conf['data']['augmentation_mode'] == "zero":
             # if "set to zero" augmentation. Can control in conf.
             return signal*0.0
-        elif self.conf['data']['augmentation_mode'] == "none":
-            return signal  # if no augmentation. Should be the default in conf.
+        elif self.conf['data']['augmentation_mode'] is None:
+            # no augmentation should be the default in conf.yaml
+            return signal
         else:
             print("Unknown augmentation mode. Exiting")
             exit(-1)

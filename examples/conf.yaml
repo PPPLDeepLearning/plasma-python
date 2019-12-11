@@ -7,25 +7,22 @@
 fs_path: '/tigress'
 target: 'hinge' # 'maxhinge' # 'maxhinge' # 'binary' # 'hinge'
 num_gpus: 4  # per node
-
 paths:
   signal_prepath: '/signal_data/' # /signal_data/jet/
   shot_list_dir: '/shot_lists/'
   tensorboard_save_path: '/Graph/'
-  data: d3d_data_0D
+  data: d3d_0D
   # if specific_signals: [] left empty, it will use all valid signals defined on a machine. Only use if need a custom set
   specific_signals: [] # ['q95','li','ip','betan','energy','lm','pradcore','pradedge','pradtot','pin','torquein','tmamp1','tmamp2','tmfreq1','tmfreq2','pechin','energydt','ipdirect','etemp_profile','edens_profile']
   executable: "mpi_learn.py"
   shallow_executable: "learn.py"
-
 data:
   bleed_in: 0 # how many shots from the test set to use in training?
   bleed_in_repeat_fac: 1 # how many times to repeat shots in training and validation?
   bleed_in_remove_from_test: True
   bleed_in_equalize_sets: False
-  # TODO(KGF): make next parameter use 'none' instead of None for consistency
   signal_to_augment: None # 'plasma current'
-  augmentation_mode: 'none'
+  augmentation_mode: None
   augment_during_training: False
   cut_shot_ends: True
   T_min_warn: 30
@@ -57,7 +54,6 @@ data:
   # the fraction of samples with which to train the shallow model
   #  shallow_sample_prob: 0.01
   floatx: 'float32'
-
 model:
   loss_scale_factor: 1.0
   use_batch_norm: false
