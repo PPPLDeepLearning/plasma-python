@@ -18,6 +18,7 @@ import numpy as np
 
 from plasma.utils.processing import train_test_split, cut_and_resample_signal
 from plasma.utils.downloading import makedirs_process_safe
+from plasma.utils.hashing import myhash
 
 
 class ShotListFiles(object):
@@ -327,11 +328,7 @@ class Shot(object):
         return self.get_id_str().__eq__(other.get_id_str())
 
     def __hash__(self):
-        import hashlib
-        return int(
-            hashlib.md5(
-                self.get_id_str().encode('utf-8')).hexdigest(),
-            16)
+        return myhash(self.get_id_str())
 
     def __str__(self):
         string = 'number: {}\n'.format(self.number)
@@ -417,7 +414,7 @@ class Shot(object):
                 signal_prepath, self, conf['data']['floatx'])
             if not valid_signal:
                 if signal.is_ip or ('q95' in signal.description) or garbage==False or sig==None:
-                   ########################Not allow a shot if it is missing plasma current information, or q95 is missing 
+                   ########################Not allow a shot if it is missing plasma current information, or q95 is missing
                    return None, None, None, None, False
                 else:
                    t=np.arange(0,20,0.001)
@@ -432,7 +429,7 @@ class Shot(object):
                 t_min = max(t_min, np.min(t))
                 signal_arrays.append(sig)
                 time_arrays.append(t)
-                
+
                 if self.is_disruptive and self.t_disrupt > np.max(t):
                     t_max_total = (
                         np.max(t) + signal.get_data_avail_tolerance(
