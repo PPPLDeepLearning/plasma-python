@@ -27,20 +27,21 @@ def parameters(input_file):
         base_path = output_path
 
         params['paths']['base_path'] = base_path
-        if isinstance(params['paths']['signal_prepath'],list):
-            print('reading from multiple data folder!**********************************************')
-        
-            params['paths']['signal_prepath'] = [base_path+s for s in params['paths']['signal_prepath']]
+        if isinstance(params['paths']['signal_prepath'], list):
+            g.print_unique('Reading from multiple data folders!')
+            params['paths']['signal_prepath'] = [
+                base_path + s for s in params['paths']['signal_prepath']]
         else:
-            params['paths']['signal_prepath']=base_path+params['paths']['signal_prepath']
+            params['paths']['signal_prepath'] = (
+                base_path + params['paths']['signal_prepath'])
         params['paths']['shot_list_dir'] = (
             base_path + params['paths']['shot_list_dir'])
         params['paths']['output_path'] = output_path
-        if params['paths']['data']=='d3d_data_gar18':
+        if params['paths']['data'] == 'd3d_data_gar18':
            h = myhash_signals(sig.all_signals_gar18.values())
-        elif params['paths']['data']=='d3d_data_garbage':
+        elif params['paths']['data'] == 'd3d_data_garbage':
            h = myhash_signals(sig.all_signals_gar18.values())*2
-        else:   
+        else:
            h = myhash_signals(sig.all_signals.values())
         params['paths']['global_normalizer_path'] = (
             output_path
@@ -94,11 +95,11 @@ def parameters(input_file):
         # params['model']['loss'] = params['data']['target'].loss
 
         # signals
-        if params['paths']['data'] in ['d3d_data_gar18','d3d_data_garbage']:
+        if params['paths']['data'] in ['d3d_data_gar18', 'd3d_data_garbage']:
            params['paths']['all_signals_dict'] = sig.all_signals_gar18
         else:
            params['paths']['all_signals_dict'] = sig.all_signals
-           
+
         # assert order
         # q95, li, ip, lm, betan, energy, dens, pradcore, pradedge, pin,
         # pechin, torquein, ipdirect, etemp_profile, edens_profile
@@ -149,7 +150,10 @@ def parameters(input_file):
             sig.d3d, params['paths']['shot_list_dir'],
             ['d3d_clear_data_avail.txt', 'd3d_disrupt_data_avail.txt'],
             'd3d data since shot 125500')
-        d3d_full_new = ShotListFiles(sig.d3d,params['paths']['shot_list_dir'],['shots_since_2016_clear.txt','shots_since_2016_disrupt.txt'],'d3d data since shot 125500')
+        d3d_full_new = ShotListFiles(sig.d3d, params['paths']['shot_list_dir'],
+                                     ['shots_since_2016_clear.txt',
+                                      'shots_since_2016_disrupt.txt'],
+                                     'd3d data since shot 125500')
         d3d_jenkins = ShotListFiles(
             sig.d3d, params['paths']['shot_list_dir'],
             ['jenkins_d3d_clear.txt', 'jenkins_d3d_disrupt.txt'],
@@ -262,7 +266,7 @@ def parameters(input_file):
 
         elif params['paths']['data'] == 'd3d_data_new':
             params['paths']['shot_files'] = [d3d_full_new]
-            params['paths']['shot_files_test'] = [] 
+            params['paths']['shot_files_test'] = []
             params['paths']['use_signals_dict'] = {
                 'q95': sig.q95,
                 'li': sig.li,

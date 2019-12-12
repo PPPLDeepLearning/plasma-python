@@ -390,8 +390,9 @@ class Shot(object):
         signal_prepath = conf['paths']['signal_prepath']
         # TODO(KGF): check the purpose of the following D3D-specific lines
         # added from fork in Dec 2019. Add [omit] print?
-        if self.number in [127613, 129423, 125726, 126662]:
-            return None, None, None, None, False
+        # --- possibly corrupted raw shot files from original D3D shot set
+        # if self.number in [127613, 129423, 125726, 126662]:
+        #     return None, None, None, None, False
         for (i, signal) in enumerate(self.signals):
             if isinstance(signal_prepath, list):
                 for prepath in signal_prepath:
@@ -464,7 +465,7 @@ class Shot(object):
         if invalid_signals > 3:
             # Omit shot if more than 3 channels are bad
             print('Shot {}: has more than 3 invalid channels [omit]'.format(
-                self.number),
+                self.number))
             valid = False
 
         return time_arrays, signal_arrays, t_min, t_max, valid

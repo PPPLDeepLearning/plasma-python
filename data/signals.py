@@ -364,16 +364,6 @@ ipdirectt = Signal("plasma current direction tol", ["d3d/iptdirect"], [d3d],data
 # Restricted subset to those signals that are present for most shots. The
 # idea is to remove signals that cause many shots to be dropped from the
 # dataset.
-all_signals_gar18 = {
-    'q95t': q95t, 'lit': lit, 'ipt': ipt, 'betant': betant, 'energyt': energyt, 'lmt': lmt,
-    'denst': denst, 'pradcoret': pradcoret,
-    'pradedget': pradedget, 'pint': pint,
-    'torqueint': torqueint,
-    'ipdirectt': ipdirectt, 'iptargett': iptargett,
-    'iperrt': iperrt,
-    'etemp_profilet': etemp_profilet, 'edens_profilet': edens_profilet,
-}
-
 
 all_signals = {
     'q95': q95, 'li': li, 'ip': ip, 'betan': betan, 'energy': energy, 'lm': lm,
@@ -393,6 +383,17 @@ all_signals = {
     # 'q_psi_profile':q_psi_profile}
 }
 
+all_signals_garbage = {
+    'q95t': q95t, 'lit': lit, 'ipt': ipt, 'betant': betant,
+    'energyt': energyt, 'lmt': lmt,
+    'denst': denst, 'pradcoret': pradcoret,
+    'pradedget': pradedget, 'pint': pint,
+    'torqueint': torqueint,
+    'ipdirectt': ipdirectt, 'iptargett': iptargett,
+    'iperrt': iperrt,
+    'etemp_profilet': etemp_profilet, 'edens_profilet': edens_profilet,
+}
+
 
 
 
@@ -405,9 +406,9 @@ all_signals = {
 
 all_signals_restricted = all_signals
 
-#g.print_unique('All signals (determines which signals are downloaded'
-#               ' & preprocessed):')
-#g.print_unique(all_signals.values())
+g.print_unique('All signals (determines which signals are downloaded'
+              ' & preprocessed):')
+g.print_unique(all_signals.values())
 
 
 fully_defined_signals = {
@@ -426,8 +427,8 @@ d3d_signals = {
     sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if (
         sig.is_defined_on_machine(d3d))
 }
-d3d_signals_gar18 = {
-    sig_name: sig for (sig_name, sig) in all_signals_gar18.items() if (
+d3d_signals_garbage = {
+    sig_name: sig for (sig_name, sig) in all_signals_garbage.items() if (
         sig.is_defined_on_machine(d3d))
 }
 d3d_signals_0D = {
