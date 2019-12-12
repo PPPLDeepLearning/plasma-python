@@ -384,6 +384,8 @@ class Shot(object):
         time_arrays = []
         garbage = False
         # disruptive = self.t_disrupt >= 0
+        # TODO(KGF): refactor the dataset-specific shot filtering settings
+        # (expose in conf.yaml?)
         if conf['paths']['data'] == 'd3d_data_garbage':
             garbage = True
         invalid_signals = 0
@@ -467,7 +469,9 @@ class Shot(object):
             print('Shot {}: has more than 3 invalid channels [omit]'.format(
                 self.number))
             valid = False
-
+        # if the signal has np.max(t) < t_disrupt, but t_max_total (with
+        # positive tolerance) > t_disrupt, then the signal is implicitly
+        # padded with 0's
         return time_arrays, signal_arrays, t_min, t_max, valid
 
     def cut_and_resample_signals(self, time_arrays, signal_arrays, t_min,

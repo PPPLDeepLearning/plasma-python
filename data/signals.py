@@ -114,16 +114,13 @@ def fetch_jet_data(signal_path, shot_num, c):
         data = c.get('_sig=jet("{}/",{})'.format(signal_path, shot_num)).data()
         if np.ndim(data) == 2:
             data = np.transpose(data)
-            time = c.get(
-                '_sig=dim_of(jet("{}/",{}),1)'.format(
-                    signal_path, shot_num)).data()
-            ydata = c.get(
-                '_sig=dim_of(jet("{}/",{}),0)'.format(
-                    signal_path, shot_num)).data()
+            time = c.get('_sig=dim_of(jet("{}/",{}),1)'.format(
+                signal_path, shot_num)).data()
+            ydata = c.get('_sig=dim_of(jet("{}/",{}),0)'.format(
+                signal_path, shot_num)).data()
         else:
-            time = c.get(
-                '_sig=dim_of(jet("{}/",{}))'.format(
-                    signal_path, shot_num)).data()
+            time = c.get('_sig=dim_of(jet("{}/",{}))'.format(
+                signal_path, shot_num)).data()
         found = True
     except Exception as e:
         g.print_unique(e)
@@ -141,23 +138,47 @@ def fetch_nstx_data(signal_path, shot_num, c):
     return time, data, None, found
 
 
-d3d = Machine(
-    "d3d",
-    "atlas.gat.com",
-    fetch_d3d_data,
-    max_cores=32,
-    current_threshold=2e-1)
-jet = Machine(
-    "jet",
-    "mdsplus.jet.efda.org",
-    fetch_jet_data,
-    max_cores=8,
-    current_threshold=1e5)
+d3d = Machine("d3d", "atlas.gat.com", fetch_d3d_data, max_cores=32,
+              current_threshold=2e-1)
+jet = Machine("jet", "mdsplus.jet.efda.org", fetch_jet_data, max_cores=8,
+              current_threshold=1e5)
 nstx = Machine("nstx", "skylark.pppl.gov:8501::", fetch_nstx_data, max_cores=8)
 
 all_machines = [d3d, jet]
 
 profile_num_channels = 64
+
+# The "data_avail_tolerances" parameter in Signal class initializer relaxes
+# the cutoff for the signal around the defined t_disrupt (provided in the
+# disruptive shot list). The latter definition (based on current quench) may
+# vary depending on who supplied the shot list and computed t_disrupt, since
+# quench may last for O(10 ms). E.g. C. Rea may have taken t_disrupt = midpoint
+# of start and end of quench for later D3D shots after 2016 in
+# d3d_disrupt_since_2016.txt. Whereas J. Barr, and semi-/automatic methods for
+# calculating t_disrupt may use t_disrupt = start of current quench.
+
+# Early-terminating signals will be implicitly padded with zeros when t_disrupt
+# still falls within the tolerance (see shots.py,
+# Shot.get_signals_and_times_from_file). Even tols > 30 ms are fine (do not
+# violate causality), but the ML method may start to base predictions on the
+# disappearance of signals.
+
+# "t" subscripted variants of signal variables increase the tolernace to 29 ms
+# on D3D, the maximum value possible without violating causality for the min
+# T_warn=30 ms. This is important for the signals of newer shots in
+# d3d_disrupt_since_2016.txt; many of them would cause [omit] of entire shot
+# because their values end shortly before t_disrupt (poss. due to different
+# t_disrupt label calculation).
+
+# See conf_parser.py dataset definitions of d3d_data_max_tol, d3d_data_garbage
+# which use these signal variants.
+
+# For non-t-subscripted profile signals (and q95), a positive tolerance of
+# 20ms on D3D (and 30-50ms on JET) is used to account for the causal shifting
+# of the delayed "real-time processing".
+
+# List ---> individual tolerance for each machine when signal definitions are
+# shared in cross-machine studies.
 
 # ZIPFIT comes from actual measurements
 # jet and d3d:
@@ -393,7 +414,7 @@ all_signals = {
     # 'q_psi_profile':q_psi_profile}
 }
 
-all_signals_garbage = {
+all_signals_max_tol = {
     'q95t': q95t, 'lit': lit, 'ipt': ipt, 'betant': betant,
     'energyt': energyt, 'lmt': lmt,
     'denst': denst, 'pradcoret': pradcoret,
@@ -430,8 +451,8 @@ d3d_signals = {
     sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if (
         sig.is_defined_on_machine(d3d))
 }
-d3d_signals_garbage = {
-    sig_name: sig for (sig_name, sig) in all_signals_garbage.items() if (
+d3d_signals_max_tol = {
+    sig_name: sig for (sig_name, sig) in all_signals_max_tol.items() if (
         sig.is_defined_on_machine(d3d))
 }
 d3d_signals_0D = {
