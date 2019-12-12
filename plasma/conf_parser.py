@@ -27,12 +27,34 @@ def parameters(input_file):
         base_path = output_path
 
         params['paths']['base_path'] = base_path
-        params['paths']['signal_prepath'] = (
-            base_path + params['paths']['signal_prepath'])
+        if isinstance(params['paths']['signal_prepath'], list):
+            g.print_unique('Reading from multiple data folders!')
+            params['paths']['signal_prepath'] = [
+                base_path + s for s in params['paths']['signal_prepath']]
+        else:
+            params['paths']['signal_prepath'] = (
+                base_path + params['paths']['signal_prepath'])
         params['paths']['shot_list_dir'] = (
             base_path + params['paths']['shot_list_dir'])
         params['paths']['output_path'] = output_path
-        h = myhash_signals(sig.all_signals.values())
+        # See notes in data/signals.py for details on signal tols relative to
+        # t_disrupt. The following 2x dataset definitions permit progressively
+        # worse signal quality when preprocessing the shots and omitting some
+        if params['paths']['data'] == 'd3d_data_max_tol':
+            # let signals terminate up to 29 ms before t_disrupt on D3D
+            h = myhash_signals(sig.all_signals_max_tol.values())
+        elif params['paths']['data'] == 'd3d_data_garbage':
+            # let up to 3x signals disappear at any time before t_disrupt
+            # (and NaNs?)
+            # -----
+            # temp workaround for identical signal dictionary (but different
+            # omit criteria in shots.py Shot.get_signals_and_times_from_file())
+            # ---> 2x hash int
+            # TODO(KGF): not robust; create reproducible specification and
+            # recording of signal filtering procedure
+            h = myhash_signals(sig.all_signals_max_tol.values())*2
+        else:
+            h = myhash_signals(sig.all_signals.values())
         params['paths']['global_normalizer_path'] = (
             output_path
             + '/normalization/normalization_signal_group_{}.npz'.format(h))
@@ -85,7 +107,11 @@ def parameters(input_file):
         # params['model']['loss'] = params['data']['target'].loss
 
         # signals
-        params['paths']['all_signals_dict'] = sig.all_signals
+        if params['paths']['data'] in ['d3d_data_max_tol', 'd3d_data_garbage']:
+            params['paths']['all_signals_dict'] = sig.all_signals_max_tol
+        else:
+            params['paths']['all_signals_dict'] = sig.all_signals
+
         # assert order
         # q95, li, ip, lm, betan, energy, dens, pradcore, pradedge, pin,
         # pechin, torquein, ipdirect, etemp_profile, edens_profile
@@ -135,11 +161,25 @@ def parameters(input_file):
         d3d_full = ShotListFiles(
             sig.d3d, params['paths']['shot_list_dir'],
             ['d3d_clear_data_avail.txt', 'd3d_disrupt_data_avail.txt'],
-            'd3d data since shot 125500')
+            'd3d data since shot 125500')  # to 168555
+        # superset of d3d_full added in 2019 from C. Rea:
+        d3d_full_2019 = ShotListFiles(
+            sig.d3d, params['paths']['shot_list_dir'],
+            ['d3d_clear_since_2016.txt', 'd3d_disrupt_since_2016.txt'],
+            'd3d data since shot 125500')  # to 180847
         d3d_jenkins = ShotListFiles(
             sig.d3d, params['paths']['shot_list_dir'],
             ['jenkins_d3d_clear.txt', 'jenkins_d3d_disrupt.txt'],
             'Subset of d3d data for Jenkins test')
+
+        # TODO(KGF): currently unused shot list files in project directory
+        # /tigress/FRNN/shot_lists/:
+        # d3d_clear.txt : 40560, 168554
+        # d3d_disrupt   : 100000, 168555
+
+        # TODO(KGF): should /tigress/FRNN/shot_lists/ be organized into subdirs
+        # like the original repo directory data/shot_lists/d3d/, jet/, nstx/ ?
+
         # d3d_jb_full = ShotListFiles(
         #     sig.d3d, params['paths']['shot_list_dir'],
         #     ['shotlist_JaysonBarr_clear.txt',
@@ -205,6 +245,50 @@ def parameters(input_file):
 
         elif params['paths']['data'] == 'd3d_data':
             params['paths']['shot_files'] = [d3d_full]
+            params['paths']['shot_files_test'] = []
+            params['paths']['use_signals_dict'] = {
+                'q95': sig.q95,
+                'li': sig.li,
+                'ip': sig.ip,
+                'lm': sig.lm,
+                'betan': sig.betan,
+                'energy': sig.energy,
+                'dens': sig.dens,
+                'pradcore': sig.pradcore,
+                'pradedge': sig.pradedge,
+                'pin': sig.pin,
+                'torquein': sig.torquein,
+                'ipdirect': sig.ipdirect,
+                'iptarget': sig.iptarget,
+                'iperr': sig.iperr,
+                'etemp_profile': sig.etemp_profile,
+                'edens_profile': sig.edens_profile,
+            }
+        elif params['paths']['data'] in ['d3d_data_max_tol',
+                                         'd3d_data_garbage']:
+            params['paths']['shot_files'] = [d3d_full_2019]
+            params['paths']['shot_files_test'] = []
+            params['paths']['use_signals_dict'] = {
+                'q95t': sig.q95t,
+                'lit': sig.lit,
+                'ipt': sig.ipt,
+                'lmt': sig.lmt,
+                'betant': sig.betant,
+                'energyt': sig.energyt,
+                'denst': sig.denst,
+                'pradcoret': sig.pradcoret,
+                'pradedget': sig.pradedget,
+                'pint': sig.pint,
+                'torqueint': sig.torqueint,
+                'ipdirectt': sig.ipdirectt,
+                'iptargett': sig.iptargett,
+                'iperrt': sig.iperrt,
+                'etemp_profilet': sig.etemp_profilet,
+                'edens_profilet': sig.edens_profilet,
+            }
+
+        elif params['paths']['data'] == 'd3d_data_2019':
+            params['paths']['shot_files'] = [d3d_full_2019]
             params['paths']['shot_files_test'] = []
             params['paths']['use_signals_dict'] = {
                 'q95': sig.q95,

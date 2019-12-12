@@ -81,7 +81,7 @@ class Loader(object):
                 # Each chunk will be a multiple of the batch size
                 for j, (X, y) in enumerate(zip(X_list, y_list)):
                     num_examples = X.shape[0]
-                    assert(num_examples % batch_size == 0)
+                    assert num_examples % batch_size == 0
                     num_chunks = num_examples//batch_size
                     """
                     The method produces batch-sized training data X and labels
@@ -118,7 +118,7 @@ class Loader(object):
 
         sig_len = res.shape[0]
         sig_len = (sig_len // length)*length  # make divisible by lenth
-        assert(sig_len > 0)
+        assert sig_len > 0
         batch_idx = np.where(end_indices == 0)[0][0]
         if sig_len > Xbuff.shape[1]:
             Xbuff = self.resize_buffer(Xbuff, sig_len+length)
@@ -132,7 +132,7 @@ class Loader(object):
     def return_from_training_buffer(self, Xbuff, Ybuff, end_indices):
         length = self.conf['model']['length']
         end_indices -= length
-        assert(np.all(end_indices >= 0))
+        assert np.all(end_indices >= 0)
         X = 1.0*Xbuff[:, :length, :]
         Y = 1.0*Ybuff[:, :length, :]
         self.shift_buffer(Xbuff, length)
@@ -454,8 +454,8 @@ class Loader(object):
         shot_lengths = []
         total_length = 0
         for shot in shot_list:
-            assert(isinstance(shot, Shot))
-            assert(shot.valid)
+            assert isinstance(shot, Shot)
+            assert shot.valid
             shot.restore(prepath)
 
             if self.normalizer is not None:
@@ -490,8 +490,8 @@ class Loader(object):
     def get_signal_result_from_shot(self, shot, prediction_mode=False):
         prepath = self.conf['paths']['processed_prepath']
         use_signals = self.conf['paths']['use_signals']
-        assert(isinstance(shot, Shot))
-        assert(shot.valid)
+        assert isinstance(shot, Shot)
+        assert shot.valid
         shot.restore(prepath)
         if self.normalizer is not None:
             self.normalizer.apply(shot)
@@ -521,7 +521,7 @@ class Loader(object):
     def batch_output_to_array(self, output, batch_size=None):
         if batch_size is None:
             batch_size = self.conf['model']['pred_batch_size']
-        assert(output.shape[0] % batch_size == 0)
+        assert output.shape[0] % batch_size == 0
         num_chunks = output.shape[0] // batch_size
         num_timesteps = output.shape[1]
         feature_size = output.shape[2]
@@ -553,7 +553,7 @@ class Loader(object):
         res_patches = []
         if len(sig) <= min_len:
             print('signal length: {}'.format(len(sig)))
-        assert(min_len <= len(sig))
+        assert min_len <= len(sig)
         for start in range(0, len(sig)-min_len, min_len):
             sig_patches.append(sig[start:start+min_len])
             res_patches.append(res[start:start+min_len])
@@ -636,13 +636,12 @@ class Loader(object):
         total_num = int(np.ceil(1.0 * num_already / total_num)) * total_num
 
         num_additional = total_num - num_already
-        assert(num_additional >= 0)
+        assert num_additional >= 0
         sig_patches_rand, res_patches_rand = self.make_random_patches(
             signals, results, num_additional)
         if self.verbose:
-            print(
-                'random to deterministic ratio: {}/{}'.format(num_additional,
-                                                              num_already))
+            print('random to deterministic ratio: {}/{}'.format(num_additional,
+                                                                num_already))
         return (sig_patches_det + sig_patches_rand,
                 res_patches_det + res_patches_rand)
 
@@ -668,9 +667,9 @@ class Loader(object):
     def arange_patches(self, sig_patches, res_patches):
         num_timesteps = self.conf['model']['length']
         batch_size = self.conf['training']['batch_size']
-        assert(len(sig_patches) % batch_size == 0)  # fixed number of batches
+        assert len(sig_patches) % batch_size == 0  # fixed number of batches
         # divisible by length of RNN sequence
-        assert(len(sig_patches[0]) % num_timesteps == 0)
+        assert len(sig_patches[0]) % num_timesteps == 0
         num_batches = len(sig_patches) // batch_size
         # patch_length = len(sig_patches[0])
 
@@ -699,8 +698,8 @@ class Loader(object):
         if custom_batch_size is not None:
             batch_size = custom_batch_size
 
-        assert(len(sig_patches) == batch_size)
-        assert(len(sig_patches[0]) % num_timesteps == 0)
+        assert len(sig_patches) == batch_size
+        assert len(sig_patches[0]) % num_timesteps == 0
         num_chunks = len(sig_patches[0]) // num_timesteps
         num_dimensions_of_data = sig_patches[0].shape[1]
         if len(res_patches[0].shape) == 1:
@@ -708,10 +707,8 @@ class Loader(object):
         else:
             num_answers = res_patches[0].shape[1]
 
-        X = np.zeros(
-            (num_chunks*batch_size,
-             num_timesteps,
-             num_dimensions_of_data))
+        X = np.zeros((num_chunks*batch_size, num_timesteps,
+                      num_dimensions_of_data))
         if return_sequences:
             y = np.zeros((num_chunks*batch_size, num_timesteps, num_answers))
         else:
@@ -732,8 +729,8 @@ class Loader(object):
         return X, y
 
     def load_as_X_y(self, shot, verbose=False, prediction_mode=False):
-        assert(isinstance(shot, Shot))
-        assert(shot.valid)
+        assert isinstance(shot, Shot)
+        assert shot.valid
         prepath = self.conf['paths']['processed_prepath']
         return_sequences = self.conf['model']['return_sequences']
         shot.restore(prepath)
@@ -780,11 +777,7 @@ class Loader(object):
         return signals, ttd
 
     def array_to_path_and_external_pred_cut(
-            self,
-            arr,
-            res,
-            return_sequences=False,
-            prediction_mode=False):
+            self, arr, res, return_sequences=False, prediction_mode=False):
         num_timesteps = self.conf['model']['length']
         skip = self.conf['model']['skip']
         if prediction_mode:
@@ -792,11 +785,11 @@ class Loader(object):
             if not return_sequences:
                 num_timesteps = 1
             skip = num_timesteps  # batchsize = 1!
-        assert(np.shape(arr)[0] == np.shape(res)[0])
+        assert np.shape(arr)[0] == np.shape(res)[0]
         num_chunks = len(arr) // num_timesteps
         arr = arr[-num_chunks*num_timesteps:]
         res = res[-num_chunks*num_timesteps:]
-        assert(np.shape(arr)[0] == np.shape(res)[0])
+        assert np.shape(arr)[0] == np.shape(res)[0]
         X = []
         y = []
         i = 0
@@ -810,7 +803,7 @@ class Loader(object):
         for chunk in chunk_range:
             for i in i_range:
                 start = chunk*num_timesteps + i
-                assert(start + num_timesteps <= len(arr))
+                assert start + num_timesteps <= len(arr)
                 X.append(arr[start:start+num_timesteps, :])
                 if return_sequences:
                     y.append(res[start:start+num_timesteps])

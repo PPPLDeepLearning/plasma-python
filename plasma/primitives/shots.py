@@ -18,6 +18,7 @@ import numpy as np
 
 from plasma.utils.processing import train_test_split, cut_and_resample_signal
 from plasma.utils.downloading import makedirs_process_safe
+from plasma.utils.hashing import myhash
 
 
 class ShotListFiles(object):
@@ -36,11 +37,8 @@ class ShotListFiles(object):
         return self.__str__()
 
     def get_single_shot_numbers_and_disruption_times(self, full_path):
-        data = np.loadtxt(
-            full_path, ndmin=1, dtype={
-                'names': (
-                    'num', 'disrupt_times'), 'formats': (
-                    'i4', 'f4')})
+        data = np.loadtxt(full_path, ndmin=1, dtype={
+            'names': ('num', 'disrupt_times'), 'formats': ('i4', 'f4')})
         shots = np.array(list(zip(*data))[0])
         disrupt_times = np.array(list(zip(*data))[1])
         return shots, disrupt_times
@@ -74,7 +72,7 @@ class ShotList(object):
         '''
         self.shots = []
         if shots is not None:
-            assert(all([isinstance(shot, Shot) for shot in shots]))
+            assert all([isinstance(shot, Shot) for shot in shots])
             self.shots = [shot for shot in shots]
 
     def load_from_shot_list_files_object(
@@ -86,9 +84,7 @@ class ShotList(object):
             self.append(
                 Shot(number=number, t_disrupt=t, machine=machine,
                      signals=[s for s in signals if
-                              s.is_defined_on_machine(machine)]
-                     )
-                )
+                              s.is_defined_on_machine(machine)]))
 
     def load_from_shot_list_files_objects(
             self, shot_list_files_objects, signals):
@@ -142,7 +138,7 @@ class ShotList(object):
         return new_shot_list
 
     def set_weights(self, weights):
-        assert(len(weights) == len(self.shots))
+        assert len(weights) == len(self.shots)
         for (i, w) in enumerate(weights):
             self.shots[i].weight = w
 
@@ -246,13 +242,13 @@ class ShotList(object):
         return self.shots
 
     def append(self, shot):
-        assert(isinstance(shot, Shot))
+        assert isinstance(shot, Shot)
         self.shots.append(shot)
 
     def remove(self, shot):
-        assert(shot in self.shots)
+        assert shot in self.shots
         self.shots.remove(shot)
-        assert(shot not in self.shots)
+        assert shot not in self.shots
 
     def make_light(self):
         for shot in self.shots:
@@ -277,16 +273,9 @@ class Shot(object):
     property.
     '''
 
-    def __init__(
-            self,
-            number=None,
-            machine=None,
-            signals=None,
-            signals_dict=None,
-            ttd=None,
-            valid=None,
-            is_disruptive=None,
-            t_disrupt=None):
+    def __init__(self, number=None, machine=None, signals=None,
+                 signals_dict=None, ttd=None, valid=None, is_disruptive=None,
+                 t_disrupt=None):
         '''
         Shot objects contain following attributes:
 
@@ -327,11 +316,7 @@ class Shot(object):
         return self.get_id_str().__eq__(other.get_id_str())
 
     def __hash__(self):
-        import hashlib
-        return int(
-            hashlib.md5(
-                self.get_id_str().encode('utf-8')).hexdigest(),
-            16)
+        return myhash(self.get_id_str())
 
     def __str__(self):
         string = 'number: {}\n'.format(self.number)
@@ -397,72 +382,106 @@ class Shot(object):
         # t_thresh = -1
         signal_arrays = []
         time_arrays = []
-
+        garbage = False
         # disruptive = self.t_disrupt >= 0
-
+        # TODO(KGF): refactor the dataset-specific shot filtering settings
+        # (expose in conf.yaml?)
+        if conf['paths']['data'] == 'd3d_data_garbage':
+            garbage = True
+        invalid_signals = 0
         signal_prepath = conf['paths']['signal_prepath']
+        # TODO(KGF): check the purpose of the following D3D-specific lines
+        # added from fork in Dec 2019. Add [omit] print?
+        # --- possibly corrupted raw shot files from original D3D shot set
+        # if self.number in [127613, 129423, 125726, 126662]:
+        #     return None, None, None, None, False
         for (i, signal) in enumerate(self.signals):
-            t, sig, valid_signal = signal.load_data(
-                signal_prepath, self, conf['data']['floatx'])
-            if not valid_signal:
-                return None, None, None, None, False
+            if isinstance(signal_prepath, list):
+                for prepath in signal_prepath:
+                    t, sig, valid_signal = signal.load_data(
+                        prepath, self, conf['data']['floatx'])
+                if valid_signal:
+                    break
             else:
-                assert(len(sig.shape) == 2)
-                assert(len(t.shape) == 1)
-                assert(len(t) > 1)
+                t, sig, valid_signal = signal.load_data(
+                    signal_prepath, self, conf['data']['floatx'])
+            if not valid_signal:
+                # TODO(KGF): new check added from fork in Dec 2019.
+                # Add [omit] print?
+                if (signal.is_ip or 'q95' in signal.description
+                        or garbage is False or sig is None):
+                    # Exclude entire shot if missing plasma current or q95
+                    return None, None, None, None, False
+                else:
+                    t = np.arange(0, 20, 0.001)
+                    sig = np.zeros((t.shape[0], sig[1]))
+                    invalid_signals += 1
+                    signal_arrays.append(sig)
+                    time_arrays.append(t)
+            else:
+                assert len(sig.shape) == 2
+                assert len(t.shape) == 1
+                assert len(t) > 1
                 t_min = max(t_min, np.min(t))
                 signal_arrays.append(sig)
                 time_arrays.append(t)
+
                 if self.is_disruptive and self.t_disrupt > np.max(t):
-                    t_max_total = (
-                        np.max(t) + signal.get_data_avail_tolerance(
-                            self.machine)
-                    )
-                    if (self.t_disrupt > t_max_total):
-                        print('Shot {}: disruption event '.format(self.number),
-                              'is not contained in valid time region of ',
-                              'signal {} by {}s, omitting.'.format(
-                                  self.number, signal,
-                                  self.t_disrupt - np.max(t)))
-                        valid = False
+                    tol = signal.get_data_avail_tolerance(self.machine)
+                    t_max_total = np.max(t) + tol
+                    if self.t_disrupt > t_max_total:
+                        if garbage is False:
+                            print('Shot {}: disruption event '.format(
+                                self.number),
+                                  'is not contained in valid time region of ',
+                                  'signal {} by {}s, omitting.'.format(
+                                      self.number, signal,
+                                      self.t_disrupt - np.max(t)))
+                            valid = False
+                        else:
+                            # Set the entire channel to zero to prevent any
+                            # peeking into possible disruptions from this early
+                            # terminated channel
+                            invalid_signals += 1
+                            t = np.arange(0, 20, 0.001)
+                            sig = np.zeros((t.shape[0], sig.shape[1]))
                     else:
-                        t_max = np.max(
-                            t) + signal.get_data_avail_tolerance(self.machine)
+                        t_max = np.max(t) + tol
                 else:
                     t_max = min(t_max, np.max(t))
 
         # make sure the shot is long enough.
         dt = conf['data']['dt']
-        if (t_max - t_min)/dt <= (2*conf['model']
-                                  ['length']+conf['data']['T_min_warn']):
-            print(
-                'Shot {} contains insufficient data, omitting.'.format(
-                    self.number))
+        if (t_max - t_min)/dt <= (2*conf['model']['length']
+                                  + conf['data']['T_min_warn']):
+            print('Shot {} contains insufficient data, omitting.'.format(
+                self.number))
             valid = False
 
-        assert(
-            t_max > t_min or not valid), "t max: {}, t_min: {}".format(
-            t_max, t_min)
+        assert t_max > t_min or not valid, (
+            "t max: {}, t_min: {}".format(t_max, t_min))
 
         if self.is_disruptive:
-            assert(self.t_disrupt <= t_max or not valid)
+            assert self.t_disrupt <= t_max or not valid
             t_max = self.t_disrupt
-
+        if invalid_signals > 3:
+            # Omit shot if more than 3 channels are bad
+            print('Shot {}: has more than 3 invalid channels [omit]'.format(
+                self.number))
+            valid = False
+        # if the signal has np.max(t) < t_disrupt, but t_max_total (with
+        # positive tolerance) > t_disrupt, then the signal is implicitly
+        # padded with 0's
         return time_arrays, signal_arrays, t_min, t_max, valid
 
-    def cut_and_resample_signals(
-            self,
-            time_arrays,
-            signal_arrays,
-            t_min,
-            t_max,
-            conf):
+    def cut_and_resample_signals(self, time_arrays, signal_arrays, t_min,
+                                 t_max, conf):
         dt = conf['data']['dt']
         signals_dict = dict()
 
         # resample signals
-        assert((len(signal_arrays) == len(time_arrays)
-                == len(self.signals)) and len(signal_arrays) > 0)
+        assert len(signal_arrays) == len(time_arrays) == len(self.signals)
+        assert len(signal_arrays) > 0
         tr = 0
         for (i, signal) in enumerate(self.signals):
             tr, sigr = cut_and_resample_signal(

@@ -379,7 +379,7 @@ def make_single_prediction(shot, specific_builder, loader, model_save_path):
     model.load_weights(model_save_path)
     model.reset_states()
     X, y = loader.load_as_X_y(shot, prediction_mode=True)
-    assert(X.shape[0] == y.shape[0])
+    assert X.shape[0] == y.shape[0]
     y_p = model.predict(
         X, batch_size=Loader.get_batch_size(conf['training']['batch_size'],
                                             prediction_mode=True), verbose=0)

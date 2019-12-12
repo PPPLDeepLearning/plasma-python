@@ -157,7 +157,7 @@ def download_shot_numbers(shot_numbers, save_prepath, machine, signals):
     # complete_shots = Array('i',zeros(len(shot_numbers)))# = mp.Queue()
 
     # mp.queue can't handle larger queues yet!
-    assert(len(shot_numbers) < 32000)
+    assert len(shot_numbers) < 32000
     for shot_num in shot_numbers:
         queue.put(shot_num)
     for i in range(num_cores):
@@ -165,9 +165,7 @@ def download_shot_numbers(shot_numbers, save_prepath, machine, signals):
     connections = [Connection(machine.server) for _ in range(num_cores)]
     processes = [mp.Process(target=fn, args=(queue, connections[i]))
                  for i in range(num_cores)]
-
     print('running in parallel on {} processes'.format(num_cores))
-
     for p in processes:
         p.start()
     for p in processes:
@@ -181,9 +179,8 @@ def download_all_shot_numbers(prepath, save_path, shot_list_files,
     signals = []
     for sig in signals_full:
         if not sig.is_defined_on_machine(machine):
-            print(
-                'Signal {} not defined on machine {}, omitting'.format(
-                    sig, machine))
+            print('Signal {} not defined on machine {} [omit]'.format(
+                sig, machine))
         else:
             signals.append(sig)
     save_prepath = prepath + save_path + '/'
