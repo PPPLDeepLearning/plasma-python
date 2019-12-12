@@ -1,31 +1,15 @@
 from __future__ import print_function
 import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-
 import numpy as np
 import sys
-if sys.version_info[0] < 3:
-    from itertools import imap
-
-#leading to import errors:
-#from hyperopt import hp, STATUS_OK
-#from hyperas.distributions import conditional
-
-import time
 import datetime
 import os
 from functools import partial
-import pathos.multiprocessing as mp
 
 from plasma.conf import conf
-from plasma.models.loader import Loader, ProcessGenerator
 from plasma.utils.performance import PerformanceAnalyzer
-from plasma.utils.evaluation import *
+from plasma.utils.evaluation import get_loss_from_list
 from plasma.utils.downloading import makedirs_process_safe
-
-
-import hashlib
 
 import torch
 import torch.nn as nn
@@ -33,24 +17,35 @@ from torch.autograd import Variable
 import torch.optim as opt
 from torch.nn.utils import weight_norm
 
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt  # noqa
+if sys.version_info[0] < 3:
+    from itertools import imap  # noqa
+
 model_filename = 'torch_model.pt'
 
+
 class FTCN(nn.Module):
-    def __init__(self,n_scalars,n_profiles,profile_size,layer_sizes_spatial,
-                 kernel_size_spatial,linear_size,output_size,
-                 num_channels_tcn,kernel_size_temporal,dropout=0.1):
+    def __init__(self, n_scalars, n_profiles, profile_size,
+                 layer_sizes_spatial, kernel_size_spatial, linear_size,
+                 output_size, num_channels_tcn, kernel_size_temporal,
+                 dropout=0.1):
         super(FTCN, self).__init__()
-        self.lin = InputBlock(n_scalars, n_profiles,profile_size, layer_sizes_spatial, kernel_size_spatial, linear_size, dropout)
-        self.input_layer = TimeDistributed(self.lin,batch_first=True)
-        self.tcn = TCN(linear_size, output_size, num_channels_tcn , kernel_size_temporal, dropout)
-        self.model = nn.Sequential(self.input_layer,self.tcn)
-    
-    def forward(self,x):
+        self.lin = InputBlock(n_scalars, n_profiles, profile_size,
+                              layer_sizes_spatial, kernel_size_spatial,
+                              linear_size, dropout)
+        self.input_layer = TimeDistributed(self.lin, batch_first=True)
+        self.tcn = TCN(linear_size, output_size, num_channels_tcn,
+                       kernel_size_temporal, dropout)
+        self.model = nn.Sequential(self.input_layer, self.tcn)
+
+    def forward(self, x):
         return self.model(x)
 
 
 class InputBlock(nn.Module):
-    def __init__(self, n_scalars, n_profiles,profile_size, layer_sizes, kernel_size, linear_size, dropout=0.2):
+    def __init__(self, n_scalars, n_profiles, profile_size, layer_sizes,
+                 kernel_size, linear_size, dropout=0.2):
         super(InputBlock, self).__init__()
         self.pooling_size = 2
         self.n_scalars = n_scalars
@@ -62,58 +57,65 @@ class InputBlock(nn.Module):
             self.conv_output_size = 0
         else:
             self.layers = []
-            for (i,layer_size) in enumerate(layer_sizes):
+            for (i, layer_size) in enumerate(layer_sizes):
                 if i == 0:
                     input_size = n_profiles
                 else:
                     input_size = layer_sizes[i-1]
-                self.layers.append(weight_norm(nn.Conv1d(input_size, layer_size, kernel_size)))
+                self.layers.append(weight_norm(
+                    nn.Conv1d(input_size, layer_size, kernel_size)))
                 self.layers.append(nn.ReLU())
-                self.conv_output_size = calculate_conv_output_size(self.conv_output_size,0,1,1,kernel_size)
+                self.conv_output_size = calculate_conv_output_size(
+                    self.conv_output_size, 0, 1, 1, kernel_size)
                 self.layers.append(nn.MaxPool1d(kernel_size=self.pooling_size))
-                self.conv_output_size = calculate_conv_output_size(self.conv_output_size,0,1,self.pooling_size,self.pooling_size)
+                self.conv_output_size = calculate_conv_output_size(
+                    self.conv_output_size, 0, 1, self.pooling_size,
+                    self.pooling_size)
                 self.layers.append(nn.Dropout2d(dropout))
             self.net = nn.Sequential(*self.layers)
             self.conv_output_size = self.conv_output_size*layer_sizes[-1]
         self.linear_layers = []
-        
-        print("Final feature size = {}".format(self.n_scalars + self.conv_output_size))
-        self.linear_layers.append(nn.Linear(self.conv_output_size+self.n_scalars,linear_size))
+
+        print("Final feature size = {}".format(
+            self.n_scalars + self.conv_output_size))
+        self.linear_layers.append(nn.Linear(
+            self.conv_output_size + self.n_scalars, linear_size))
         self.linear_layers.append(nn.ReLU())
-        self.linear_layers.append(nn.Linear(linear_size,linear_size))
+        self.linear_layers.append(nn.Linear(linear_size, linear_size))
         self.linear_layers.append(nn.ReLU())
         print("Final output size = {}".format(linear_size))
         self.linear_net = nn.Sequential(*self.linear_layers)
 
-#     def init_weights(self):
-#         self.conv1.weight.data.normal_(0, 0.01)
-#         self.conv2.weight.data.normal_(0, 0.01)
-#         if self.downsample is not None:
-#             self.downsample.weight.data.normal_(0, 0.01)
+    # def init_weights(self):
+    # self.conv1.weight.data.normal_(0, 0.01)
+    # self.conv2.weight.data.normal_(0, 0.01)
+    # if self.downsample is not None:
+    # self.downsample.weight.data.normal_(0, 0.01)
 
     def forward(self, x):
         if self.n_profiles == 0:
-            full_features = x#x_scalars
+            full_features = x  # x_scalars
         else:
             if self.n_scalars == 0:
                 x_profiles = x
             else:
-                x_scalars = x[:,:self.n_scalars]
-                x_profiles = x[:,self.n_scalars:]
-            x_profiles = x_profiles.contiguous().view(x.size(0),self.n_profiles,self.profile_size)
-            profile_features = self.net(x_profiles).view(x.size(0),-1)
+                x_scalars = x[:, :self.n_scalars]
+                x_profiles = x[:, self.n_scalars:]
+            x_profiles = x_profiles.contiguous().view(
+                x.size(0), self.n_profiles, self.profile_size)
+            profile_features = self.net(x_profiles).view(x.size(0), -1)
             if self.n_scalars == 0:
                 full_features = profile_features
             else:
-                full_features = torch.cat([x_scalars,profile_features],dim=1)
-                
+                full_features = torch.cat([x_scalars, profile_features], dim=1)
+
         out = self.linear_net(full_features)
-#         out = self.net(x)
-#         res = x if self.downsample is None else self.downsample(x)
+        # out = self.net(x)
+        # res = x if self.downsample is None else self.downsample(x)
         return out
 
 
-def calculate_conv_output_size(L_in,padding,dilation,stride,kernel_size):
+def calculate_conv_output_size(L_in, padding, dilation, stride, kernel_size):
     return int(np.floor((L_in + 2*padding - dilation*(kernel_size-1) - 1)*1.0/stride + 1))
 
 
@@ -127,23 +129,28 @@ class Chomp1d(nn.Module):
 
 
 class TemporalBlock(nn.Module):
-    def __init__(self, n_inputs, n_outputs, kernel_size, stride, dilation, padding, dropout=0.2):
+    def __init__(self, n_inputs, n_outputs, kernel_size, stride, dilation,
+                 padding, dropout=0.2):
         super(TemporalBlock, self).__init__()
         self.conv1 = weight_norm(nn.Conv1d(n_inputs, n_outputs, kernel_size,
-                                           stride=stride, padding=padding, dilation=dilation))
+                                           stride=stride, padding=padding,
+                                           dilation=dilation))
         self.chomp1 = Chomp1d(padding)
         self.relu1 = nn.ReLU()
         self.dropout1 = nn.Dropout2d(dropout)
 
         self.conv2 = weight_norm(nn.Conv1d(n_outputs, n_outputs, kernel_size,
-                                           stride=stride, padding=padding, dilation=dilation))
+                                           stride=stride, padding=padding,
+                                           dilation=dilation))
         self.chomp2 = Chomp1d(padding)
         self.relu2 = nn.ReLU()
         self.dropout2 = nn.Dropout2d(dropout)
 
-        self.net = nn.Sequential(self.conv1, self.chomp1, self.relu1, self.dropout1,
-                                 self.conv2, self.chomp2, self.relu2, self.dropout2)
-        self.downsample = nn.Conv1d(n_inputs, n_outputs, 1) if n_inputs != n_outputs else None
+        self.net = nn.Sequential(self.conv1, self.chomp1, self.relu1,
+                                 self.dropout1,
+                                 self.conv2, self.chomp2, self.relu2,
+                                 self.dropout2)
+        self.downsample = nn.Conv1d(n_inputs, n_outputs, 1) if n_inputs != n_outputs else None  # noqa
         self.relu = nn.ReLU()
         self.init_weights()
 
@@ -158,7 +165,8 @@ class TemporalBlock(nn.Module):
         res = x if self.downsample is None else self.downsample(x)
         return self.relu(out + res)
 
-#dimensions are batch,channels,length
+
+# dimensions are batch X channels X length
 class TemporalConvNet(nn.Module):
     def __init__(self, num_inputs, num_channels, kernel_size=2, dropout=0.2):
         super(TemporalConvNet, self).__init__()
@@ -168,30 +176,31 @@ class TemporalConvNet(nn.Module):
             dilation_size = 2 ** i
             in_channels = num_inputs if i == 0 else num_channels[i-1]
             out_channels = num_channels[i]
-            layers += [TemporalBlock(in_channels, out_channels, kernel_size, stride=1, dilation=dilation_size,
-                                     padding=(kernel_size-1) * dilation_size, dropout=dropout)]
-
+            layers += [TemporalBlock(in_channels, out_channels, kernel_size,
+                                     stride=1, dilation=dilation_size,
+                                     padding=(kernel_size-1) * dilation_size,
+                                     dropout=dropout)]
         self.network = nn.Sequential(*layers)
 
     def forward(self, x):
         return self.network(x)
-    
-    
+
+
 class TCN(nn.Module):
-    def __init__(self, input_size, output_size, num_channels, kernel_size, dropout):
+    def __init__(self, input_size, output_size, num_channels, kernel_size,
+                 dropout):
         super(TCN, self).__init__()
-        self.tcn = TemporalConvNet(input_size, num_channels, kernel_size, dropout=dropout)
+        self.tcn = TemporalConvNet(input_size, num_channels, kernel_size,
+                                   dropout=dropout)
         self.linear = nn.Linear(num_channels[-1], output_size)
-#         self.sig = nn.Sigmoid()
+        # self.sig = nn.Sigmoid()
 
     def forward(self, x):
         # x needs to have dimension (N, C, L) in order to be passed into CNN
         output = self.tcn(x.transpose(1, 2)).transpose(1, 2)
-        output = self.linear(output)#.transpose(1,2)).transpose(1,2)
+        output = self.linear(output)  # .transpose(1,2)).transpose(1,2)
         return output
-#         return self.sig(output)
-
-
+    # return self.sig(output)
 
 
 # def train(model,data_gen,lr=0.001,iters = 100):
@@ -202,9 +211,11 @@ class TCN(nn.Module):
 #     count = 0
 #     loss_fn = nn.MSELoss(size_average=False)
 #     for i in range(iters):
-#         x_,y_,mask_ = data_gen() 
+#         x_,y_,mask_ = data_gen()
 # #         print(y)
-#         x, y, mask = Variable(torch.from_numpy(x_).float()), Variable(torch.from_numpy(y_).float()),Variable(torch.from_numpy(mask_).byte())
+#         x, y, mask = Variable(torch.from_numpy(x_).float()),
+#     Variable(torch.from_numpy(y_).float()),Variable(torch.from_numpy(mask_).byte())
+
 # #         print(y)
 #         optimizer.zero_grad()
 # #         output = model(x.unsqueeze(0)).squeeze(0)
@@ -226,64 +237,57 @@ class TCN(nn.Module):
 #             total_loss = 0.0
 #             count = 0
 
-
-
-
-
-
-
-
 class TimeDistributed(nn.Module):
-    def __init__(self, module,is_half=False, batch_first=False):
+    def __init__(self, module, is_half=False, batch_first=False):
         super(TimeDistributed, self).__init__()
         self.module = module
         self.batch_first = batch_first
-        self.is_half=is_half
-    def forward(self, x):
+        self.is_half = is_half
 
+    def forward(self, x):
         if len(x.size()) <= 2:
             return self.module(x)
-        x=x.float()
+        x = x.float()
 
         # Squash samples and timesteps into a single axis
-        x_reshape = x.contiguous().view(-1, x.size(-1))  # (samples * timesteps, input_size)
+        # (samples * timesteps, input_size)
+        x_reshape = x.contiguous().view(-1, x.size(-1))
 
         y = self.module(x_reshape)
 
         # We have to reshape Y
         if self.batch_first:
-            y = y.contiguous().view(x.size(0), -1, y.size(-1))  # (samples, timesteps, output_size)
+            # (samples, timesteps, output_size)
+            y = y.contiguous().view(x.size(0), -1, y.size(-1))
         else:
-            y = y.view(-1, x.size(1), y.size(-1))  # (timesteps, samples, output_size)
+            # (timesteps, samples, output_size)
+            y = y.view(-1, x.size(1), y.size(-1))
         if self.is_half:
-         y=y.half()
+            y = y.half()
         return y
-
-
-
 
 
 def build_torch_model(conf):
     dropout = conf['model']['dropout_prob']
-# dim = 10
+    # dim = 10
 
     # lin = nn.Linear(input_size,intermediate_dim)
     n_scalars, n_profiles, profile_size = get_signal_dimensions(conf)
-    print('n_scalars,n_profiles,profile_size=',n_scalars,n_profiles,profile_size)
+    print('n_scalars, n_profiles, profile_size=', n_scalars, n_profiles, profile_size)
     dim = n_scalars+n_profiles*profile_size
     input_size = dim
     output_size = 1
     # intermediate_dim = 15
 
-    layer_sizes_spatial = conf['model']['layer_size_spatial']#[40,20,20]
+    layer_sizes_spatial = conf['model']['layer_size_spatial']#[40, 20, 20]
     kernel_size_spatial = conf['model']['kernel_size_spatial']
     linear_size = 5
 
     num_channels_tcn = [conf['model']['tcn_hidden']]*conf['model']['tcn_layers']#[3]*5
     kernel_size_temporal = conf['model']['kernel_size_temporal'] #3
-    model = FTCN(n_scalars,n_profiles,profile_size,layer_sizes_spatial,
-             kernel_size_spatial,linear_size,output_size,num_channels_tcn,
-             kernel_size_temporal,dropout)
+    model = FTCN(n_scalars, n_profiles, profile_size, layer_sizes_spatial,
+             kernel_size_spatial, linear_size, output_size, num_channels_tcn,
+             kernel_size_temporal, dropout)
 #    model.cuda()
 #    para_model=nn.DataParallel(model)
     return model
@@ -306,15 +310,15 @@ def get_signal_dimensions(conf):
             assert(num_channels == 1)
             n_scalars += 1
             is_1D_region = False
-    return n_scalars,n_profiles,profile_size 
+    return n_scalars, n_profiles, profile_size
 
-def apply_model_to_np(model,x):
+def apply_model_to_np(model, x):
     #     return model(Variable(torch.from_numpy(x).float()).unsqueeze(0)).squeeze(0).data.numpy()
     return model(Variable(torch.from_numpy(x).float())).data.numpy()
 
 
 
-def make_predictions(conf,shot_list,loader,custom_path=None):
+def make_predictions(conf, shot_list, loader, custom_path=None):
     generator = loader.inference_batch_generator_full_shot(shot_list)
     inference_model = build_torch_model(conf)
 
@@ -322,9 +326,9 @@ def make_predictions(conf,shot_list,loader,custom_path=None):
         model_path = get_model_path(conf)
     else:
         model_path = custom_path
-    print('model-path is: ',model_path)
+    print('model-path is: ', model_path)
     a=torch.load(model_path)
-    print('tried loading model path',len(a))
+    print('tried loading model path', len(a))
     inference_model.load_state_dict(torch.load(model_path))
     #shot_list = shot_list.random_sublist(10)
 
@@ -334,38 +338,38 @@ def make_predictions(conf,shot_list,loader,custom_path=None):
     num_shots = len(shot_list)
 
     while True:
-        x,y,mask,disr,lengths,num_so_far,num_total = next(generator)
-        #x, y, mask = Variable(torch.from_numpy(x_).float()), Variable(torch.from_numpy(y_).float()),Variable(torch.from_numpy(mask_).byte())
-        output = apply_model_to_np(inference_model,x)
+        x, y, mask, disr, lengths, num_so_far, num_total = next(generator)
+        #x,  y,  mask = Variable(torch.from_numpy(x_).float()),  Variable(torch.from_numpy(y_).float()), Variable(torch.from_numpy(mask_).byte())
+        output = apply_model_to_np(inference_model, x)
         for batch_idx in range(x.shape[0]):
             curr_length = lengths[batch_idx]
-            y_prime += [output[batch_idx,:curr_length,0]]
-            y_gold += [y[batch_idx,:curr_length,0]]
+            y_prime += [output[batch_idx, :curr_length, 0]]
+            y_gold += [y[batch_idx, :curr_length, 0]]
             disruptive += [disr[batch_idx]]
         if len(disruptive) >= num_shots:
             y_prime = y_prime[:num_shots]
             y_gold = y_gold[:num_shots]
             disruptive = disruptive[:num_shots]
             break
-    return y_prime,y_gold,disruptive
+    return y_prime, y_gold, disruptive
 
-def make_predictions_and_evaluate_gpu(conf,shot_list,loader,custom_path = None):
-    y_prime,y_gold,disruptive = make_predictions(conf,shot_list,loader,custom_path)
+def make_predictions_and_evaluate_gpu(conf, shot_list, loader, custom_path = None):
+    y_prime, y_gold, disruptive = make_predictions(conf, shot_list, loader, custom_path)
     analyzer = PerformanceAnalyzer(conf=conf)
-    roc_area = analyzer.get_roc_area(y_prime,y_gold,disruptive)
-    loss = get_loss_from_list(y_prime,y_gold,conf['data']['target'])
-    return y_prime,y_gold,disruptive,roc_area,loss
+    roc_area = analyzer.get_roc_area(y_prime, y_gold, disruptive)
+    loss = get_loss_from_list(y_prime, y_gold, conf['data']['target'])
+    return y_prime, y_gold, disruptive, roc_area, loss
 
 
 def get_model_path(conf):
     return conf['paths']['model_save_path']  + model_filename #save_prepath + model_filename
 
 
-def train_epoch(model,data_gen,optimizer,loss_fn):
+def train_epoch(model, data_gen, optimizer, loss_fn):
     loss = 0
     total_loss = 0
     num_so_far = 0
-    x_,y_,mask_,num_so_far_start,num_total = next(data_gen)
+    x_, y_, mask_, num_so_far_start, num_total = next(data_gen)
     num_so_far = num_so_far_start
     step = 0
     while True:
@@ -412,7 +416,7 @@ def train(conf,shot_list_train,shot_list_validate,loader):
 
     loader.set_inference_mode(False)
 
-    train_model = build_torch_model(conf) 
+    train_model = build_torch_model(conf)
 
     if conf['data']['floatx'] == 'float16':
        train_model.half()
@@ -464,7 +468,7 @@ def train(conf,shot_list_train,shot_list_validate,loader):
         e = effective_epochs
         print('\nFiniehsed Training'.format(e,num_epochs),'finishing at',datetime.datetime.now())
         loader.verbose=False #True during the first iteration
-        # if task_index == 0: 
+        # if task_index == 0:
             # specific_builder.save_model_weights(train_model,int(round(e)))
         torch.save(train_model.state_dict(),model_path)
         _,_,_,roc_area,loss = make_predictions_and_evaluate_gpu(conf,shot_list_validate,loader)
@@ -486,4 +490,3 @@ def train(conf,shot_list_train,shot_list_validate,loader):
         if not_updated > patience:
             print("Stopping training due to early stopping")
             break
-

@@ -36,7 +36,6 @@ import sys
 import time
 import datetime
 import numpy as np
-import random
 
 from functools import partial
 from copy import deepcopy
@@ -314,7 +313,7 @@ class MPIModel():
 
         return_sequences = self.conf['model']['return_sequences']
         if not return_sequences:
-           Y_batch=Y_batch[:,-1,:]
+            Y_batch = Y_batch[:, -1, :]
         loss = self.model.train_on_batch(X_batch, Y_batch)
 
         weights_after_update = self.model.get_weights()
@@ -467,18 +466,19 @@ class MPIModel():
             pass
 
         return cbks.CallbackList(callbacks)
-    def add_noise(self,X):
-        if self.conf['training']['noise']==True:
-           prob=0.05
+
+    def add_noise(self, X):
+        if self.conf['training']['noise'] is True:
+            prob = 0.05
         else:
-           prob=self.conf['training']['noise']
-        for i in range(0,X.shape[0]):
-            for j in range(0,X.shape[2]):
-                a=random.randint(0,100)
-                if a<prob*100:
-                   X[i,:,j]=0.0
+            prob = self.conf['training']['noise']
+        for i in range(0, X.shape[0]):
+            for j in range(0, X.shape[2]):
+                a = random.randint(0, 100)
+                if a < prob*100:
+                    X[i, :, j] = 0.0
         return X
-             
+
     def train_epoch(self):
         '''
         The purpose of the method is to perform distributed mini-batch SGD for
@@ -551,8 +551,8 @@ class MPIModel():
             if first_run:
                 first_run = False
                 t0_comp = time.time()
-             #   print('input_dimension:',batch_xs.shape)
-             #   print('output_dimension:',batch_ys.shape)
+                #   print('input_dimension:',batch_xs.shape)
+                #   print('output_dimension:',batch_ys.shape)
                 _, _ = self.train_on_batch_and_get_deltas(
                     batch_xs, batch_ys, verbose)
                 self.comm.Barrier()
@@ -565,8 +565,9 @@ class MPIModel():
 
             if np.any(batches_to_reset):
                 reset_states(self.model, batches_to_reset)
-            if 'noise' in self.conf['training'].keys() and self.conf['training']['noise']!=False:
-                batch_xs=self.add_noise(batch_xs)
+            if ('noise' in self.conf['training'].keys()
+                    and self.conf['training']['noise'] is not False):
+                batch_xs = self.add_noise(batch_xs)
             t0 = time.time()
             deltas, loss = self.train_on_batch_and_get_deltas(
                 batch_xs, batch_ys, verbose)
@@ -879,12 +880,13 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
                                   histogram_freq=1, write_graph=True,
                                   write_grads=write_grads)
         tensorboard.set_model(mpi_model.model)
-        fr=open('model_architecture.log','a')
-        ori=sys.stdout
-        sys.stdout=fr
+        # TODO(KGF): check addition of TF model summary write added from fork
+        fr = open('model_architecture.log', 'a')
+        ori = sys.stdout
+        sys.stdout = fr
         mpi_model.model.summary()
-        sys.stdout=ori
-        fr.close()        
+        sys.stdout = ori
+        fr.close()
         mpi_model.model.summary()
 
     if g.task_index == 0:
