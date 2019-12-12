@@ -116,7 +116,8 @@ class InputBlock(nn.Module):
 
 
 def calculate_conv_output_size(L_in, padding, dilation, stride, kernel_size):
-    return int(np.floor((L_in + 2*padding - dilation*(kernel_size-1) - 1)*1.0/stride + 1))
+    return int(np.floor((L_in + 2*padding - dilation
+                         * (kernel_size-1) - 1)*1.0/stride + 1))
 
 
 class Chomp1d(nn.Module):
@@ -233,7 +234,8 @@ class TCN(nn.Module):
 #         optimizer.step()
 #         if i > 0 and i % log_step == 0:
 #             cur_loss = total_loss / count
-#             print("Epoch {:2d} | lr {:.5f} | loss {:.5f}".format(0,lr, cur_loss))
+#             print("Epoch {:2d} | lr {:.5f} | loss {:.5f}".format(
+#                   0, lr, cur_loss))
 #             total_loss = 0.0
 #             count = 0
 
@@ -269,36 +271,38 @@ class TimeDistributed(nn.Module):
 
 def build_torch_model(conf):
     dropout = conf['model']['dropout_prob']
-    # dim = 10
-
-    # lin = nn.Linear(input_size,intermediate_dim)
+    # lin = nn.Linear(input_size, intermediate_dim)
     n_scalars, n_profiles, profile_size = get_signal_dimensions(conf)
-    print('n_scalars, n_profiles, profile_size=', n_scalars, n_profiles, profile_size)
-    dim = n_scalars+n_profiles*profile_size
-    input_size = dim
-    output_size = 1
+    print('n_scalars, n_profiles, profile_size=',
+          n_scalars, n_profiles, profile_size)
+    # dim = n_scalars + n_profiles*profile_size
+    # input_size = dim
     # intermediate_dim = 15
+    output_size = 1
 
-    layer_sizes_spatial = conf['model']['layer_size_spatial']#[40, 20, 20]
+    layer_sizes_spatial = conf['model']['layer_size_spatial']  # [40, 20, 20]
     kernel_size_spatial = conf['model']['kernel_size_spatial']
     linear_size = 5
 
-    num_channels_tcn = [conf['model']['tcn_hidden']]*conf['model']['tcn_layers']#[3]*5
-    kernel_size_temporal = conf['model']['kernel_size_temporal'] #3
+    num_channels_tcn = ([conf['model']['tcn_hidden']]
+                        * conf['model']['tcn_layers'])  # [3]*5
+    kernel_size_temporal = conf['model']['kernel_size_temporal']  # 3
     model = FTCN(n_scalars, n_profiles, profile_size, layer_sizes_spatial,
-             kernel_size_spatial, linear_size, output_size, num_channels_tcn,
-             kernel_size_temporal, dropout)
-#    model.cuda()
-#    para_model=nn.DataParallel(model)
+                 kernel_size_spatial, linear_size, output_size,
+                 num_channels_tcn, kernel_size_temporal, dropout)
+    #    model.cuda()
+    #    para_model = nn.DataParallel(model)
     return model
 
+
 def get_signal_dimensions(conf):
-    #make sure all 1D indices are contiguous in the end!
+    # make sure all 1D indices are contiguous in the end!
     use_signals = conf['paths']['use_signals']
     n_scalars = 0
     n_profiles = 0
     profile_size = 0
-    is_1D_region = use_signals[0].num_channels > 1#do we have any 1D indices?
+    # do we have any 1D indices?
+    is_1D_region = use_signals[0].num_channels > 1
     for sig in use_signals:
         num_channels = sig.num_channels
         if num_channels > 1:
@@ -306,31 +310,33 @@ def get_signal_dimensions(conf):
             n_profiles += 1
             is_1D_region = True
         else:
-            assert(not is_1D_region), "make sure all use_signals are ordered such that 1D signals come last!"
-            assert(num_channels == 1)
+            assert not is_1D_region, (
+                "Check that use_signals are ordered with 1D signals last!")
+            assert num_channels == 1
             n_scalars += 1
             is_1D_region = False
     return n_scalars, n_profiles, profile_size
 
-def apply_model_to_np(model, x):
-    #     return model(Variable(torch.from_numpy(x).float()).unsqueeze(0)).squeeze(0).data.numpy()
-    return model(Variable(torch.from_numpy(x).float())).data.numpy()
 
+def apply_model_to_np(model, x):
+    # return
+    # model(Variable(torch.from_numpy(x).float()).unsqueeze(0)).squeeze(0).data.numpy()
+    return model(Variable(torch.from_numpy(x).float())).data.numpy()
 
 
 def make_predictions(conf, shot_list, loader, custom_path=None):
     generator = loader.inference_batch_generator_full_shot(shot_list)
     inference_model = build_torch_model(conf)
 
-    if custom_path == None:
+    if custom_path is None:
         model_path = get_model_path(conf)
     else:
         model_path = custom_path
     print('model-path is: ', model_path)
-    a=torch.load(model_path)
+    a = torch.load(model_path)
     print('tried loading model path', len(a))
     inference_model.load_state_dict(torch.load(model_path))
-    #shot_list = shot_list.random_sublist(10)
+    # shot_list = shot_list.random_sublist(10)
 
     y_prime = []
     y_gold = []
@@ -339,7 +345,9 @@ def make_predictions(conf, shot_list, loader, custom_path=None):
 
     while True:
         x, y, mask, disr, lengths, num_so_far, num_total = next(generator)
-        #x,  y,  mask = Variable(torch.from_numpy(x_).float()),  Variable(torch.from_numpy(y_).float()), Variable(torch.from_numpy(mask_).byte())
+        # x, y, mask = Variable(torch.from_numpy(x_).float()),
+        # Variable(torch.from_numpy(y_).float()),
+        # Variable(torch.from_numpy(mask_).byte())
         output = apply_model_to_np(inference_model, x)
         for batch_idx in range(x.shape[0]):
             curr_length = lengths[batch_idx]
@@ -353,8 +361,11 @@ def make_predictions(conf, shot_list, loader, custom_path=None):
             break
     return y_prime, y_gold, disruptive
 
-def make_predictions_and_evaluate_gpu(conf, shot_list, loader, custom_path = None):
-    y_prime, y_gold, disruptive = make_predictions(conf, shot_list, loader, custom_path)
+
+def make_predictions_and_evaluate_gpu(
+        conf, shot_list, loader, custom_path=None):
+    y_prime, y_gold, disruptive = make_predictions(
+        conf, shot_list, loader, custom_path)
     analyzer = PerformanceAnalyzer(conf=conf)
     roc_area = analyzer.get_roc_area(y_prime, y_gold, disruptive)
     loss = get_loss_from_list(y_prime, y_gold, conf['data']['target'])
@@ -362,7 +373,8 @@ def make_predictions_and_evaluate_gpu(conf, shot_list, loader, custom_path = Non
 
 
 def get_model_path(conf):
-    return conf['paths']['model_save_path']  + model_filename #save_prepath + model_filename
+    return (conf['paths']['model_save_path']
+            + model_filename)  # save_prepath + model_filename
 
 
 def train_epoch(model, data_gen, optimizer, loss_fn):
@@ -373,69 +385,87 @@ def train_epoch(model, data_gen, optimizer, loss_fn):
     num_so_far = num_so_far_start
     step = 0
     while True:
-    #         print(y)
+        #         print(y)
         if conf['data']['floatx'] == 'float16':
-           x, y, mask = Variable(torch.from_numpy(x_).half()), Variable(torch.from_numpy(y_).half()),Variable(torch.from_numpy(mask_).byte())
+            x, y, mask = Variable(
+                torch.from_numpy(x_).half()), Variable(
+                torch.from_numpy(y_).half()), Variable(
+                torch.from_numpy(mask_).byte())
         else:
-           x, y, mask = Variable(torch.from_numpy(x_).float()), Variable(torch.from_numpy(y_).float()),Variable(torch.from_numpy(mask_).byte())
-    #         print(y)
-    #    x,y,mask=x.cuda(),y.cuda(),mask.cuda()
+            x, y, mask = Variable(
+                torch.from_numpy(x_).float()), Variable(
+                torch.from_numpy(y_).float()), Variable(
+                torch.from_numpy(mask_).byte())
+        # print(y)
+        # x, y, mask=x.cuda(),y.cuda(),mask.cuda()
         optimizer.zero_grad()
-    #         output = model(x.unsqueeze(0)).squeeze(0)
-        output = model(x)#.unsqueeze(0)).squeeze(0)
-        output_masked = torch.masked_select(output,mask)
-        y_masked = torch.masked_select(y,mask)
+        # output = model(x.unsqueeze(0)).squeeze(0)
+        output = model(x)  # .unsqueeze(0)).squeeze(0)
+        output_masked = torch.masked_select(output, mask)
+        y_masked = torch.masked_select(y, mask)
         print('OUTPUTSHAPING::')
-        print('y.shape:',y.shape)
-        print('output.shape:',output.shape)
-        loss = loss_fn(output_masked,y_masked)
+        print('y.shape:', y.shape)
+        print('output.shape:', output.shape)
+        loss = loss_fn(output_masked, y_masked)
         total_loss += loss.data.item()
         # count += output.size(0)
 
         # if args.clip > 0:
-            # torch.nn.utils.clip_grad_norm(model.parameters(), args.clip)
+        # torch.nn.utils.clip_grad_norm(model.parameters(), args.clip)
         loss.backward()
         optimizer.step()
         step += 1
-        print("[{}]  [{}/{}] loss: {:.3f}, ave_loss: {:.3f}".format(step,num_so_far-num_so_far_start,num_total,loss.data.item(),total_loss/step))
+        print("[{}]  [{}/{}] loss: {:.3f}, ave_loss: {:.3f}".format(
+            step, num_so_far-num_so_far_start, num_total, loss.data.item(),
+            total_loss/step))
         if num_so_far-num_so_far_start >= num_total:
             break
-        x_,y_,mask_,num_so_far,num_total = next(data_gen)
-    return step,loss.data.item(),total_loss,num_so_far,1.0*num_so_far/num_total
+        x_, y_, mask_, num_so_far, num_total = next(data_gen)
+    return (step, loss.data.item(), total_loss, num_so_far,
+            1.0*num_so_far/num_total)
 
 
-def train(conf,shot_list_train,shot_list_validate,loader):
-
+def train(conf, shot_list_train, shot_list_validate, loader):
     np.random.seed(1)
+    # data_gen =
+    # ProcessGenerator(partial(loader.training_batch_generator_full_shot_partial_reset,
+    # shot_list=shot_list_train)())
+    data_gen = partial(
+        loader.training_batch_generator_full_shot_partial_reset,
+        shot_list=shot_list_train)()
 
-    #data_gen = ProcessGenerator(partial(loader.training_batch_generator_full_shot_partial_reset,shot_list=shot_list_train)())
-    data_gen = partial(loader.training_batch_generator_full_shot_partial_reset,shot_list=shot_list_train)()
-
-    print('validate: {} shots, {} disruptive'.format(len(shot_list_validate),shot_list_validate.num_disruptive()))
-    print('training: {} shots, {} disruptive'.format(len(shot_list_train),shot_list_train.num_disruptive()))
+    print(
+        'validate: {} shots, {} disruptive'.format(
+            len(shot_list_validate),
+            shot_list_validate.num_disruptive()))
+    print(
+        'training: {} shots, {} disruptive'.format(
+            len(shot_list_train),
+            shot_list_train.num_disruptive()))
 
     loader.set_inference_mode(False)
 
     train_model = build_torch_model(conf)
 
     if conf['data']['floatx'] == 'float16':
-       train_model.half()
-    #load the latest epoch we did. Returns -1 if none exist yet
+        train_model.half()
+    # load the latest epoch we did. Returns -1 if none exist yet
     # e = specific_builder.load_model_weights(train_model)
 
     num_epochs = conf['training']['num_epochs']
     patience = conf['callbacks']['patience']
     lr_decay = conf['model']['lr_decay']
-    batch_size = conf['training']['batch_size']
+    # batch_size = conf['training']['batch_size']
     lr = conf['model']['lr']
-    clipnorm = conf['model']['clipnorm']
+    # clipnorm = conf['model']['clipnorm']
     e = 0
     # warmup_steps = conf['model']['warmup_steps']
     # num_batches_minimum = conf['training']['num_batches_minimum']
 
     # if 'adam' in conf['model']['optimizer']:
     #     optimizer = MPIAdam(lr=lr)
-    # elif conf['model']['optimizer'] == 'sgd' or conf['model']['optimizer'] == 'tf_sgd':
+    # elif conf['model']['optimizer'] == 'sgd'
+    #     or conf['model']['optimizer'] == 'tf_sgd':
     #     optimizer = MPISGD(lr=lr)
     # elif 'momentum_sgd' in conf['model']['optimizer']:
     #     optimizer = MPIMomentumSGD(lr=lr)
@@ -443,45 +473,49 @@ def train(conf,shot_list_train,shot_list_validate,loader):
     #     print("Optimizer not implemented yet")
     #     exit(1)
 
-
-
     if conf['callbacks']['mode'] == 'max':
         best_so_far = -np.inf
         cmp_fn = max
     else:
         best_so_far = np.inf
         cmp_fn = min
-    optimizer = opt.Adam(train_model.parameters(),lr = lr)
-    scheduler = opt.lr_scheduler.ExponentialLR(optimizer,lr_decay)
+    optimizer = opt.Adam(train_model.parameters(), lr=lr)
+    scheduler = opt.lr_scheduler.ExponentialLR(optimizer, lr_decay)
     train_model.train()
     not_updated = 0
-    total_loss = 0
-    count = 0
+    # total_loss = 0
+    # count = 0
     loss_fn = nn.MSELoss(size_average=True)
     model_path = get_model_path(conf)
     makedirs_process_safe(os.path.dirname(model_path))
     while e < num_epochs-1:
         print('{} epochs left to go'.format(num_epochs - 1 - e))
         scheduler.step()
-        print('\nTraining Epoch {}/{}'.format(e,num_epochs),'starting at',datetime.datetime.now())
-        (step,ave_loss,curr_loss,num_so_far,effective_epochs) = train_epoch(train_model,data_gen,optimizer,loss_fn)
+        print('\nTraining Epoch {}/{}'.format(e, num_epochs),
+              'starting at', datetime.datetime.now())
+        (step, ave_loss, curr_loss, num_so_far,
+         effective_epochs) = train_epoch(
+             train_model, data_gen, optimizer, loss_fn)
         e = effective_epochs
-        print('\nFiniehsed Training'.format(e,num_epochs),'finishing at',datetime.datetime.now())
-        loader.verbose=False #True during the first iteration
+        print('\nFiniehsed Training'.format(e, num_epochs),
+              'finishing at', datetime.datetime.now())
+        loader.verbose = False  # True during the first iteration
         # if task_index == 0:
-            # specific_builder.save_model_weights(train_model,int(round(e)))
-        torch.save(train_model.state_dict(),model_path)
-        _,_,_,roc_area,loss = make_predictions_and_evaluate_gpu(conf,shot_list_validate,loader)
+        # specific_builder.save_model_weights(train_model,int(round(e)))
+        torch.save(train_model.state_dict(), model_path)
+        _, _, _, roc_area, loss = make_predictions_and_evaluate_gpu(
+            conf, shot_list_validate, loader)
 
-        best_so_far = cmp_fn(roc_area,best_so_far)
+        best_so_far = cmp_fn(roc_area, best_so_far)
 
-        stop_training = False
+        # stop_training = False
         print('=========Summary======== for epoch{}'.format(step))
         print('Training Loss numpy: {:.3e}'.format(ave_loss))
         print('Validation Loss: {:.3e}'.format(loss))
         print('Validation ROC: {:.4f}'.format(roc_area))
 
-        if best_so_far != roc_area: #only save model weights if quantity we are tracking is improving
+        if best_so_far != roc_area:
+            # only save model weights if quantity we are tracking is improving
             print("No improvement, still saving model")
             not_updated += 1
         else:
