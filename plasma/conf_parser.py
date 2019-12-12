@@ -38,11 +38,11 @@ def parameters(input_file):
             base_path + params['paths']['shot_list_dir'])
         params['paths']['output_path'] = output_path
         if params['paths']['data'] == 'd3d_data_gar18':
-           h = myhash_signals(sig.all_signals_gar18.values())
+            h = myhash_signals(sig.all_signals_gar18.values())
         elif params['paths']['data'] == 'd3d_data_garbage':
-           h = myhash_signals(sig.all_signals_gar18.values())*2
+            h = myhash_signals(sig.all_signals_gar18.values())*2
         else:
-           h = myhash_signals(sig.all_signals.values())
+            h = myhash_signals(sig.all_signals.values())
         params['paths']['global_normalizer_path'] = (
             output_path
             + '/normalization/normalization_signal_group_{}.npz'.format(h))
@@ -96,9 +96,9 @@ def parameters(input_file):
 
         # signals
         if params['paths']['data'] in ['d3d_data_gar18', 'd3d_data_garbage']:
-           params['paths']['all_signals_dict'] = sig.all_signals_gar18
+            params['paths']['all_signals_dict'] = sig.all_signals_gar18
         else:
-           params['paths']['all_signals_dict'] = sig.all_signals
+            params['paths']['all_signals_dict'] = sig.all_signals
 
         # assert order
         # q95, li, ip, lm, betan, energy, dens, pradcore, pradedge, pin,
@@ -242,7 +242,7 @@ def parameters(input_file):
                 'etemp_profile': sig.etemp_profile,
                 'edens_profile': sig.edens_profile,
             }
-        elif params['paths']['data'] in ['d3d_data_gar18','d3d_data_garbage']:
+        elif params['paths']['data'] in ['d3d_data_gar18', 'd3d_data_garbage']:
             params['paths']['shot_files'] = [d3d_full_new]
             params['paths']['shot_files_test'] = []
             params['paths']['use_signals_dict'] = {

@@ -285,34 +285,40 @@ ip = Signal("plasma current", ["jpf/da/c2-ipla", "d3d/ipspr15V"],
             [jet, d3d], is_ip=True)
 
 ipt = Signal("plasma current tol", ["jpf/da/c2-ipla", "d3d/ipspr15V"],
-            [jet, d3d], is_ip=True,data_avail_tolerances=[0.029, 0.029])
+             [jet, d3d], is_ip=True, data_avail_tolerances=[0.029, 0.029])
 iptarget = Signal("plasma current target", ["d3d/ipsiptargt"], [d3d])
-iptargett = Signal("plasma current target tol", ["d3d/ipsiptargt"], [d3d],data_avail_tolerances=[0.029])
+iptargett = Signal("plasma current target tol", ["d3d/ipsiptargt"], [d3d],
+                   data_avail_tolerances=[0.029])
 iperr = Signal("plasma current error", ["d3d/ipeecoil"], [d3d])
-iperrt = Signal("plasma current error tol", ["d3d/ipeecoil"], [d3d],data_avail_tolerances=[0.029])
+iperrt = Signal("plasma current error tol", ["d3d/ipeecoil"], [d3d],
+                data_avail_tolerances=[0.029])
 
 li = Signal("internal inductance", ["jpf/gs/bl-li<s", "d3d/efsli"], [jet, d3d])
-lit = Signal("internal inductance tol", ["jpf/gs/bl-li<s", "d3d/efsli"], [jet, d3d],data_avail_tolerances=[0.029, 0.029])
+lit = Signal("internal inductance tol", ["jpf/gs/bl-li<s", "d3d/efsli"],
+             [jet, d3d], data_avail_tolerances=[0.029, 0.029])
 lm = Signal("Locked mode amplitude", ['jpf/da/c2-loca', 'd3d/dusbradial'],
             [jet, d3d])
 lmt = Signal("Locked mode amplitude tol", ['jpf/da/c2-loca', 'd3d/dusbradial'],
-            [jet, d3d],data_avail_tolerances=[0.029, 0.029])
+             [jet, d3d], data_avail_tolerances=[0.029, 0.029])
 dens = Signal("Plasma density", ['jpf/df/g1r-lid:003', 'd3d/dssdenest'],
               [jet, d3d], is_strictly_positive=True)
 denst = Signal("Plasma density tol", ['jpf/df/g1r-lid:003', 'd3d/dssdenest'],
-              [jet, d3d], is_strictly_positive=True,data_avail_tolerances=[0.029, 0.029])
+               [jet, d3d], is_strictly_positive=True,
+               data_avail_tolerances=[0.029, 0.029])
 energy = Signal("stored energy", ['jpf/gs/bl-wmhd<s', 'd3d/efswmhd'],
                 [jet, d3d])
 energyt = Signal("stored energy tol", ['jpf/gs/bl-wmhd<s', 'd3d/efswmhd'],
-                [jet, d3d],data_avail_tolerances=[0.029, 0.029])
+                 [jet, d3d], data_avail_tolerances=[0.029, 0.029])
 # Total beam input power
 pin = Signal("Input Power (beam for d3d)", ['jpf/gs/bl-ptot<s', 'd3d/bmspinj'],
              [jet, d3d])
-pint = Signal("Input Power (beam for d3d) tol", ['jpf/gs/bl-ptot<s', 'd3d/bmspinj'],
-             [jet, d3d],data_avail_tolerances=[0.029, 0.029])
+pint = Signal("Input Power (beam for d3d) tol",
+              ['jpf/gs/bl-ptot<s', 'd3d/bmspinj'],
+              [jet, d3d], data_avail_tolerances=[0.029, 0.029])
 
 pradtot = Signal("Radiated Power", ['jpf/db/b5r-ptot>out'], [jet])
-pradtott = Signal("Radiated Power tol", ['jpf/db/b5r-ptot>out'], [jet],data_avail_tolerances=[0.029])
+pradtott = Signal("Radiated Power tol", ['jpf/db/b5r-ptot>out'], [jet],
+                  data_avail_tolerances=[0.029])
 # pradtot = Signal("Radiated Power", ['jpf/db/b5r-ptot>out',
 # 'd3d/'+r'\prad_tot'], [jet,d3d])
 # pradcore = ChannelSignal("Radiated Power Core", [ 'd3d/' + r'\bol_l15_p']
@@ -326,26 +332,29 @@ pradedge = ChannelSignal("Radiated Power Edge",
                          ['ppf/bolo/kb5h/channel10', 'd3d/' + r'\bol_l03_p'],
                          [jet, d3d])
 pradcoret = ChannelSignal("Radiated Power Core tol",
-                         ['ppf/bolo/kb5h/channel14', 'd3d/' + r'\bol_l15_p'],
-                         [jet, d3d],data_avail_tolerances=[0.029, 0.029])
-pradedget = ChannelSignal("Radiated Power Edge tol" ,
-                         ['ppf/bolo/kb5h/channel10', 'd3d/' + r'\bol_l03_p'],
-                         [jet, d3d],data_avail_tolerances=[0.029, 0.029])
+                          ['ppf/bolo/kb5h/channel14', 'd3d/' + r'\bol_l15_p'],
+                          [jet, d3d], data_avail_tolerances=[0.029, 0.029])
+pradedget = ChannelSignal("Radiated Power Edge tol",
+                          ['ppf/bolo/kb5h/channel10', 'd3d/' + r'\bol_l03_p'],
+                          [jet, d3d], data_avail_tolerances=[0.029, 0.029])
 # pechin = Signal("ECH input power, not always on", ['d3d/pcechpwrf'], [d3d])
 pechin = Signal("ECH input power, not always on",
                 ['RF/ECH.TOTAL.ECHPWRC'], [d3d])
 pechint = Signal("ECH input power, not always on tol",
-                ['RF/ECH.TOTAL.ECHPWRC'], [d3d],data_avail_tolerances=[0.029])
+                 ['RF/ECH.TOTAL.ECHPWRC'], [d3d],
+                 data_avail_tolerances=[0.029])
 
 # betan = Signal("Normalized Beta", ['jpf/gs/bl-bndia<s', 'd3d/efsbetan'],
 # [jet, d3d])
 betan = Signal("Normalized Beta", ['d3d/efsbetan'], [d3d])
-betant = Signal("Normalized Beta tol", ['d3d/efsbetan'], [d3d],data_avail_tolerances=[0.029])
+betant = Signal("Normalized Beta tol", ['d3d/efsbetan'], [d3d],
+                data_avail_tolerances=[0.029])
 energydt = Signal(
     "stored energy time derivative", ['jpf/gs/bl-fdwdt<s'], [jet])
 
 torquein = Signal("Input Beam Torque", ['d3d/bmstinj'], [d3d])
-torqueint = Signal("Input Beam Torque tol", ['d3d/bmstinj'], [d3d],data_avail_tolerances=[0.029])
+torqueint = Signal("Input Beam Torque tol", ['d3d/bmstinj'], [d3d],
+                   data_avail_tolerances=[0.029])
 tmamp1 = Signal("Tearing Mode amplitude (rotating 2/1)", ['d3d/nssampn1l'],
                 [d3d])
 tmamp2 = Signal("Tearing Mode amplitude (rotating 3/2)", ['d3d/nssampn2l'],
@@ -355,7 +364,8 @@ tmfreq1 = Signal("Tearing Mode frequency (rotating 2/1)", ['d3d/nssfrqn1l'],
 tmfreq2 = Signal("Tearing Mode frequency (rotating 3/2)", ['d3d/nssfrqn2l'],
                  [d3d])
 ipdirect = Signal("plasma current direction", ["d3d/iptdirect"], [d3d])
-ipdirectt = Signal("plasma current direction tol", ["d3d/iptdirect"], [d3d],data_avail_tolerances=[0.029])
+ipdirectt = Signal("plasma current direction tol", ["d3d/iptdirect"], [d3d],
+                   data_avail_tolerances=[0.029])
 
 # for downloading, modify this to preprocess shots with only a subset of
 # signals. This may produce more shots
@@ -394,20 +404,13 @@ all_signals_garbage = {
     'etemp_profilet': etemp_profilet, 'edens_profilet': edens_profilet,
 }
 
-
-
-
-# new signals are not downloaded yet
-
-
-# for actual data analysis
+# for actual data analysis, use:
 # all_signals_restricted = [q95, li, ip, energy, lm, dens, pradcore, pradtot,
 # pin, etemp_profile, edens_profile]
-
 all_signals_restricted = all_signals
 
 g.print_unique('All signals (determines which signals are downloaded'
-              ' & preprocessed):')
+               ' & preprocessed):')
 g.print_unique(all_signals.values())
 
 
