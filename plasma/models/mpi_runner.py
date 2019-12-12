@@ -790,7 +790,7 @@ def mpi_make_predictions_and_evaluate_multiple_times(conf, shot_list, loader,
         conf_curr = deepcopy(conf)
         T_min_warn_orig = conf['data']['T_min_warn']
         conf_curr['data']['T_min_warn'] = T_min_curr
-        assert(conf['data']['T_min_warn'] == T_min_warn_orig)
+        assert conf['data']['T_min_warn'] == T_min_warn_orig
         analyzer = PerformanceAnalyzer(conf=conf_curr)
         roc_area = analyzer.get_roc_area(y_prime, y_gold, disruptive)
         # shot_list.set_weights(analyzer.get_shot_difficulty(y_prime, y_gold,

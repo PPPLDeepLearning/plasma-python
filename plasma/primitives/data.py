@@ -28,7 +28,7 @@ class Signal(object):
                  causal_shifts=None, is_ip=False, normalize=True,
                  data_avail_tolerances=None, is_strictly_positive=False,
                  mapping_paths=None):
-        assert(len(paths) == len(machines))
+        assert len(paths) == len(machines)
         self.description = description
         self.paths = paths
         self.machines = machines  # on which machines is the signal defined
@@ -185,7 +185,7 @@ class Signal(object):
         return self.data_avail_tolerances[idx]
 
     def get_idx(self, machine):
-        assert(machine in self.machines)
+        assert machine in self.machines
         idx = self.machines.index(machine)
         return idx
 
@@ -329,10 +329,10 @@ class ChannelSignal(Signal):
         nums = []
         new_paths = []
         for p in paths:
-            assert(p[-1] != '/')
+            assert p[-1] != '/'
             elements = p.split('/')
             res = regex.findall(elements[-1])
-            assert(len(res) < 2)
+            assert len(res) < 2
             if len(res) == 0:
                 nums.append(None)
                 new_paths.append(p)

@@ -37,11 +37,8 @@ class ShotListFiles(object):
         return self.__str__()
 
     def get_single_shot_numbers_and_disruption_times(self, full_path):
-        data = np.loadtxt(
-            full_path, ndmin=1, dtype={
-                'names': (
-                    'num', 'disrupt_times'), 'formats': (
-                    'i4', 'f4')})
+        data = np.loadtxt(full_path, ndmin=1, dtype={
+            'names': ('num', 'disrupt_times'), 'formats': ('i4', 'f4')})
         shots = np.array(list(zip(*data))[0])
         disrupt_times = np.array(list(zip(*data))[1])
         return shots, disrupt_times
@@ -75,7 +72,7 @@ class ShotList(object):
         '''
         self.shots = []
         if shots is not None:
-            assert(all([isinstance(shot, Shot) for shot in shots]))
+            assert all([isinstance(shot, Shot) for shot in shots])
             self.shots = [shot for shot in shots]
 
     def load_from_shot_list_files_object(
@@ -87,9 +84,7 @@ class ShotList(object):
             self.append(
                 Shot(number=number, t_disrupt=t, machine=machine,
                      signals=[s for s in signals if
-                              s.is_defined_on_machine(machine)]
-                     )
-                )
+                              s.is_defined_on_machine(machine)]))
 
     def load_from_shot_list_files_objects(
             self, shot_list_files_objects, signals):
@@ -143,7 +138,7 @@ class ShotList(object):
         return new_shot_list
 
     def set_weights(self, weights):
-        assert(len(weights) == len(self.shots))
+        assert len(weights) == len(self.shots)
         for (i, w) in enumerate(weights):
             self.shots[i].weight = w
 
@@ -247,13 +242,13 @@ class ShotList(object):
         return self.shots
 
     def append(self, shot):
-        assert(isinstance(shot, Shot))
+        assert isinstance(shot, Shot)
         self.shots.append(shot)
 
     def remove(self, shot):
-        assert(shot in self.shots)
+        assert shot in self.shots
         self.shots.remove(shot)
-        assert(shot not in self.shots)
+        assert shot not in self.shots
 
     def make_light(self):
         for shot in self.shots:
@@ -278,16 +273,9 @@ class Shot(object):
     property.
     '''
 
-    def __init__(
-            self,
-            number=None,
-            machine=None,
-            signals=None,
-            signals_dict=None,
-            ttd=None,
-            valid=None,
-            is_disruptive=None,
-            t_disrupt=None):
+    def __init__(self, number=None, machine=None, signals=None,
+                 signals_dict=None, ttd=None, valid=None, is_disruptive=None,
+                 t_disrupt=None):
         '''
         Shot objects contain following attributes:
 
@@ -428,9 +416,9 @@ class Shot(object):
                     signal_arrays.append(sig)
                     time_arrays.append(t)
             else:
-                assert(len(sig.shape) == 2)
-                assert(len(t.shape) == 1)
-                assert(len(t) > 1)
+                assert len(sig.shape) == 2
+                assert len(t.shape) == 1
+                assert len(t) > 1
                 t_min = max(t_min, np.min(t))
                 signal_arrays.append(sig)
                 time_arrays.append(t)
@@ -467,12 +455,11 @@ class Shot(object):
                 self.number))
             valid = False
 
-        assert(
-            t_max > t_min or not valid), "t max: {}, t_min: {}".format(
-            t_max, t_min)
+        assert t_max > t_min or not valid, (
+            "t max: {}, t_min: {}".format(t_max, t_min))
 
         if self.is_disruptive:
-            assert(self.t_disrupt <= t_max or not valid)
+            assert self.t_disrupt <= t_max or not valid
             t_max = self.t_disrupt
         if invalid_signals > 3:
             # Omit shot if more than 3 channels are bad
@@ -488,8 +475,8 @@ class Shot(object):
         signals_dict = dict()
 
         # resample signals
-        assert((len(signal_arrays) == len(time_arrays)
-                == len(self.signals)) and len(signal_arrays) > 0)
+        assert len(signal_arrays) == len(time_arrays) == len(self.signals)
+        assert len(signal_arrays) > 0
         tr = 0
         for (i, signal) in enumerate(self.signals):
             tr, sigr = cut_and_resample_signal(

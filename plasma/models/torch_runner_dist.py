@@ -23,6 +23,7 @@ if sys.version_info[0] < 3:
     from itertools import imap  # noqa
 
 model_filename = 'torch_model.pt'
+# TODO(KGF): deduplicate code with torch_runner.py and mpi_runner.py
 
 
 class FTCN(nn.Module):

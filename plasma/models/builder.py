@@ -77,10 +77,9 @@ class ModelBuilder(object):
                 num_1D += 1
                 is_1D_region = True
             else:
-                assert(not is_1D_region)
-                # , "make sure all use_signals are ordered such that 1D signals
-                # come last!"
-                assert(num_channels == 1)
+                assert not is_1D_region, (
+                    "Check that use_signals are ordered with 1D signals last!")
+                assert num_channels == 1
                 indices_0d += indices
                 num_0D += 1
                 is_1D_region = False
@@ -160,61 +159,66 @@ class ModelBuilder(object):
             # slicer_output_shape(s,indices_0d))(pre_rnn_input)
             pre_rnn_1D = Reshape((num_1D, len(indices_1d)//num_1D))(pre_rnn_1D)
             pre_rnn_1D = Permute((2, 1))(pre_rnn_1D)
-            if 'simple_conv' in model_conf.keys() and model_conf['simple_conv']==True:
-              for i in range(model_conf['num_conv_layers']):
-                pre_rnn_1D = Convolution1D(num_conv_filters,size_conv_filters,padding='valid',activation='relu') (pre_rnn_1D)
-                pre_rnn_1D = MaxPooling1D(pool_size) (pre_rnn_1D) 
-            else:
-              for i in range(model_conf['num_conv_layers']):
-                div_fac = 2**i
-                '''The first conv layer learns `num_conv_filters//div_fac`
-                filters (aka kernels), each of size
-                `(size_conv_filters, num1D)`. Its output will have shape
-                (None, len(indices_1d)//num_1D - size_conv_filters + 1,
-                num_conv_filters//div_fac), i.e., for
-                each position in the input spatial series (direction along
-                radius), the activation of each filter at that position.
-
-                '''
-
-                '''For i=1 first conv layer would get:
-                (None, (len(indices_1d)//num_1D - size_conv_filters
-                + 1)/pool_size-size_conv_filters + 1,num_conv_filters//div_fac)
-
-                '''
-                pre_rnn_1D = Convolution1D(
-                    num_conv_filters//div_fac, size_conv_filters,
-                    padding='valid')(pre_rnn_1D)
-                if use_batch_norm:
-                    pre_rnn_1D = BatchNormalization()(pre_rnn_1D)
-                pre_rnn_1D = Activation('relu')(pre_rnn_1D)
-
-                '''The output of the second conv layer will have shape
-                (None, len(indices_1d)//num_1D - size_conv_filters + 1,
-                num_conv_filters//div_fac),
-                i.e., for each position in the input spatial series
-                (direction along radius), the activation of each filter
-                at that position.
-
-                For i=1, the second layer would output
-                (None, (len(indices_1d)//num_1D - size_conv_filters + 1)/
-                pool_size-size_conv_filters + 1,num_conv_filters//div_fac)
-                '''
-                pre_rnn_1D = Convolution1D(
-                    num_conv_filters//div_fac, 1, padding='valid')(pre_rnn_1D)
-                if use_batch_norm:
-                    pre_rnn_1D = BatchNormalization()(pre_rnn_1D)
-                pre_rnn_1D = Activation('relu')(pre_rnn_1D)
-                '''Outputs (None, (len(indices_1d)//num_1D - size_conv_filters
-                + 1)/pool_size, num_conv_filters//div_fac)
-
-                For i=1, the pooling layer would output:
-                (None,((len(indices_1d)//num_1D- size_conv_filters
-                + 1)/pool_size-size_conv_filters+1)/pool_size,
-                num_conv_filters//div_fac)
-
-                '''
+            if ('simple_conv' in model_conf.keys()
+                    and model_conf['simple_conv'] is True):
+                for i in range(model_conf['num_conv_layers']):
+                    pre_rnn_1D = Convolution1D(
+                        num_conv_filters, size_conv_filters,
+                        padding='valid', activation='relu')(pre_rnn_1D)
                 pre_rnn_1D = MaxPooling1D(pool_size)(pre_rnn_1D)
+            else:
+                for i in range(model_conf['num_conv_layers']):
+                    div_fac = 2**i
+                    '''The first conv layer learns `num_conv_filters//div_fac`
+                    filters (aka kernels), each of size
+                    `(size_conv_filters, num1D)`. Its output will have shape
+                    (None, len(indices_1d)//num_1D - size_conv_filters + 1,
+                    num_conv_filters//div_fac), i.e., for
+                    each position in the input spatial series (direction along
+                    radius), the activation of each filter at that position.
+
+                    '''
+
+                    '''For i=1 first conv layer would get:
+                    (None, (len(indices_1d)//num_1D - size_conv_filters
+                    + 1)/pool_size-size_conv_filters + 1,
+                    num_conv_filters//div_fac)
+
+                    '''
+                    pre_rnn_1D = Convolution1D(
+                        num_conv_filters//div_fac, size_conv_filters,
+                        padding='valid')(pre_rnn_1D)
+                    if use_batch_norm:
+                        pre_rnn_1D = BatchNormalization()(pre_rnn_1D)
+                        pre_rnn_1D = Activation('relu')(pre_rnn_1D)
+
+                    '''The output of the second conv layer will have shape
+                    (None, len(indices_1d)//num_1D - size_conv_filters + 1,
+                    num_conv_filters//div_fac),
+                    i.e., for each position in the input spatial series
+                    (direction along radius), the activation of each filter
+                    at that position.
+
+                    For i=1, the second layer would output
+                    (None, (len(indices_1d)//num_1D - size_conv_filters + 1)/
+                    pool_size-size_conv_filters + 1,num_conv_filters//div_fac)
+                    '''
+                    pre_rnn_1D = Convolution1D(
+                        num_conv_filters//div_fac, 1, padding='valid')(
+                            pre_rnn_1D)
+                    if use_batch_norm:
+                        pre_rnn_1D = BatchNormalization()(pre_rnn_1D)
+                        pre_rnn_1D = Activation('relu')(pre_rnn_1D)
+                    '''Outputs (None, (len(indices_1d)//num_1D - size_conv_filters
+                    + 1)/pool_size, num_conv_filters//div_fac)
+
+                    For i=1, the pooling layer would output:
+                    (None,((len(indices_1d)//num_1D- size_conv_filters
+                    + 1)/pool_size-size_conv_filters+1)/pool_size,
+                    num_conv_filters//div_fac)
+
+                    '''
+                    pre_rnn_1D = MaxPooling1D(pool_size)(pre_rnn_1D)
             pre_rnn_1D = Flatten()(pre_rnn_1D)
             pre_rnn_1D = Dense(
                 dense_size,
@@ -269,7 +273,7 @@ class ModelBuilder(object):
           sys.stdout=fr
           pre_rnn_model.summary()
           sys.stdout=ori
-          fr.close()        
+          fr.close()
         # pre_rnn_model.summary()
         x_input = Input(batch_shape=batch_input_shape)
         if num_1D>0 or (
@@ -298,7 +302,7 @@ class ModelBuilder(object):
                nb_filters=nb_filters,num_layers=tcn_layers,
                dropout_rate=tcn_dropout)(x_in)
             x_in = Dropout(dropout_prob) (x_in)
-        else: 
+        else:
 ###################TCN model##################################
           for _ in range(model_conf['rnn_layers']):
             x_in = rnn_model(
@@ -338,7 +342,7 @@ class ModelBuilder(object):
 
     def delete_model_weights(self, model, epoch):
         save_path = self.get_save_path(epoch)
-        assert(os.path.exists(save_path))
+        assert os.path.exists(save_path)
         os.remove(save_path)
 
     def get_save_path(self, epoch):
@@ -384,8 +388,8 @@ class ModelBuilder(object):
     def extract_id_and_epoch_from_filename(self, filename):
         regex = re.compile(r'-?\d+')
         numbers = [int(x) for x in regex.findall(filename)]
-        assert(len(numbers) == 3)  # id,epoch number and extension
-        assert(numbers[2] == 5)  # .h5 extension
+        assert len(numbers) == 3  # id,epoch number and extension
+        assert numbers[2] == 5  # .h5 extension
         return numbers[0], numbers[1]
 
     def get_all_saved_files(self):

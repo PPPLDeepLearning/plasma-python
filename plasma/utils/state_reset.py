@@ -27,7 +27,7 @@ def reset_states(model, batches_to_reset):
     new_states = get_states(model)
     for i, layer_states in enumerate(new_states):
         for j, within_layer_state in enumerate(layer_states):
-            assert(len(batches_to_reset) == within_layer_state.shape[0])
+            assert len(batches_to_reset) == within_layer_state.shape[0]
             within_layer_state[~batches_to_reset,
                                :] = old_states[i][j][~batches_to_reset, :]
     set_states(model, new_states)
