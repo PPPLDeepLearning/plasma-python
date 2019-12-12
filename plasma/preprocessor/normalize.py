@@ -422,7 +422,7 @@ class MinMaxNormalizer(Normalizer):
 
     def apply(self, shot):
         apply_positivity(shot)
-        assert(self.minimums is not None and self.maximums is not None)
+        assert self.minimums is not None and self.maximums is not None
         m = shot.machine
         curr_range = (self.maximums[m] - self.minimums[m])
         if curr_range == 0.0:
@@ -452,7 +452,7 @@ class MinMaxNormalizer(Normalizer):
             self.print_summary(action='saved')
 
     def load_stats(self, verbose=False):
-        assert(self.previously_saved_stats()[0])
+        assert self.previously_saved_stats()[0]
         dat = np.load(self.path, encoding="latin1", allow_pickle=True)
         self.minimums = dat['minimums'][()]
         self.maximums = dat['maximums'][()]

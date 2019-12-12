@@ -27,7 +27,7 @@ class Signal(object):
                  causal_shifts=None, is_ip=False, normalize=True,
                  data_avail_tolerances=None, is_strictly_positive=False,
                  mapping_paths=None):
-        assert(len(paths) == len(machines))
+        assert len(paths) == len(machines)
         self.description = description
         self.paths = paths
         self.machines = machines  # on which machines is the signal defined
@@ -105,7 +105,7 @@ class Signal(object):
             region = np.where(np.abs(sig) >= shot.machine.current_threshold)[0]
             if len(region) == 0:
                 print('Shot {} has no current [omit]'.format(shot.number))
-                return None, None, False
+                return None, sig.shape, False
             first_idx = region[0]
             last_idx = region[-1]
             # add 50 ms to cover possible disruption event
@@ -125,13 +125,13 @@ class Signal(object):
             else:
                 print('Signal {}, shot {} contains no data [omit]'.format(
                     self.description, shot.number))
-            return None, None, False
+            return None, sig.shape, False
 
         # make sure data doesn't contain NaN values
         if np.any(np.isnan(t)) or np.any(np.isnan(sig)):
             print('Signal {}, shot {} contains NaN [omit]'.format(
                 self.description, shot.number))
-            return None, None, False
+            return None, sig.shape, False
 
         return t, sig, True
 
@@ -182,7 +182,7 @@ class Signal(object):
         return self.data_avail_tolerances[idx]
 
     def get_idx(self, machine):
-        assert(machine in self.machines)
+        assert machine in self.machines
         idx = self.machines.index(machine)
         return idx
 
@@ -328,10 +328,10 @@ class ChannelSignal(Signal):
         nums = []
         new_paths = []
         for p in paths:
-            assert(p[-1] != '/')
+            assert p[-1] != '/'
             elements = p.split('/')
             res = regex.findall(elements[-1])
-            assert(len(res) < 2)
+            assert len(res) < 2
             if len(res) == 0:
                 nums.append(None)
                 new_paths.append(p)

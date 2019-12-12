@@ -25,7 +25,6 @@ from plasma.utils.downloading import mkdirdepth
 
 
 class Preprocessor(object):
-
     def __init__(self, conf):
         self.conf = conf
 
@@ -193,7 +192,7 @@ def apply_bleed_in(conf, shot_list_train, shot_list_validate, shot_list_test):
             num_sampled_nd+num_sampled_d, num_sampled_d, num_sampled_nd))
         print("Before adding: training shots: {} validation shots: {}".format(
             len(shot_list_train), len(shot_list_validate)))
-        assert(num_sampled_d == num)
+        assert num_sampled_d == num
         # add bleed-in shots to training and validation set repeatedly
         if conf['data']['bleed_in_equalize_sets']:
             print("Applying equalized bleed in")
@@ -267,4 +266,7 @@ def guarantee_preprocessed(conf, verbose=False):
         print_shot_list_sizes(shot_list_train, shot_list_validate,
                               shot_list_test)
         g.print_unique("...done")
+    #    g.print_unique("...printing test shot list:")
+    #    for s in shot_list_test:
+    #       g.print_unique(str(s.number))
     return shot_list_train, shot_list_validate, shot_list_test

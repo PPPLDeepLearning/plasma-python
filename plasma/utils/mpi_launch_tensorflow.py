@@ -8,11 +8,8 @@ import math
 
 
 def get_host_to_id_mapping():
-    return {
-        host: i for (
-            i, host) in enumerate(
-            expand_hostlist(
-                os.environ['SLURM_NODELIST']))}
+    return {host: i for (i, host) in enumerate(
+        expand_hostlist(os.environ['SLURM_NODELIST']))}
 
 
 def get_my_host_id():
@@ -20,11 +17,8 @@ def get_my_host_id():
 
 
 def get_host_list(port):
-    return [
-        '{}:{}'.format(
-            host,
-            port) for host in expand_hostlist(
-            os.environ['SLURM_NODELIST'])]
+    return ['{}:{}'.format(host, port) for
+            host in expand_hostlist(os.environ['SLURM_NODELIST'])]
 
 
 def get_worker_host_list(base_port, workers_per_host):
@@ -42,7 +36,7 @@ def get_worker_host(base_port, workers_per_host, task_id):
 
 
 def get_ps_host_list(base_port, num_ps):
-    assert(num_ps < 10000000)
+    assert num_ps < 10000000
     port = base_port
     ps_hlist = []
     hosts = expand_hostlist(os.environ['SLURM_NODELIST'])
@@ -86,9 +80,8 @@ def get_mpi_cluster_server_jobname(num_ps=1, num_workers=None):
     print("tasks_per_node {} num_workers_per_host {} num_hosts {}".format(
         tasks_per_node, num_workers_per_host, num_hosts))
     if num_ps == 0 or num_ps > max_ps:
-        print(
-            'Invalid number of ps {} (maximum {}, minimum 0)'.format(
-                num_ps, max_ps))
+        print('Invalid number of ps {} (maximum {}, minimum 0)'.format(
+            num_ps, max_ps))
         if num_ps == 0:
             print('Setting to 1')
             num_ps = 1
@@ -96,7 +89,6 @@ def get_mpi_cluster_server_jobname(num_ps=1, num_workers=None):
             print('Setting to {}'.format(max_ps))
             num_ps = max_ps
     num_ps_per_host = int(math.ceil(1.0*num_ps/num_hosts))
-
     task_index = task_index % tasks_per_node
 
     if task_index < NUM_GPUS:
@@ -114,31 +106,23 @@ def get_mpi_cluster_server_jobname(num_ps=1, num_workers=None):
     # if job_name == "worker":
     #   os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(MY_GPU)
     num_total = num_workers + num_ps
-    assert(task_num >= num_total)
+    assert task_num >= num_total
 
     if task_index == 0:
         print('{} superfluous processes'.format(task_num - num_total))
-        print(
-            '{} superfluous workers'.format(
-                num_workers_per_host
-                * num_hosts
-                - num_workers))
+        print('{} superfluous workers'.format(
+            num_workers_per_host * num_hosts - num_workers))
         print('{} superfluous ps'.format(num_ps_per_host*num_hosts - num_ps))
 
-    print(
-        '{}, task_id: {}, host_id: {}'.format(
-            socket.gethostname(),
-            task_index,
-            get_my_host_id()))
+    print('{}, task_id: {}, host_id: {}'.format(
+        socket.gethostname(), task_index, get_my_host_id()))
 
     worker_hosts = get_worker_host_list(
         2222, num_workers_per_host)[:num_workers]
     ps_hosts = get_ps_host_list(2322, num_ps)
     if global_task_index == 0:
-        print(
-            'ps_hosts: {}\n, worker hosts: {}\n'.format(
-                ps_hosts,
-                worker_hosts))
+        print('ps_hosts: {}\n, worker hosts: {}\n'.format(
+            ps_hosts, worker_hosts))
     # Create a cluster from the parameter server and worker hosts.
     if job_name == 'ps' and global_task_index >= num_ps:
         exit(0)
@@ -147,10 +131,8 @@ def get_mpi_cluster_server_jobname(num_ps=1, num_workers=None):
 
     cluster = tf.train.ClusterSpec({"ps": ps_hosts, "worker": worker_hosts})
     # Create and start a server for the local task.
-    server = tf.train.Server(
-        cluster,
-        job_name=job_name,
-        task_index=global_task_index)
+    server = tf.train.Server(cluster, job_name=job_name,
+                             task_index=global_task_index)
 
     return cluster, server, job_name, global_task_index, num_workers
 
@@ -186,21 +168,15 @@ def get_mpi_task_index(num_workers=None):
         exit(0)
 
     num_total = num_workers
-    assert(task_num >= num_total)
+    assert task_num >= num_total
 
     if task_index == 0:
-        print(
-            '{} superfluous workers'.format(
-                num_workers_per_host
-                * num_hosts
-                - num_workers))
+        print('{} superfluous workers'.format(
+            num_workers_per_host * num_hosts - num_workers))
         print('{} total workers'.format(num_workers))
 
-    print(
-        '{}, task_id: {}, host_id: {}'.format(
-            socket.gethostname(),
-            task_index,
-            get_my_host_id()))
+    print('{}, task_id: {}, host_id: {}'.format(
+        socket.gethostname(), task_index, get_my_host_id()))
     if job_name == 'worker' and global_task_index >= num_workers:
         exit(0)
 
