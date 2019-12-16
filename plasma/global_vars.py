@@ -13,7 +13,7 @@ tf_ver = None
 
 def init_MPI():
     from mpi4py import MPI
-    global comm, task_index, num_workers
+    global comm, task_index, num_workers#
     comm = MPI.COMM_WORLD
     task_index = comm.Get_rank()
     num_workers = comm.Get_size()
