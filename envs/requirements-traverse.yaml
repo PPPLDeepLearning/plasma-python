@@ -1,17 +1,18 @@
 name: frnn
 channels:
-  - https:////public.dhe.ibm.com/ibmdl/export/pub/software/server/ibm-ai/conda
+  - https://public.dhe.ibm.com/ibmdl/export/pub/software/server/ibm-ai/conda
   - defaults
-channel_priority: strict
+# channel_priority: strict   # set in .condarc
 dependencies:
   - python==3.6.8
-      - scipy
-      - pandas
-      - flake8
-      - h5py
-      - pyparsing
-      - pyyaml
-      - tensorflow-gpu>=1.3,<2.0.0
+  - pip
+  - scipy
+  - pandas
+  - flake8
+  - h5py
+  - pyparsing
+  - pyyaml
+  - tensorflow-gpu>=1.3,<2.0.0
   - pip:
       - keras>=2.0.5
       - pathos
