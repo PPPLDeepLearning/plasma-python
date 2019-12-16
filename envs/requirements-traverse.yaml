@@ -5,6 +5,7 @@ channels:
 # channel_priority: strict   # set in .condarc
 dependencies:
   - python==3.6.8
+  - cython
   - pip
   - scipy
   - pandas
