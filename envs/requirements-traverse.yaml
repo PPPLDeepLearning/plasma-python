@@ -1,0 +1,23 @@
+name: frnn
+channels:
+  - https:////public.dhe.ibm.com/ibmdl/export/pub/software/server/ibm-ai/conda
+  - defaults
+channel_priority: strict
+dependencies:
+  - python==3.6.8
+      - scipy
+      - pandas
+      - flake8
+      - h5py
+      - pyparsing
+      - pyyaml
+      - tensorflow-gpu>=1.3,<2.0.0
+  - pip:
+      - keras>=2.0.5
+      - pathos
+      - matplotlib>=2.0.2
+      - hyperopt  # TODO(KGF): remove
+      - mpi4py
+      - xgboost
+      - scikit-learn
+      - joblib
