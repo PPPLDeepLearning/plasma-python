@@ -4,6 +4,7 @@ channels:
 #channel_priority: strict
 dependencies:
   - python==3.6.8
+  - pip
   - scipy
   - pandas
   - flake8
