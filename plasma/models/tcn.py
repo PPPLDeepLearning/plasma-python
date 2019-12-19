@@ -1,5 +1,4 @@
 from typing import List, Tuple
-
 import keras.backend as K
 import keras.layers
 from keras import optimizers
@@ -10,7 +9,8 @@ from keras.layers import Dense, BatchNormalization
 from keras.models import Input, Model
 
 
-def residual_block(x, dilation_rate, nb_filters, kernel_size, padding, activation='relu', dropout_rate=0,
+def residual_block(x, dilation_rate, nb_filters, kernel_size, padding,
+                   activation='relu', dropout_rate=0,
                    kernel_initializer='he_normal', use_batch_norm=False):
     # type: (Layer, int, int, int, str, str, float, str, bool) -> Tuple[Layer, Layer]
     """Defines the residual block for the WaveNet TCN
@@ -37,7 +37,8 @@ def residual_block(x, dilation_rate, nb_filters, kernel_size, padding, activatio
                    kernel_initializer=kernel_initializer,
                    padding=padding)(x)
         if use_batch_norm:
-            x = BatchNormalization()(x)  # TODO should be WeightNorm here, but using batchNorm instead
+            # TODO should be WeightNorm here, but using batchNorm instead
+            x = BatchNormalization()(x)
         x = Activation('relu')(x)
         x = SpatialDropout1D(rate=dropout_rate)(x)
 
@@ -84,20 +85,12 @@ class TCN:
             A TCN layer.
         """
 
-    def __init__(self,
-                 nb_filters=25,
-                 kernel_size=5,
-                 nb_stacks=1,
-                 num_layers=10,#[1, 2, 4, 8, 16, 32,64,128,256,512],
-                 padding='causal',
-                 use_skip_connections=True,
-                 dropout_rate=0.0,
-                 return_sequences=True,
-                 activation='linear',
-                 name='tcn',
-                 kernel_initializer='he_normal',
-                 use_batch_norm=False):
-        dilations=[2**i for i in range(0,num_layers)]
+    def __init__(self, nb_filters=25, kernel_size=5, nb_stacks=1,
+                 num_layers=10,  # [1, 2, 4, 8, 16, 32,64,128,256,512],
+                 padding='causal', use_skip_connections=True, dropout_rate=0.0,
+                 return_sequences=True, activation='linear', name='tcn',
+                 kernel_initializer='heb_normal', use_batch_norm=False):
+        dilations = [2**i for i in range(0, num_layers)]
         self.name = name
         self.return_sequences = return_sequences
         self.dropout_rate = dropout_rate
@@ -112,31 +105,29 @@ class TCN:
         self.use_batch_norm = use_batch_norm
 
         if padding != 'causal' and padding != 'same':
-            raise ValueError("Only 'causal' or 'same' padding are compatible for this layer.")
+            raise ValueError("Only 'causal' or 'same' padding are compatible for this layer.")  # noqa
 
         if not isinstance(nb_filters, int):
             print('An interface change occurred after the version 2.1.2.')
             print('Before: tcn.TCN(x, return_sequences=False, ...)')
             print('Now should be: tcn.TCN(return_sequences=False, ...)(x)')
-            print('The alternative is to downgrade to 2.1.2 (pip install keras-tcn==2.1.2).')
+            print('The alternative is to downgrade to 2.1.2 (pip install keras-tcn==2.1.2).')  # noqa
             raise Exception()
 
     def __call__(self, inputs):
         x = inputs
         # 1D FCN.
-        x = Conv1D(self.nb_filters, 1, padding=self.padding, kernel_initializer=self.kernel_initializer)(x)
+        x = Conv1D(self.nb_filters, 1, padding=self.padding,
+                   kernel_initializer=self.kernel_initializer)(x)
         skip_connections = []
         for s in range(self.nb_stacks):
             for d in self.dilations:
-                x, skip_out = residual_block(x,
-                                             dilation_rate=d,
-                                             nb_filters=self.nb_filters,
-                                             kernel_size=self.kernel_size,
-                                             padding=self.padding,
-                                             activation=self.activation,
-                                             dropout_rate=self.dropout_rate,
-                                             kernel_initializer=self.kernel_initializer,
-                                             use_batch_norm=self.use_batch_norm)
+                x, skip_out = residual_block(
+                    x, dilation_rate=d, nb_filters=self.nb_filters,
+                    kernel_size=self.kernel_size, padding=self.padding,
+                    activation=self.activation, dropout_rate=self.dropout_rate,
+                    kernel_initializer=self.kernel_initializer,
+                    use_batch_norm=self.use_batch_norm)
                 skip_connections.append(skip_out)
         if self.use_skip_connections:
             x = keras.layers.add(skip_connections)
@@ -219,7 +210,8 @@ def compiled_tcn(num_feat,  # type: int
         # It's now in Keras@master but still not available with pip.
         # TODO remove later.
         def accuracy(y_true, y_pred):
-            # reshape in case it's in shape (num_samples, 1) instead of (num_samples,)
+            # reshape in case it's in shape (num_samples, 1) instead of
+            # (num_samples,)
             if K.ndim(y_true) == K.ndim(y_pred):
                 y_true = K.squeeze(y_true, -1)
             # convert dense predictions to labels
@@ -227,7 +219,8 @@ def compiled_tcn(num_feat,  # type: int
             y_pred_labels = K.cast(y_pred_labels, K.floatx())
             return K.cast(K.equal(y_true, y_pred_labels), K.floatx())
 
-        model.compile(get_opt(), loss='sparse_categorical_crossentropy', metrics=[accuracy])
+        model.compile(get_opt(), loss='sparse_categorical_crossentropy',
+                      metrics=[accuracy])
     else:
         # regression
         x = Dense(1)(x)
