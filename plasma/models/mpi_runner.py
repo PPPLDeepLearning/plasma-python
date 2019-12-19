@@ -700,7 +700,8 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
     model = specific_builder.build_model(True)
     specific_builder.load_model_weights(model, custom_path)
 
-    # broadcast model weights then set it explicitely: fix for Py3.6
+    # broadcast model weights then set it explicitly: fix for Py3.6
+    # TODO(KGF): remove if we no longer support Py2
     if sys.version_info[0] > 2:
         if g.task_index == 0:
             new_weights = model.get_weights()
