@@ -27,9 +27,16 @@ from copy import deepcopy
 from plasma.utils.downloading import makedirs_process_safe
 from plasma.utils.hashing import general_object_hash
 from plasma.models.tcn import TCN
-# TODO(KGF): perhaps relax the requirement of thse dependencies with try/except
-import keras2onnx
-import onnx
+# TODO(KGF): consider using importlib.util.find_spec() instead (Py>3.4)
+try:
+    import keras2onnx
+    import onnx
+except ImportError:  # as e:
+    _has_onnx = False
+    # onnx = None
+    # keras2onnx = None
+else:
+    _has_onnx = True
 
 # Synchronize 2x stderr msg from TensorFlow initialization via Keras backend
 # "Succesfully opened dynamic library... libcudart" "Using TensorFlow backend."
@@ -355,14 +362,15 @@ class ModelBuilder(object):
     def save_model_weights(self, model, epoch):
         save_path = self.get_save_path(epoch)
         model.save_weights(save_path, overwrite=True)
-        try:
+        # try:
+        if _has_onnx:
             save_path = self.get_save_path(epoch, ext='onnx')
             onnx_model = keras2onnx.convert_keras(model, model.name,
                                                   target_opset=10)
             onnx.save_model(onnx_model, save_path)
-        except Exception as e:
-            print(e)
-            return
+        # except Exception as e:
+        #     print(e)
+        return
 
     def delete_model_weights(self, model, epoch):
         save_path = self.get_save_path(epoch)
