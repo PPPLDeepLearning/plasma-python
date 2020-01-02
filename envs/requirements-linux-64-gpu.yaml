@@ -1,9 +1,10 @@
 name: frnn
 channels:
+  - conda-forge
   - defaults
 #channel_priority: strict
 dependencies:
-  - python==3.6.8
+  - python>=3.6.8
   - pip
   - scipy
   - pandas
