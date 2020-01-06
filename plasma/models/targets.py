@@ -130,6 +130,7 @@ class MaxHingeTarget(Target):
 
     @staticmethod
     def loss(y_true, y_pred):
+        # TODO(KGF): this function is unused and unique to this class
         from plasma.conf import conf
         fac = MaxHingeTarget.fac
         # overall_fac =
@@ -151,9 +152,10 @@ class MaxHingeTarget(Target):
     def loss_np(y_true, y_pred):
         from plasma.conf import conf
         # TODO(KGF): fac = positive_example_penalty is only used in this class,
-        # only in above loss() fn, which only this class has (besides loss_np)
+        # only in above (unused) loss() fn, which only this class has, and is
+        # never called. 2 lines related to fac commented-out in this fn.
+        #
         # fac = MaxHingeTarget.fac
-        # print(y_pred.shape)
         overall_fac = np.prod(np.array(y_pred.shape).astype(np.float32))
         max_val = np.max(y_pred, axis=-2)  # temporal axis!
         max_val = np.reshape(
