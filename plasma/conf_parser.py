@@ -98,7 +98,8 @@ def parameters(input_file):
         elif params['target'] == 'ttdlinear':
             params['data']['target'] = TTDLinearTarget
         else:
-            g.print_unique('Unkown type of target. Exiting')
+            # TODO(KGF): "Target" base class is unused here
+            g.print_unique('Unknown type of target. Exiting')
             exit(1)
 
         # params['model']['output_activation'] =
