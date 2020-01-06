@@ -276,17 +276,18 @@ class ModelBuilder(object):
                 activity_regularizer=l2(dense_regularization))(pre_rnn)
 
         pre_rnn_model = Model(inputs=pre_rnn_input, outputs=pre_rnn)
-        from mpi4py import MPI
-        comm = MPI.COMM_WORLD
-        task_index = comm.Get_rank()
-        if not predict and task_index == 0:
-            print('Printing out pre_rnn model...')
-            fr = open('model_architecture.log', 'w')
-            ori = sys.stdout
-            sys.stdout = fr
-            pre_rnn_model.summary()
-            sys.stdout = ori
-            fr.close()
+        # TODO(KGF): uncomment following lines to get summary of pre-RNN model
+        # from mpi4py import MPI
+        # comm = MPI.COMM_WORLD
+        # task_index = comm.Get_rank()
+        # if not predict and task_index == 0:
+        #     print('Printing out pre_rnn model...')
+        #     fr = open('model_architecture.log', 'w')
+        #     ori = sys.stdout
+        #     sys.stdout = fr
+        #     pre_rnn_model.summary()
+        #     sys.stdout = ori
+        #     fr.close()
         # pre_rnn_model.summary()
         x_input = Input(batch_shape=batch_input_shape)
         # TODO(KGF): Ge moved this inside a new conditional in Dec 2019. check
