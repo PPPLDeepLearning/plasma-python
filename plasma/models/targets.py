@@ -126,6 +126,7 @@ class TTDLinearTarget(Target):
 # time sequence is punished. Also implements class weighting
 class MaxHingeTarget(Target):
     activation = 'linear'
+    loss = 'hinge'
     fac = 1.0
 
     @staticmethod
@@ -198,7 +199,7 @@ class MaxHingeTarget(Target):
 
 class HingeTarget(Target):
     activation = 'linear'
-    loss = 'hinge'  # hinge
+    loss = 'hinge'
 
     @staticmethod
     def loss_np(y_true, y_pred):
