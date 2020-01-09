@@ -25,7 +25,6 @@ data:
   augmentation_mode: None
   augment_during_training: False
   cut_shot_ends: True
-  T_min_warn: 30
   recompute: False
   recompute_normalization: False
   # specifies which of the signals in the signals_dirs order contains the plasma current info
@@ -36,10 +35,11 @@ data:
   positive_example_penalty: 1.0 # by what factor to upweight positive examples?
   # normalization timescale
   dt: 0.001
+  T_min_warn: 30
   # maximum TTD considered
   T_max: 1000.0
   # warning time in seconds
-  # The shortest works best so far: less overfitting. log TTd prediction also works well. 0.5 better than 0.2
+  # The shortest works best so far: less overfitting. log(TTD) prediction also works well. 0.5s better than 0.2s
   T_warning: 1.024 # 0.512 # 0.25 # 1.0
   current_thresh: 750000
   current_end_thresh: 10000
