@@ -244,7 +244,7 @@ class MeanVarNormalizer(Normalizer):
                                     (1, num_signals))
             stats.is_disruptive = shot.is_disruptive
         else:
-            print('Warning: shot {} not valid, omitting'.format(shot.number))
+            print('Warning: shot {} not valid [omit]'.format(shot.number))
         stats.valid = shot.valid
         stats.machine = shot.machine
         return stats
@@ -397,7 +397,7 @@ class MinMaxNormalizer(Normalizer):
             stats.maximums = np.array([np.max(sig) for sig in list_of_signals])
             stats.is_disruptive = shot.is_disruptive
         else:
-            print('Warning: shot {} not valid, omitting'.format(shot.number))
+            print('Warning: shot {} not valid [omit]'.format(shot.number))
         stats.valid = shot.valid
         stats.machine = shot.machine
         return stats
@@ -463,10 +463,6 @@ class MinMaxNormalizer(Normalizer):
         #     g.print_unique('Machine {}:'.format(machine))
         if verbose:
             self.print_summary()
-
-
-def get_individual_shot_file(prepath, shot_num, ext='.txt'):
-    return prepath + str(shot_num) + ext
 
 
 def apply_positivity(shot):

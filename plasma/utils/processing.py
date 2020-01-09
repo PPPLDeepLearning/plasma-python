@@ -10,7 +10,7 @@ This work was supported by the DOE CSGF program.
 
 from __future__ import print_function
 import itertools
-
+import os
 import numpy as np
 # from scipy.interpolate import UnivariateSpline
 
@@ -57,8 +57,13 @@ def cut_and_resample_signal(t, sig, tmin, tmax, dt, precision_str):
     return resample_signal(t, sig, tmin, tmax, dt, precision_str)
 
 
-def get_individual_shot_file(prepath, shot_num, ext='.txt'):
-    return prepath + str(shot_num) + ext
+def get_individual_shot_file(prepath, machine, shot_num, raw_signal=False,
+                             ext='.txt'):
+    """Return filepath of raw input .txt shot signal or processed .npz shot"""
+    if raw_signal:
+        return os.path.join(prepath, str(shot_num) + ext)
+    else:
+        return os.path.join(prepath, str(machine) + '_' + str(shot_num) + ext)
 
 
 def append_to_filename(path, to_append):
@@ -68,9 +73,13 @@ def append_to_filename(path, to_append):
 
 
 def train_test_split(x, frac, do_shuffle=False):
+    # TODO(KGF): rename these 2x fns; used for generic ShotList.split_direct
     if not isinstance(x, np.ndarray):
         return train_test_split_robust(x, frac, do_shuffle)
     mask = np.array(range(len(x))) < frac*len(x)
+    # Note, these functions do not directly split the "disruptive" subset of
+    # ShotLists; they are only applied to the overall sets and rely on random
+    # shuffling to produce the correct disruptive split in large N sample limit
     if do_shuffle:
         np.random.shuffle(mask)
     return x[mask], x[~mask]
@@ -90,15 +99,15 @@ def train_test_split_robust(x, frac, do_shuffle=False):
     return train, test
 
 
-def train_test_split_all(x, frac, do_shuffle=True):
-    groups = []
-    length = len(x[0])
-    mask = np.array(range(length)) < frac*length
-    if do_shuffle:
-        np.random.shuffle(mask)
-    for item in x:
-        groups.append((item[mask], item[~mask]))
-    return groups
+# def train_test_split_all(x, frac, do_shuffle=True):
+#     groups = []
+#     length = len(x[0])
+#     mask = np.array(range(length)) < frac*length
+#     if do_shuffle:
+#         np.random.shuffle(mask)
+#     for item in x:
+#         groups.append((item[mask], item[~mask]))
+#     return groups
 
 
 def concatenate_sublists(superlist):

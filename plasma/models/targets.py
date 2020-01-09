@@ -126,10 +126,12 @@ class TTDLinearTarget(Target):
 # time sequence is punished. Also implements class weighting
 class MaxHingeTarget(Target):
     activation = 'linear'
+    loss = 'hinge'
     fac = 1.0
 
     @staticmethod
     def loss(y_true, y_pred):
+        # TODO(KGF): this function is unused and unique to this class
         from plasma.conf import conf
         fac = MaxHingeTarget.fac
         # overall_fac =
@@ -150,8 +152,11 @@ class MaxHingeTarget(Target):
     @staticmethod
     def loss_np(y_true, y_pred):
         from plasma.conf import conf
-        fac = MaxHingeTarget.fac
-        # print(y_pred.shape)
+        # TODO(KGF): fac = positive_example_penalty is only used in this class,
+        # only in above (unused) loss() fn, which only this class has, and is
+        # never called. 2 lines related to fac commented-out in this fn.
+        #
+        # fac = MaxHingeTarget.fac
         overall_fac = np.prod(np.array(y_pred.shape).astype(np.float32))
         max_val = np.max(y_pred, axis=-2)  # temporal axis!
         max_val = np.reshape(
@@ -160,10 +165,8 @@ class MaxHingeTarget(Target):
         mask = np.equal(max_val, y_pred)
         mask = mask.astype(np.float32)
         y_pred = mask * y_pred + (1-mask) * y_true
-        weight_mask = np.greater(
-            y_true, 0.0).astype(
-            np.float32)  # positive label!
-        weight_mask = fac*weight_mask + (1 - weight_mask)
+        # positive label! weight_mask = fac*weight_mask + (1 - weight_mask):
+        weight_mask = np.greater(y_true, 0.0).astype(np.float32)
         # return np.mean(
         #  weight_mask*np.square(np.maximum(1. - y_true * y_pred, 0.)))
         # , axis=-1)
@@ -196,8 +199,7 @@ class MaxHingeTarget(Target):
 
 class HingeTarget(Target):
     activation = 'linear'
-
-    loss = 'hinge'  # hinge
+    loss = 'hinge'
 
     @staticmethod
     def loss_np(y_true, y_pred):

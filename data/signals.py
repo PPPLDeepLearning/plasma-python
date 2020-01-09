@@ -85,12 +85,9 @@ def fetch_d3d_data(signal_path, shot, c=None):
     if found:
         if rank > 1:
             xdata = c.get('dim_of(_s,1)').data()
-            # xunits = get_units('dim_of(_s,1)')
             ydata = c.get('dim_of(_s)').data()
-            # yunits = get_units('dim_of(_s)')
         else:
             xdata = c.get('dim_of(_s)').data()
-            # xunits = get_units('dim_of(_s)')
 
     # MDSplus seems to return 2-D arrays transposed.  Change them back.
     if np.ndim(data) == 2:
@@ -406,6 +403,11 @@ all_signals = {
     # 'tmamp1':tmamp1, 'tmamp2':tmamp2, 'tmfreq1':tmfreq1, 'tmfreq2':tmfreq2,
     # 'pechin':pechin,
     # 'rho_profile_spatial':rho_profile_spatial, 'etemp':etemp,
+    # -----
+    # TODO(KGF): replace this hacky workaround
+    # IMPORTANT: must comment-out the following line when preprocessing for
+    # training on JET CW and testing on JET ILW (FRNN 0D).
+    # Otherwise 1K+ CW shots are excluded due to missing profile data
     'etemp_profile': etemp_profile, 'edens_profile': edens_profile,
     # 'itemp_profile':itemp_profile, 'zdens_profile':zdens_profile,
     # 'trot_profile':trot_profile, 'pthm_profile':pthm_profile,

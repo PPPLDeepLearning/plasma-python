@@ -1,0 +1,26 @@
+name: frnn
+channels:
+  - https://public.dhe.ibm.com/ibmdl/export/pub/software/server/ibm-ai/conda
+  - conda-forge
+  - defaults
+# channel_priority: strict   # set in .condarc
+dependencies:
+  - python>=3.6.8
+  - cython
+  - pip
+  - scipy
+  - pandas
+  - flake8
+  - h5py
+  - pyparsing
+  - pyyaml
+  - tensorflow-gpu>=1.3,<2.0.0
+  - pip:
+      - keras>=2.0.5,<2.3.0
+      - pathos
+      - matplotlib>=2.0.2
+      - hyperopt  # TODO(KGF): remove
+      # - mpi4py   # must reload MPI library modules before installing via pip
+      - xgboost
+      - scikit-learn
+      - joblib

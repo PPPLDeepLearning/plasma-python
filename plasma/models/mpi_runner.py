@@ -167,7 +167,7 @@ class MPIAdam(MPIOptimizer):
             self.m_list = [np.zeros_like(grad) for grad in raw_deltas]
             self.v_list = [np.zeros_like(grad) for grad in raw_deltas]
         t = self.iterations + 1
-        lr_t = self.lr * np.sqrt(1-self.beta_2**t)/(1-self.beta_1**t)
+        lr_t = self.lr * np.sqrt(1 - self.beta_2**t)/(1 - self.beta_1**t)
         deltas = []
         for (i, grad) in enumerate(raw_deltas):
             m_t = (self.beta_1 * self.m_list[i]) + (1-self.beta_1) * grad
@@ -182,16 +182,20 @@ class MPIAdam(MPIOptimizer):
 
 
 class Averager(object):
+    """Compute and store a cumulative moving average (CMA).
+
+    """
+
     def __init__(self):
         self.steps = 0
-        self.val = 0.0
+        self.cma = 0.0
 
-    def add_val(self, val):
-        self.val = (self.steps * self.val + 1.0 * val)/(self.steps + 1.0)
+    def add_val(self, new_val):
+        self.cma = (self.steps * self.cma + 1.0 * new_val)/(self.steps + 1.0)
         self.steps += 1
 
-    def get_val(self):
-        return self.val
+    def get_ave(self):
+        return self.cma
 
 
 class MPIModel():
@@ -432,7 +436,7 @@ class MPIModel():
         val_loss this should be min, etc. In auto mode, the direction is
         automatically inferred from the name of the monitored quantity.
 
-        -monitor: Quantity used for early stopping, has to
+        - monitor: Quantity used for early stopping, has to
         be from the list of metrics
 
         - patience: Number of epochs used to decide on whether to apply early
@@ -481,11 +485,13 @@ class MPIModel():
 
     def train_epoch(self):
         '''
-        The purpose of the method is to perform distributed mini-batch SGD for
+        Perform distributed mini-batch SGD for
         one epoch.  It takes the batch iterator function and a NN model from
         MPIModel object, fetches mini-batches in a while-loop until number of
         samples seen by the ensemble of workers (num_so_far) exceeds the
         training dataset size (num_total).
+
+        NOTE: "sample" = "an entire shot" within this description
 
         During each iteration, the gradient updates (deltas) and the loss are
         calculated for each model replica in the ensemble, weights are averaged
@@ -497,11 +503,11 @@ class MPIModel():
         Argument list: Empty
 
         Returns:
-          - step: epoch number
-          - ave_loss: training loss averaged over replicas
-          - curr_loss:
-          - num_so_far: the number of samples seen by ensemble of replicas to a
-        current epoch (step)
+          - step: final iteration number
+          - ave_loss: model loss averaged over iterations within this epoch
+          - curr_loss: training loss averaged over replicas at final iteration
+          - num_so_far: the cumulative number of samples seen by the ensemble
+        of replicas up to the end of the final iteration (step) of this epoch
 
         Intermediate outputs and logging: debug printout of task_index (MPI),
         epoch number, number of samples seen to a current epoch, average
@@ -579,7 +585,7 @@ class MPIModel():
                 curr_loss = self.mpi_average_scalars(1.0*loss, num_replicas)
                 # g.print_unique(self.model.get_weights()[0][0][:4])
                 loss_averager.add_val(curr_loss)
-                ave_loss = loss_averager.get_val()
+                ave_loss = loss_averager.get_ave()
                 eta = self.estimate_remaining_time(
                     t0 - t_start, self.num_so_far - self.epoch*num_total,
                     num_total)
@@ -641,7 +647,7 @@ class MPIModel():
 
         print_str = ('{:.2E} Examples/sec | {:.2E} sec/batch '.format(
             examples_per_sec, t_tot)
-                     + '[{:.1%} calc., {:.1%} synch.]'.format(
+                     + '[{:.1%} calc., {:.1%} sync.]'.format(
                          frac_calculate, frac_sync))
         print_str += '[batch = {} = {}*{}] [lr = {:.2E} = {:.2E}*{}]'.format(
             effective_batch_size, self.batch_size, num_replicas,
@@ -700,7 +706,8 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
     model = specific_builder.build_model(True)
     specific_builder.load_model_weights(model, custom_path)
 
-    # broadcast model weights then set it explicitely: fix for Py3.6
+    # broadcast model weights then set it explicitly: fix for Py3.6
+    # TODO(KGF): remove if we no longer support Py2
     if sys.version_info[0] > 2:
         if g.task_index == 0:
             new_weights = model.get_weights()

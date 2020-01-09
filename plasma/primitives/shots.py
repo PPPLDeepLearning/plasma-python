@@ -13,10 +13,12 @@ import os
 import os.path
 import sys
 import random as rnd
-
 import numpy as np
 
-from plasma.utils.processing import train_test_split, cut_and_resample_signal
+from plasma.utils.processing import (
+    train_test_split, cut_and_resample_signal,
+    get_individual_shot_file
+    )
 from plasma.utils.downloading import makedirs_process_safe
 from plasma.utils.hashing import myhash
 
@@ -75,19 +77,18 @@ class ShotList(object):
             assert all([isinstance(shot, Shot) for shot in shots])
             self.shots = [shot for shot in shots]
 
-    def load_from_shot_list_files_object(
-            self, shot_list_files_object, signals):
+    def load_from_shot_list_files_object(self, shot_list_files_object,
+                                         signals):
         machine = shot_list_files_object.machine
         shot_numbers, disruption_times = (
             shot_list_files_object.get_shot_numbers_and_disruption_times())
         for number, t in list(zip(shot_numbers, disruption_times)):
-            self.append(
-                Shot(number=number, t_disrupt=t, machine=machine,
-                     signals=[s for s in signals if
-                              s.is_defined_on_machine(machine)]))
+            self.append(Shot(number=number, t_disrupt=t, machine=machine,
+                             signals=[s for s in signals if
+                                      s.is_defined_on_machine(machine)]))
 
-    def load_from_shot_list_files_objects(
-            self, shot_list_files_objects, signals):
+    def load_from_shot_list_files_objects(self, shot_list_files_objects,
+                                          signals):
         for obj in shot_list_files_objects:
             self.load_from_shot_list_files_object(obj, signals)
 
@@ -99,13 +100,17 @@ class ShotList(object):
         shuffle_training = conf['training']['shuffle_training']
         use_shots = conf['data']['use_shots']
         all_signals = conf['paths']['all_signals']
-        # split randomly
+        # split "maximum number of shots to use" into:
+        # test vs. (train U validate)
         use_shots_train = int(round(train_frac*use_shots))
         use_shots_test = int(round((1-train_frac)*use_shots))
         if len(shot_files_test) == 0:
+            # split randomly, e.g. sample both sets from same distribution
+            # such as D3D test and train
             shot_list_train, shot_list_test = train_test_split(
                 self.shots, train_frac, shuffle_training)
-        # train and test list given
+        # train and test list given, e.g. they are sampled from separate
+        # distributions such as train=CW and test=ILW for JET
         else:
             shot_list_train = ShotList()
             shot_list_train.load_from_shot_list_files_objects(
@@ -117,7 +122,6 @@ class ShotList(object):
 
         shot_numbers_train = [shot.number for shot in shot_list_train]
         shot_numbers_test = [shot.number for shot in shot_list_test]
-        print(len(shot_numbers_train), len(shot_numbers_test))
         # make sure we only use pre-filtered valid shots
         shots_train = self.filter_by_number(shot_numbers_train)
         shots_test = self.filter_by_number(shot_numbers_test)
@@ -172,6 +176,7 @@ class ShotList(object):
         return self.sample_weighted_given_arr(p)
 
     def get_weights_d_nd(self):
+        # TODO(KGF): only called in above sample_equal_classes()
         num_total = len(self)
         num_d = self.num_disruptive()
         num_nd = num_total - num_d
@@ -259,7 +264,7 @@ class ShotList(object):
             self.append(shot)
             return True
         else:
-            # print('Warning: shot {} not valid, omitting'.format(shot.number))
+            # print('Warning: shot {} not valid [omit]'.format(shot.number))
             return False
 
 
@@ -434,7 +439,7 @@ class Shot(object):
                             print('Shot {}: disruption event '.format(
                                 self.number),
                                   'is not contained in valid time region of ',
-                                  'signal {} by {}s, omitting.'.format(
+                                  'signal {} by {}s [omit]'.format(
                                       self.number, signal,
                                       self.t_disrupt - np.max(t)))
                             valid = False
@@ -454,7 +459,7 @@ class Shot(object):
         dt = conf['data']['dt']
         if (t_max - t_min)/dt <= (2*conf['model']['length']
                                   + conf['data']['T_min_warn']):
-            print('Shot {} contains insufficient data, omitting.'.format(
+            print('Shot {} contains insufficient data [omit]'.format(
                 self.number))
             valid = False
 
@@ -512,7 +517,8 @@ class Shot(object):
         print('...saved shot {}'.format(self.number))
 
     def get_save_path(self, prepath):
-        return get_individual_shot_file(prepath, self.number, '.npz')
+        return get_individual_shot_file(prepath, self.machine, self.number,
+                                        ext='.npz')
 
     def restore(self, prepath, light=False):
         assert self.previously_saved(prepath), 'shot was never saved'
@@ -540,9 +546,3 @@ class Shot(object):
     @staticmethod
     def is_disruptive_given_disruption_time(t):
         return t >= 0
-
-# it used to be in utilities, but can't import globals in multiprocessing
-
-
-def get_individual_shot_file(prepath, shot_num, ext='.txt'):
-    return prepath + str(shot_num) + ext

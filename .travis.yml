@@ -34,12 +34,12 @@ env:
 # before_install:
 
 install:
-  - sh install-mpi.sh
+  - sh ci/travis/install-mpi.sh
   - export MPI_PREFIX="${HOME}/opt/${MPI_LIBRARY}-${MPI_LIBRARY_VERSION}"
   - export PATH="${HOME}/.local/bin:${MPI_PREFIX}/bin${PATH:+":${PATH}"}"
   - export LD_LIBRARY_PATH="${MPI_PREFIX}/lib${LD_LIBRARY_PATH:+":${LD_LIBRARY_PATH}"}"
   - pip install --upgrade pip
-  - pip install -r requirements-travis.txt
+  - pip install -r envs/pip-requirements-travis.txt
 
 # before_script:
 
@@ -54,6 +54,8 @@ stages:
 
 notifications:
   email:
+    recipients:
+      - felker@anl.gov
     on_success: change
     on_failure: always
   slack:
