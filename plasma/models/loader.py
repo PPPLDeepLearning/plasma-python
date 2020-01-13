@@ -391,8 +391,7 @@ class Loader(object):
         proc.join()
         queue.close()
 
-    def load_as_X_y_list(self, shot_list, verbose=False,
-                         prediction_mode=False):
+    def load_as_X_y_list(self, shot_list, prediction_mode=False):
         """
         The method turns a ShotList into a set of equal-sized patches which
         contain a number of examples that is a multiple of the batch size.
@@ -408,7 +407,6 @@ class Loader(object):
 
         Argument list:
           - shot_list: a ShotList
-          - verbose: TO BE DEPRECATED, self.verbose data member is used instead
           - prediction_mode: unused
 
         Returns:
@@ -432,8 +430,7 @@ class Loader(object):
                 len(res_patches[0]), len(res_patches)))
         return X_list, y_list
 
-    def load_as_X_y_pred(self, shot_list, verbose=False,
-                         custom_batch_size=None):
+    def load_as_X_y_pred(self, shot_list, custom_batch_size=None):
         (signals, results, shot_lengths,
          disruptive) = self.get_signals_results_from_shotlist(
              shot_list, prediction_mode=True)
@@ -728,7 +725,7 @@ class Loader(object):
                         :] = res_patches[patch_idx][src_end-1]
         return X, y
 
-    def load_as_X_y(self, shot, verbose=False, prediction_mode=False):
+    def load_as_X_y(self, shot, prediction_mode=False):
         assert isinstance(shot, Shot)
         assert shot.valid
         prepath = self.conf['paths']['processed_prepath']
