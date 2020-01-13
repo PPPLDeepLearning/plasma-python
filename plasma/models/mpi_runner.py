@@ -668,27 +668,26 @@ def subtract_params(params1, params2):
 def add_params(params1, params2):
     return [p1 + p2 for p1, p2 in zip(params1, params2)]
 
-
-def get_shot_list_path(conf):
-    # TODO(KGF): incompatible with flexible conf.py hierarchy; see setting of
-    # 'normalizer_path', 'global_normalizer_path'
-    return conf['paths']['base_path'] + '/normalization/shot_lists.npz'
-
-
-def save_shotlists(conf, shot_list_train, shot_list_validate, shot_list_test):
-    path = get_shot_list_path(conf)
-    np.savez(path, shot_list_train=shot_list_train,
-             shot_list_validate=shot_list_validate,
-             shot_list_test=shot_list_test)
+# TODO(KGF): next 3x fns are currently unused; near dupes of Preprocessor class
+# def get_shot_list_path(conf):
+#     # TODO(KGF): incompatible with flexible conf.py hierarchy; see setting of
+#     # 'normalizer_path', 'global_normalizer_path'
+#     return conf['paths']['base_path'] + '/normalization/shot_lists.npz'
 
 
-def load_shotlists(conf):
-    path = get_shot_list_path(conf)
-    data = np.load(path, allow_pickle=False)
-    shot_list_train = data['shot_list_train'][()]
-    shot_list_validate = data['shot_list_validate'][()]
-    shot_list_test = data['shot_list_test'][()]
-    return shot_list_train, shot_list_validate, shot_list_test
+# def save_shotlists(conf, shot_list_train, shot_list_validate, shot_list_test)
+#     path = get_shot_list_path(conf)
+#     np.savez(path, shot_list_train=shot_list_train,
+#              shot_list_validate=shot_list_validate,
+#              shot_list_test=shot_list_test)
+
+# def load_shotlists(conf):
+#     path = get_shot_list_path(conf)
+#     data = np.load(path, allow_pickle=False)
+#     shot_list_train = data['shot_list_train'][()]
+#     shot_list_validate = data['shot_list_validate'][()]
+#     shot_list_test = data['shot_list_test'][()]
+#     return shot_list_train, shot_list_validate, shot_list_test
 
 # shot_list_train, shot_list_validate, shot_list_test = load_shotlists(conf)
 

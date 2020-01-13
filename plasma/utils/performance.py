@@ -391,6 +391,7 @@ class PerformanceAnalyzer():
     def assert_same_lists(self, shot_list, truth_arr, disr_arr):
         assert len(shot_list) == len(truth_arr)
         for i in range(len(shot_list)):
+            # TODO(KGF): remove this hardcoded path (also missing signal_path))
             shot_list.shots[i].restore("/tigress/jk7/processed_shots/")
             s = shot_list.shots[i].ttd
             if not truth_arr[i].shape[0] == s.shape[0]-30:
