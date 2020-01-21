@@ -1,11 +1,10 @@
 # ALCF Theta `plasma-python` FRNN Notes
 
-**Author: Rick Zamora (rzamora@anl.gov)**
+**Original author: Rick Zamora (rzamora@anl.gov)**
 
-This document is intended to act as a tutorial for running the [plasma-python](https://github.com/PPPLDeepLearning/plasma-python) implementation of the Fusion recurrent neural network (FRNN) on the ALCF Theta supercomputer (Cray XC40; Intel KNL processors).  The steps followed in these notes are based on the Princeton [Tiger-GPU tutorial](https://github.com/PPPLDeepLearning/plasma-python/blob/master/docs/PrincetonUTutorial.md#location-of-the-data-on-tigress), hosted within the main GitHub repository for the project.
+This document is intended to act as a tutorial for running the [plasma-python](https://github.com/PPPLDeepLearning/plasma-python) implementation of the fusion recurrent neural network (FRNN) on the ALCF Theta supercomputer (Cray XC40; Intel KNL processors).  The steps followed in these notes are based on the Princeton [Tiger-GPU tutorial](https://github.com/PPPLDeepLearning/plasma-python/blob/master/docs/PrincetonUTutorial.md#location-of-the-data-on-tigress), hosted within the main GitHub repository for the project.
 
 ## Environment Setup
-
 
 Choose a *root* directory for FRNN-related installations on Theta:
 
@@ -14,7 +13,7 @@ export FRNN_ROOT=<desired-root-directory>
 cd $FRNN_ROOT
 ```
 
-*Personal Note: Using FRNN_ROOT=/home/zamora/ESP*
+*Personal Note: I am using FRNN_ROOT=/home/zamora/ESP*
 
 Create a simple directory structure allowing experimental *builds* of the `plasma-python` python code/library:
 
@@ -56,7 +55,7 @@ export PATH=${FRNN_ROOT}/build/miniconda-3.6-4.5.4/miniconda3/4.5.4/bin:$PATH
 export PYTHONPATH=${FRNN_ROOT}/build/miniconda-3.6-4.5.4/miniconda3/4.5.4/lib/python3.6/site-packages/:$PYTHONPATH
 ```
 
-*Personal Note: Using `export FRNN_ROOT=/lus/theta-fs0/projects/fusiondl_aesp/zamora/FRNN_project`*
+*Personal note: I am using `export FRNN_ROOT=/lus/theta-fs0/projects/fusiondl_aesp/zamora/FRNN_project`*
 
 If the environment is set up correctly, installation of `plasma-python` is straightforward:
 
