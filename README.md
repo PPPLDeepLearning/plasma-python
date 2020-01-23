@@ -5,7 +5,7 @@
 
 ## Package description
 
-Fusion Recurrent Neural Net (FRNN) is a Python package implementing deep learning models for disruption prediction in tokamak fusion plasmas.
+The Fusion Recurrent Neural Net (FRNN) software is a Python package that implements deep learning models for disruption prediction in tokamak fusion plasmas.
 
 It consists of 4 core modules:
 
