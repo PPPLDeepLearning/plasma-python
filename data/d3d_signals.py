@@ -32,8 +32,6 @@ signal_paths = [
     'bmstinj', ]  # Total Beam Torque
 # 'pcechpwrf'] #Total ECH Power Not always on!
 
-signal_paths = ['d3d/' + path for path in signal_paths]
-
 # 0D EFIT signals
 signal_paths += ['EFIT01/RESULTS.AEQDSK.Q95']
 

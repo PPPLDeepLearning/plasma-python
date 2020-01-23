@@ -15,6 +15,11 @@ if g.comm is not None:
     g.flush_all_inorder()
     g.comm.Barrier()
 
+# TODO(KGF): remove unused threshold_range() methods (#54)
+
+# remapper() method, used only in normalize.py, implicitly knows the
+# transformation applied to Shot.ttd within Shot.convert_to_ttd()
+
 
 # Requirement: larger value must mean disruption more likely.
 class Target(object):
@@ -28,6 +33,7 @@ class Target(object):
 
     @abc.abstractmethod
     def remapper(ttd, T_warning):
+        # TODO(KGF): base class directly uses ttd=log(TTD+dt/10) quantity
         return -ttd
 
     @abc.abstractmethod
@@ -47,6 +53,7 @@ class BinaryTarget(Target):
 
     @staticmethod
     def remapper(ttd, T_warning, as_array_of_shots=True):
+        # TODO(KGF): see below comment in HingeTarget.remapper()
         binary_ttd = 0*ttd
         mask = ttd < np.log10(T_warning)
         binary_ttd[mask] = 1.0
@@ -88,11 +95,11 @@ class TTDInvTarget(Target):
 
     @staticmethod
     def remapper(ttd, T_warning):
-        eps = 1e-4
-        ttd = 10**(ttd)
+        eps = 1e-4  # hardcoded "avoid division by zero"
+        ttd = 10**(ttd)  # see below comment about undoing log transformation
         mask = ttd < T_warning
         ttd[~mask] = T_warning
-        ttd = (1.0)/(ttd+eps)  # T_warning
+        ttd = (1.0)/(ttd + eps)
         return ttd
 
     @staticmethod
@@ -111,6 +118,8 @@ class TTDLinearTarget(Target):
 
     @staticmethod
     def remapper(ttd, T_warning):
+        # TODO(KGF): this next line "undoes" the log-transform in shots.py
+        # Shot.convert_to_ttd() (except for small offset of +dt/10)
         ttd = 10**(ttd)
         mask = ttd < T_warning
         ttd[~mask] = 0  # T_warning
@@ -184,6 +193,7 @@ class MaxHingeTarget(Target):
 
     @staticmethod
     def remapper(ttd, T_warning, as_array_of_shots=True):
+        # TODO(KGF): see below comment in HingeTarget.remapper()
         binary_ttd = 0*ttd
         mask = ttd < np.log10(T_warning)
         binary_ttd[mask] = 1.0
@@ -209,6 +219,7 @@ class HingeTarget(Target):
 
     @staticmethod
     def remapper(ttd, T_warning, as_array_of_shots=True):
+        # TODO(KGF): zeros the ttd=log(TTD+dt/10) (just reuses shape)
         binary_ttd = 0*ttd
         mask = ttd < np.log10(T_warning)
         binary_ttd[mask] = 1.0
