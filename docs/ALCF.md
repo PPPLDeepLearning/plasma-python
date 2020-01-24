@@ -6,14 +6,14 @@ This document is intended to act as a tutorial for running the [plasma-python](h
 
 ## Environment Setup
 
-Choose a *root* directory for FRNN-related installations on Theta:
+Choose a root project directory for FRNN-related installations on Theta:
 
 ```
 export FRNN_ROOT=<desired-root-directory>
 cd $FRNN_ROOT
 ```
 
-*Personal Note: I am using FRNN_ROOT=/home/zamora/ESP*
+*Personal note:* I am using `FRNN_ROOT=/home/zamora/ESP`
 
 Create a simple directory structure allowing experimental *builds* of the `plasma-python` python code/library:
 
@@ -55,7 +55,7 @@ export PATH=${FRNN_ROOT}/build/miniconda-3.6-4.5.4/miniconda3/4.5.4/bin:$PATH
 export PYTHONPATH=${FRNN_ROOT}/build/miniconda-3.6-4.5.4/miniconda3/4.5.4/lib/python3.6/site-packages/:$PYTHONPATH
 ```
 
-*Personal note: I am using `export FRNN_ROOT=/lus/theta-fs0/projects/fusiondl_aesp/zamora/FRNN_project`*
+*Personal note:* I am using `export FRNN_ROOT=/lus/theta-fs0/projects/fusiondl_aesp/zamora/FRNN_project`
 
 If the environment is set up correctly, installation of `plasma-python` is straightforward:
 
@@ -180,8 +180,9 @@ The issue has to do with the `>` character in the directory name (without the pr
 
 ## Singularity/Docker Notes
 
-Recall that the data preprocessing step was PAINFULLY slow on Theta, and so I decided to use Cooley. To simplify the process of using Cooley, I created a Docker image with the necessary environment. **Personal Note:** I performed this work on my local machine (Mac) in `/Users/rzamora/container-recipes`.
+Recall that the data preprocessing step was PAINFULLY slow on Theta, and so I decided to use Cooley. To simplify the process of using Cooley, I created a Docker image with the necessary environment. 
 
+*Personal Note:* I performed this work on my local machine (Mac) in `/Users/rzamora/container-recipes`.
 
 In order to use a Docker image within a Singularity container (required on ALCF machines), it is useful to build the image on your local machine and push it to "Docker Hub":
 
