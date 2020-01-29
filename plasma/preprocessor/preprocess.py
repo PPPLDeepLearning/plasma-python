@@ -138,6 +138,7 @@ class Preprocessor(object):
         return shot
 
     def get_individual_channel_dirs(self):
+        # TODO(KGF): unused
         return self.conf['paths']['signals_dirs']
 
     def get_shot_list_path(self):
