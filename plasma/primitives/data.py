@@ -5,7 +5,6 @@ import os
 import re
 
 from scipy.interpolate import UnivariateSpline
-
 from plasma.utils.processing import get_individual_shot_file
 from plasma.utils.downloading import get_missing_value_array
 from plasma.utils.hashing import myhash
@@ -28,7 +27,7 @@ class Signal(object):
                  causal_shifts=None, is_ip=False, normalize=True,
                  data_avail_tolerances=None, is_strictly_positive=False,
                  mapping_paths=None):
-        assert(len(paths) == len(machines))
+        assert len(paths) == len(machines)
         self.description = description
         self.paths = paths
         self.machines = machines  # on which machines is the signal defined
@@ -51,9 +50,10 @@ class Signal(object):
         return self.is_ip
 
     def get_file_path(self, prepath, machine, shot_number):
-        dirname = self.get_path(machine)
-        return get_individual_shot_file(prepath + '/' + machine.name + '/'
-                                        + dirname + '/', shot_number)
+        signal_dirname = self.get_path(machine)
+        dirname = os.path.join(prepath, machine.name, signal_dirname)
+        return get_individual_shot_file(dirname, machine.name, shot_number,
+                                        raw_signal=True)
 
     def is_valid(self, prepath, shot, dtype='float32'):
         t, data, exists = self.load_data(prepath, shot, dtype)
@@ -66,24 +66,24 @@ class Signal(object):
     def load_data_from_txt_safe(self, prepath, shot, dtype='float32'):
         file_path = self.get_file_path(prepath, shot.machine, shot.number)
         if not self.is_saved(prepath, shot):
-            print('Signal {}, shot {} was never downloaded'.format(
+            print('Signal {}, shot {} was never downloaded [omit]'.format(
                 self.description, shot.number))
             return None, False
 
         if os.path.getsize(file_path) == 0:
             print('Signal {}, shot {} '.format(self.description, shot.number),
-                  'was downloaded incorrectly (empty file). Removing.')
+                  'was downloaded incorrectly (empty file) [omit]')
             os.remove(file_path)
             return None, False
         try:
             data = np.loadtxt(file_path, dtype=dtype)
             if np.all(data == get_missing_value_array()):
-                print('Signal {}, shot {} contains no data'.format(
+                print('Signal {}, shot {} contains no data [omit]'.format(
                     self.description, shot.number))
                 return None, False
         except Exception as e:
             print(e)
-            print('Couldnt load signal {} shot {}. Removing.'.format(
+            print('Cannot load signal {} shot {} [omit]'.format(
                 file_path, shot.number))
             os.remove(file_path)
             return None, False
@@ -104,12 +104,12 @@ class Signal(object):
         if self.is_ip:  # restrict shot to current threshold
             region = np.where(np.abs(sig) >= shot.machine.current_threshold)[0]
             if len(region) == 0:
-                print('shot {} has no current'.format(shot.number))
-                return None, None, False
+                print('Shot {} has no current [omit]'.format(shot.number))
+                return None, sig.shape, False
             first_idx = region[0]
             last_idx = region[-1]
             # add 50 ms to cover possible disruption event
-            last_time = t[last_idx]+5e-2
+            last_time = t[last_idx] + 5e-2
             last_indices = np.where(t > last_time)[0]
             if len(last_indices) == 0:
                 last_idx = -1
@@ -121,20 +121,17 @@ class Signal(object):
         # make sure shot is not garbage data
         if len(t) <= 1 or (np.max(sig) == 0.0 and np.min(sig) == 0.0):
             if self.is_ip:
-                print('shot {} has no current'.format(shot.number))
+                print('Shot {} has no current [omit]'.format(shot.number))
             else:
-                print(
-                    'Signal {}, shot {} contains no data'.format(
-                        self.description, shot.number))
-            return None, None, False
+                print('Signal {}, shot {} contains no data [omit]'.format(
+                    self.description, shot.number))
+            return None, sig.shape, False
 
-        # make sure data doesn't contain nan
+        # make sure data doesn't contain NaN values
         if np.any(np.isnan(t)) or np.any(np.isnan(sig)):
-            print(
-                'Signal {}, shot {} contains NAN'.format(
-                    self.description,
-                    shot.number))
-            return None, None, False
+            print('Signal {}, shot {} contains NaN [omit]'.format(
+                self.description, shot.number))
+            return None, sig.shape, False
 
         return t, sig, True
 
@@ -185,7 +182,7 @@ class Signal(object):
         return self.data_avail_tolerances[idx]
 
     def get_idx(self, machine):
-        assert(machine in self.machines)
+        assert machine in self.machines
         idx = self.machines.index(machine)
         return idx
 
@@ -247,15 +244,16 @@ class ProfileSignal(Signal):
             print('Signal {}, shot {} '.format(self.description, shot.number),
                   'should be profile but has only one channel. Possibly only ',
                   'one profile fit was run for the duration of the shot and ',
-                  'was transposed during downloading. Need at least 2.')
+                  'was transposed during downloading. Need at least 2 channels'
+                  ' [omit]')
             return None, None, False
         if len(t) <= 1 or (np.max(sig) == 0.0 and np.min(sig) == 0.0):
             print('Signal {}, shot {} '.format(self.description, shot.number),
-                  'contains no data.')
+                  'contains no data [omit]')
             return None, None, False
         if np.any(np.isnan(t)) or np.any(np.isnan(sig)):
             print('Signal {}, shot {} '.format(self.description, shot.number),
-                  'contains NaN value(s).')
+                  'contains NaN value(s) [omit]')
             return None, None, False
 
         timesteps = len(t)
@@ -272,14 +270,15 @@ class ProfileSignal(Signal):
                 print('Signal {}, shot {} '.format(self.description,
                                                    shot.number),
                       'has insufficient points for linear interpolation. ',
-                      'dfitpack.error: (m>k) failed for hidden m: fpcurf0:m=1')
+                      'dfitpack.error: (m>k) failed for hidden m: fpcurf0:m=1 '
+                      '[omit]')
                 return None, None, False
 
         return t, sig_interp, True
 
     def fetch_data(self, machine, shot_num, c):
-        time, data, mapping, success = self.fetch_data_basic(machine, shot_num,
-                                                             c)
+        time, data, mapping, success = self.fetch_data_basic(
+            machine, shot_num, c)
         path = self.get_path(machine)
         mapping_path = self.get_mapping_path(machine)
 
@@ -329,10 +328,10 @@ class ChannelSignal(Signal):
         nums = []
         new_paths = []
         for p in paths:
-            assert(p[-1] != '/')
+            assert p[-1] != '/'
             elements = p.split('/')
             res = regex.findall(elements[-1])
-            assert(len(res) < 2)
+            assert len(res) < 2
             if len(res) == 0:
                 nums.append(None)
                 new_paths.append(p)
@@ -353,19 +352,21 @@ class ChannelSignal(Signal):
         if channel_num is not None and success:
             if np.ndim(data) != 2:
                 print("Channel Signal {} expected 2D array for shot {}".format(
-                    self, self.shot_number))
+                    self, self.shot_number), ' [omit]')
                 success = False
             else:
                 data = data[channel_num, :]  # extract channel of interest
         return time, data, mapping, success
 
     def get_file_path(self, prepath, machine, shot_number):
-        dirname = self.get_path(machine)
+        signal_dirname = self.get_path(machine)
         num = self.get_channel_num(machine)
         if num is not None:
-            dirname += "/channel{}".format(num)
-        return get_individual_shot_file(prepath + '/' + machine.name + '/'
-                                        + dirname + '/', shot_number)
+            # TODO(KGF): deduplicate with parent class fn. Only difference:
+            signal_dirname += "/channel{}".format(num)
+        dirname = os.path.join(prepath, machine.name, signal_dirname)
+        return get_individual_shot_file(dirname, machine.name, shot_number,
+                                        raw_signal=True)
 
 
 class Machine(object):

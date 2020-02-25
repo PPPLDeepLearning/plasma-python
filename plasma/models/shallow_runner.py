@@ -10,6 +10,7 @@ from plasma.utils.downloading import makedirs_process_safe
 # from plasma.utils.state_reset import reset_states
 from plasma.utils.evaluation import get_loss_from_list
 from plasma.utils.performance import PerformanceAnalyzer
+from plasma.utils.diagnostics import print_shot_list_sizes
 # from plasma.models.loader import Loader, ProcessGenerator
 # from plasma.conf import conf
 from sklearn.neural_network import MLPClassifier
@@ -117,7 +118,7 @@ class FeatureExtractor(object):
         if not os.path.exists(save_prepath):
             makedirs_process_safe(save_prepath)
         prepath = self.loader.conf['paths']['processed_prepath']
-        assert(shot.valid)
+        assert shot.valid
         shot.restore(prepath)
         self.loader.set_inference_mode(True)  # make sure shots aren't cut
         if self.loader.normalizer is not None:
@@ -159,8 +160,8 @@ class FeatureExtractor(object):
             print(shot.ttd, shot.number)
             print("Shot must be at least as long as the RNN length.")
             exit(1)
-        assert(len(sig_sample.shape) == len(shot.ttd.shape) == 2)
-        assert(shot.ttd.shape[1] == 1)
+        assert len(sig_sample.shape) == len(shot.ttd.shape) == 2
+        assert shot.ttd.shape[1] == 1
 
         X = []
         while(len(X) == 0):
@@ -324,12 +325,13 @@ def build_callbacks(conf):
 def train(conf, shot_list_train, shot_list_validate, loader,
           shot_list_test=None):
     np.random.seed(1)
-    print('validate: {} shots, {} disruptive'.format(
-        len(shot_list_validate),
-        shot_list_validate.num_disruptive()))
+    print_shot_list_sizes(shot_list_train, shot_list_validate)
     print('training: {} shots, {} disruptive'.format(
         len(shot_list_train),
         shot_list_train.num_disruptive()))
+    print('validate: {} shots, {} disruptive'.format(
+        len(shot_list_validate),
+        shot_list_validate.num_disruptive()))
 
     num_samples = conf['model']['shallow_model']['num_samples']
     feature_extractor = FeatureExtractor(loader)
@@ -513,7 +515,7 @@ def make_predictions_and_evaluate_multiple_times(conf, shot_list, loader,
         conf_curr = deepcopy(conf)
         T_min_warn_orig = conf['data']['T_min_warn']
         conf_curr['data']['T_min_warn'] = T_min_curr
-        assert(conf['data']['T_min_warn'] == T_min_warn_orig)
+        assert conf['data']['T_min_warn'] == T_min_warn_orig
         analyzer = PerformanceAnalyzer(conf=conf_curr)
         roc_area = analyzer.get_roc_area(y_prime, y_gold, disruptive)
         # shot_list.set_weights(analyzer.get_shot_difficulty(y_prime, y_gold,

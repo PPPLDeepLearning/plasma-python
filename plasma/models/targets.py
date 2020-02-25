@@ -15,6 +15,11 @@ if g.comm is not None:
     g.flush_all_inorder()
     g.comm.Barrier()
 
+# TODO(KGF): remove unused threshold_range() methods (#54)
+
+# remapper() method, used only in normalize.py, implicitly knows the
+# transformation applied to Shot.ttd within Shot.convert_to_ttd()
+
 
 # Requirement: larger value must mean disruption more likely.
 class Target(object):
@@ -28,6 +33,7 @@ class Target(object):
 
     @abc.abstractmethod
     def remapper(ttd, T_warning):
+        # TODO(KGF): base class directly uses ttd=log(TTD+dt/10) quantity
         return -ttd
 
     @abc.abstractmethod
@@ -47,6 +53,7 @@ class BinaryTarget(Target):
 
     @staticmethod
     def remapper(ttd, T_warning, as_array_of_shots=True):
+        # TODO(KGF): see below comment in HingeTarget.remapper()
         binary_ttd = 0*ttd
         mask = ttd < np.log10(T_warning)
         binary_ttd[mask] = 1.0
@@ -88,11 +95,11 @@ class TTDInvTarget(Target):
 
     @staticmethod
     def remapper(ttd, T_warning):
-        eps = 1e-4
-        ttd = 10**(ttd)
+        eps = 1e-4  # hardcoded "avoid division by zero"
+        ttd = 10**(ttd)  # see below comment about undoing log transformation
         mask = ttd < T_warning
         ttd[~mask] = T_warning
-        ttd = (1.0)/(ttd+eps)  # T_warning
+        ttd = (1.0)/(ttd + eps)
         return ttd
 
     @staticmethod
@@ -111,6 +118,8 @@ class TTDLinearTarget(Target):
 
     @staticmethod
     def remapper(ttd, T_warning):
+        # TODO(KGF): this next line "undoes" the log-transform in shots.py
+        # Shot.convert_to_ttd() (except for small offset of +dt/10)
         ttd = 10**(ttd)
         mask = ttd < T_warning
         ttd[~mask] = 0  # T_warning
@@ -126,10 +135,12 @@ class TTDLinearTarget(Target):
 # time sequence is punished. Also implements class weighting
 class MaxHingeTarget(Target):
     activation = 'linear'
+    loss = 'hinge'
     fac = 1.0
 
     @staticmethod
     def loss(y_true, y_pred):
+        # TODO(KGF): this function is unused and unique to this class
         from plasma.conf import conf
         fac = MaxHingeTarget.fac
         # overall_fac =
@@ -150,8 +161,11 @@ class MaxHingeTarget(Target):
     @staticmethod
     def loss_np(y_true, y_pred):
         from plasma.conf import conf
-        fac = MaxHingeTarget.fac
-        # print(y_pred.shape)
+        # TODO(KGF): fac = positive_example_penalty is only used in this class,
+        # only in above (unused) loss() fn, which only this class has, and is
+        # never called. 2 lines related to fac commented-out in this fn.
+        #
+        # fac = MaxHingeTarget.fac
         overall_fac = np.prod(np.array(y_pred.shape).astype(np.float32))
         max_val = np.max(y_pred, axis=-2)  # temporal axis!
         max_val = np.reshape(
@@ -160,10 +174,8 @@ class MaxHingeTarget(Target):
         mask = np.equal(max_val, y_pred)
         mask = mask.astype(np.float32)
         y_pred = mask * y_pred + (1-mask) * y_true
-        weight_mask = np.greater(
-            y_true, 0.0).astype(
-            np.float32)  # positive label!
-        weight_mask = fac*weight_mask + (1 - weight_mask)
+        # positive label! weight_mask = fac*weight_mask + (1 - weight_mask):
+        weight_mask = np.greater(y_true, 0.0).astype(np.float32)
         # return np.mean(
         #  weight_mask*np.square(np.maximum(1. - y_true * y_pred, 0.)))
         # , axis=-1)
@@ -181,6 +193,7 @@ class MaxHingeTarget(Target):
 
     @staticmethod
     def remapper(ttd, T_warning, as_array_of_shots=True):
+        # TODO(KGF): see below comment in HingeTarget.remapper()
         binary_ttd = 0*ttd
         mask = ttd < np.log10(T_warning)
         binary_ttd[mask] = 1.0
@@ -196,8 +209,7 @@ class MaxHingeTarget(Target):
 
 class HingeTarget(Target):
     activation = 'linear'
-
-    loss = 'hinge'  # hinge
+    loss = 'hinge'
 
     @staticmethod
     def loss_np(y_true, y_pred):
@@ -207,6 +219,7 @@ class HingeTarget(Target):
 
     @staticmethod
     def remapper(ttd, T_warning, as_array_of_shots=True):
+        # TODO(KGF): zeros the ttd=log(TTD+dt/10) (just reuses shape)
         binary_ttd = 0*ttd
         mask = ttd < np.log10(T_warning)
         binary_ttd[mask] = 1.0

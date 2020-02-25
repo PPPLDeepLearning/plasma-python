@@ -319,7 +319,7 @@ class PerformanceAnalyzer():
         else:
             print('Error Invalid Mode for acceptable region')
             exit(1)
-        assert(self.T_max_warn > self.T_min_warn)
+        assert self.T_max_warn > self.T_min_warn
 
         acceptable = np.zeros_like(truth, dtype=bool)
         if acceptable_timesteps > 0:
@@ -389,15 +389,16 @@ class PerformanceAnalyzer():
         # self.disruptive_train)
 
     def assert_same_lists(self, shot_list, truth_arr, disr_arr):
-        assert(len(shot_list) == len(truth_arr))
+        assert len(shot_list) == len(truth_arr)
         for i in range(len(shot_list)):
+            # TODO(KGF): remove this hardcoded path (also missing signal_path))
             shot_list.shots[i].restore("/tigress/jk7/processed_shots/")
             s = shot_list.shots[i].ttd
             if not truth_arr[i].shape[0] == s.shape[0]-30:
                 print(i)
                 print(shot_list.shots[i].number)
                 print((s.shape, truth_arr[i].shape, disr_arr[i]))
-            assert(truth_arr[i].shape[0] == s.shape[0]-30)
+            assert truth_arr[i].shape[0] == s.shape[0]-30
         print("Same shape!")
 
     def print_conf(self):
@@ -743,7 +744,7 @@ class PerformanceAnalyzer():
                 f, axarr = plt.subplots(
                     len(use_signals)+1, 1, sharex=True, figsize=(10, 15))
                 plt.title(prediction_type)
-                assert(np.all(shot.ttd.flatten() == truth.flatten()))
+                assert np.all(shot.ttd.flatten() == truth.flatten())
                 xx = range(len(prediction))  # list(reversed(range(len(pred))))
                 for i, sig in enumerate(use_signals):
                     ax = axarr[i]
@@ -832,7 +833,7 @@ class PerformanceAnalyzer():
             self.normalizer = nn
             self.normalizer.set_inference_mode(True)
 
-        if(shot.previously_saved(self.shots_dir)):
+        if shot.previously_saved(self.shots_dir):
             shot.restore(self.shots_dir)
             # t_disrupt = shot.t_disrupt
             # is_disruptive = shot.is_disruptive
@@ -845,7 +846,7 @@ class PerformanceAnalyzer():
             plt.title(prediction_type)
             # all files must agree on T_warning due to output of truth vs.
             # normalized shot ttd.
-            assert(np.all(shot.ttd.flatten() == truth.flatten()))
+            assert np.all(shot.ttd.flatten() == truth.flatten())
             for i, sig in enumerate(use_signals):
                 num_channels = sig.num_channels
                 ax = axarr[i]

@@ -1,6 +1,6 @@
 '''
 #########################################################
-This file containts classes to handle data processing
+This file contains classes to handle data processing
 
 Author: Julian Kates-Harbeck, jkatesharbeck@g.harvard.edu
 
@@ -19,12 +19,12 @@ import numpy as np
 import pathos.multiprocessing as mp
 
 from plasma.utils.processing import append_to_filename
+from plasma.utils.diagnostics import print_shot_list_sizes
 from plasma.primitives.shots import ShotList
 from plasma.utils.downloading import mkdirdepth
 
 
 class Preprocessor(object):
-
     def __init__(self, conf):
         self.conf = conf
 
@@ -100,12 +100,18 @@ class Preprocessor(object):
 
         pool.close()
         pool.join()
-        print('Finished Preprocessing {} files in {} seconds'.format(
+        print('\nFinished preprocessing {} files in {} seconds'.format(
             len(shot_list_picked), time.time() - start_time))
-        print('Omitted {} shots of {} total.'.format(
+        print('Using {} shots ({} disruptive shots)'.format(
+            len(used_shots), used_shots.num_disruptive()))
+        print('Omitted {} shots of {} total shots'.format(
             len(shot_list_picked) - len(used_shots), len(shot_list_picked)))
-        print('{}/{} disruptive shots'.format(used_shots.num_disruptive(),
-                                              len(used_shots)))
+        print(
+            'Omitted {} disruptive shots of {} total disruptive shots'.format(
+                shot_list_picked.num_disruptive()
+                - used_shots.num_disruptive(),
+                shot_list_picked.num_disruptive()))
+
         if len(used_shots) == 0:
             print("WARNING: All shots were omitted, please ensure raw data "
                   " is complete and available at {}.".format(
@@ -132,6 +138,7 @@ class Preprocessor(object):
         return shot
 
     def get_individual_channel_dirs(self):
+        # TODO(KGF): unused
         return self.conf['paths']['signals_dirs']
 
     def get_shot_list_path(self):
@@ -186,7 +193,7 @@ def apply_bleed_in(conf, shot_list_train, shot_list_validate, shot_list_test):
             num_sampled_nd+num_sampled_d, num_sampled_d, num_sampled_nd))
         print("Before adding: training shots: {} validation shots: {}".format(
             len(shot_list_train), len(shot_list_validate)))
-        assert(num_sampled_d == num)
+        assert num_sampled_d == num
         # add bleed-in shots to training and validation set repeatedly
         if conf['data']['bleed_in_equalize_sets']:
             print("Applying equalized bleed in")
@@ -218,7 +225,7 @@ def apply_bleed_in(conf, shot_list_train, shot_list_validate, shot_list_test):
         #         if conf['data']['bleed_in_remove_from_test']:
         #             shot_list_test.remove(s)
         # else:
-        #     print('No disruptive shots in test set, omitting bleed in')
+        #     print('No disruptive shots in test set, [omit] bleed in')
         # if num_nd > 0:
         #     for i in range(num):
         #         s = shot_list_test.sample_single_class(False)
@@ -227,7 +234,7 @@ def apply_bleed_in(conf, shot_list_train, shot_list_validate, shot_list_test):
         #         if conf['data']['bleed_in_remove_from_test']:
         #             shot_list_test.remove(s)
         # else:
-        #     print('No nondisruptive shots in test set, omitting bleed in')
+        #     print('No nondisruptive shots in test set, [omit] bleed in')
     return shot_list_train, shot_list_validate, shot_list_test
 
 
@@ -257,11 +264,10 @@ def guarantee_preprocessed(conf, verbose=False):
     shot_list_train, shot_list_validate, shot_list_test = apply_bleed_in(
         conf, shot_list_train, shot_list_validate, shot_list_test)
     if verbose:
-        g.print_unique('validate: {} shots, {} disruptive'.format(
-            len(shot_list_validate), shot_list_validate.num_disruptive()))
-        g.print_unique('training: {} shots, {} disruptive'.format(
-            len(shot_list_train), shot_list_train.num_disruptive()))
-        g.print_unique('testing: {} shots, {} disruptive'.format(
-            len(shot_list_test), shot_list_test.num_disruptive()))
+        print_shot_list_sizes(shot_list_train, shot_list_validate,
+                              shot_list_test)
         g.print_unique("...done")
+    #    g.print_unique("...printing test shot list:")
+    #    for s in shot_list_test:
+    #       g.print_unique(str(s.number))
     return shot_list_train, shot_list_validate, shot_list_test

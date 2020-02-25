@@ -1,0 +1,8 @@
+# pip dependencies for Travis CI builds
+scipy
+pandas
+flake8
+h5py
+pyparsing
+pyyaml
+tensorflow-gpu>=1.3,<2.0.0

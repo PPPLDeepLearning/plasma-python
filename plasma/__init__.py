@@ -15,7 +15,7 @@ import warnings
 warnings.filterwarnings('ignore',
                         category=FutureWarning,
                         message=r"passing \(type, 1\) or '1type' as a synonym of type is deprecated",  # noqa
-                        module="tensorflow")
+                        module="tensor*")
 
 # Optional: disable the C-based library diagnostic info and warning messages:
 # 2019-11-06 18:27:31.698908: I ...  dynamic library libcublas.so.10

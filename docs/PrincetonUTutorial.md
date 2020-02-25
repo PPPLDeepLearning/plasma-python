@@ -245,7 +245,7 @@ A URL should be emitted to the console output. Navigate to this link in your bro
 
 You should see something like:
 
-![tensorboard example](https://github.com/PPPLDeepLearning/plasma-python/blob/master/docs/tb.png)
+![tensorboard example](https://github.com/PPPLDeepLearning/plasma-python/blob/master/docs/images/tb.png)
 
 When you are finished with analyzing the summaries in TensorBoard, you may wish to unmount the remote filesystem:
 ```
