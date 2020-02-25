@@ -2,6 +2,7 @@ language: python
 branches:
   only:
     - master
+    - transformer
 os:
   - linux
 

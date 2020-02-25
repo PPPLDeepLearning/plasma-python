@@ -418,7 +418,8 @@ def train(conf, shot_list_train, shot_list_validate, loader):
     hvd.broadcast_parameters(train_model.state_dict(), root_rank=0)
     hvd.broadcast_optimizer_state(optim, root_rank=0)
 
-    optimizer_args = {'op': hvd.Average, 'compression': hvd.Compression.fp16, 'named_parameters': train_model.named_parameters()}
+    optimizer_args = {'op': hvd.Average, 'compression': hvd.Compression.fp16,
+                      'named_parameters': train_model.named_parameters()}
     optimizer = hvd.DistributedOptimizer(optim, **optimizer_args)
 
     train_model.train()
@@ -431,8 +432,8 @@ def train(conf, shot_list_train, shot_list_validate, loader):
     while e < num_epochs - 1:
         print('\nEpoch {}/{}'.format(e, num_epochs))
         (step, ave_loss, curr_loss, num_so_far,
-         effective_epochs) = train_epoch(train_model, data_gen, optimizer, scheduler,
-                                         loss_fn)
+         effective_epochs) = train_epoch(train_model, data_gen, optimizer,
+                                         scheduler, loss_fn)
         e = effective_epochs
         loader.verbose = False  # True during the first iteration
         # if task_index == 0:

@@ -8,9 +8,10 @@ from plasma.utils.downloading import makedirs_process_safe
 from plasma.utils.performance import PerformanceAnalyzer
 from plasma.utils.evaluation import get_loss_from_list
 from plasma.models.torch_runner import (
-    #make_predictions_and_evaluate_gpu,
-    #make_predictions,
+    # make_predictions_and_evaluate_gpu,
+    # make_predictions,
     get_signal_dimensions,
+    calculate_conv_output_size,
 )
 
 from functools import partial
@@ -18,7 +19,7 @@ import os
 import numpy as np
 import logging
 import random
-import tqdm
+# import tqdm
 
 model_filename = "torch_model.pt"
 LOGGER = logging.getLogger("plasma.transformer.runner")
@@ -32,12 +33,14 @@ device = "cuda:0" if torch.cuda.is_available() else "cpu"
 # else:
 #    device = torch.device("cpu")
 
+
 def set_seed(seed):
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-    os.environ["PYTHONHASHSEED"]="0"
+    os.environ["PYTHONHASHSEED"] = "0"
+
 
 class TransformerNet(nn.Module):
     def __init__(
@@ -103,14 +106,16 @@ class InputBlock(nn.Module):
                 )
                 self.layers.append(nn.MaxPool1d(kernel_size=self.pooling_size))
                 self.conv_output_size = calculate_conv_output_size(
-                    self.conv_output_size, 0, 1, self.pooling_size, self.pooling_size
+                    self.conv_output_size, 0, 1, self.pooling_size,
+                    self.pooling_size
                 )
                 self.layers.append(nn.Dropout2d(dropout))
             self.net = nn.Sequential(*self.layers)
             self.conv_output_size = self.conv_output_size * layer_sizes[-1]
         self.linear_layers = []
 
-        print("Final feature size = {}".format(self.n_scalars + self.conv_output_size))
+        print("Final feature size = {}".format(self.n_scalars
+                                               + self.conv_output_size))
         self.linear_layers.append(
             nn.Linear(self.conv_output_size + self.n_scalars, linear_size)
         )
@@ -128,7 +133,7 @@ class InputBlock(nn.Module):
                 x_profiles = x
             else:
                 x_scalars = x[:, : self.n_scalars]
-                x_profiles = x[:, self.n_scalars :]
+                x_profiles = x[:, self.n_scalars:]
             x_profiles = x_profiles.contiguous().view(
                 x.size(0), self.n_profiles, self.profile_size
             )
@@ -170,7 +175,8 @@ class TransformerSequenceEncoder(nn.Module):
         self.__max_seq_length = max_seq_length
         self.__d_model = d_model
         # FIXME
-        self.__positional_encodings = nn.Embedding(max_seq_length, d_model).float()
+        self.__positional_encodings = nn.Embedding(
+            max_seq_length, d_model).float()
 
     def forward(self, x):
         """
@@ -180,17 +186,19 @@ class TransformerSequenceEncoder(nn.Module):
         mask = (
             torch.arange(x.shape[1], device=device)
             .unsqueeze(0)
-            .lt(torch.tensor([self.__max_seq_length], device=device).unsqueeze(-1))
+            .lt(torch.tensor([self.__max_seq_length],
+                             device=device).unsqueeze(-1))
         )
         transformer_input = x * mask.unsqueeze(-1).float()  # B x max_len x D
 
         positional_encodings = self.__positional_encodings(
             torch.arange(x.shape[1], dtype=torch.int64, device=device)
         ).unsqueeze(0)
-        transformer_input = transformer_input + positional_encodings  # B x max_len x D
+        transformer_input = (transformer_input
+                             + positional_encodings)  # B x max_len x D
 
         out = self.__transformer_encoder(
-            transformer_input #.transpose(0, 1), src_key_padding_mask=~mask
+            transformer_input  # .transpose(0, 1), src_key_padding_mask=~mask
         )
         return out
 
@@ -199,11 +207,10 @@ def build_torch_model(conf):
 
     dropout = conf["model"]["dropout_prob"]
     n_scalars, n_profiles, profile_size = get_signal_dimensions(conf)
-
-    output_size = 1
-    layer_sizes_spatial = [6, 3, 3] 
+    # output_size = 1
+    layer_sizes_spatial = [6, 3, 3]
     kernel_size_spatial = 3
-    linear_size = 5 #FIXME Alexeys there will be no linear layers
+    linear_size = 5  # FIXME Alexeys there will be no linear layers
 
     model = TransformerNet(
         n_scalars,
@@ -233,7 +240,7 @@ def train_epoch(model, data_gen, optimizer, scheduler, loss_fn):
     step = 0
     while True:
         x_, y_, num_so_far, num_total, _ = next(data_gen)
-      
+
         x = torch.from_numpy(x_).float().to(device)
         y = torch.from_numpy(y_).float().to(device)
 
@@ -247,24 +254,23 @@ def train_epoch(model, data_gen, optimizer, scheduler, loss_fn):
         scheduler.step()
         step += 1
 
-        LOGGER.info(
-            f"[{step}]  [{num_so_far}/{num_total}] loss: {loss.item()}, ave_loss: {total_loss / step}"
-            )
+        LOGGER.info(f"[{step}]  [{num_so_far}/{num_total}] loss: {loss.item()}, ave_loss: {total_loss / step}")  # noqa
         if num_so_far >= num_total:
             break
 
-    return step, loss.item(), total_loss, num_so_far, 1.0 * num_so_far / num_total
+    return (step, loss.item(), total_loss, num_so_far,
+            1.0 * num_so_far / num_total)
 
 
 def train(conf, shot_list_train, shot_list_validate, loader):
-    #set random seed
+    # set random seed
     set_seed(0)
     num_epochs = conf["training"]["num_epochs"]
-    patience = conf["callbacks"]["patience"]
+    # patience = conf["callbacks"]["patience"]
     lr_decay = conf["model"]["lr_decay"]
-    batch_size = conf['training']['batch_size']
+    # batch_size = conf['training']['batch_size']
     lr = conf["model"]["lr"]
-    clipnorm = conf['model']['clipnorm']
+    # clipnorm = conf['model']['clipnorm']
     e = 0
 
     loader.set_inference_mode(False)
@@ -272,20 +278,20 @@ def train(conf, shot_list_train, shot_list_validate, loader):
         loader.simple_batch_generator,
         shot_list=shot_list_train,
     )()
-    valid_data_generator = partial(
+    valid_data_generator = partial(  # noqa
         loader.simple_batch_generator,
         shot_list=shot_list_validate,
         inference=True
     )()
-    LOGGER.info(f"validate: {len(shot_list_validate)} shots, {shot_list_validate.num_disruptive()} disruptive")
-    LOGGER.info(f"training: {len(shot_list_train)} shots, {shot_list_train.num_disruptive()} disruptive")
+    LOGGER.info(f"validate: {len(shot_list_validate)} shots, {shot_list_validate.num_disruptive()} disruptive")  # noqa
+    LOGGER.info(f"training: {len(shot_list_train)} shots, {shot_list_train.num_disruptive()} disruptive")  # noqa
 
     loss_fn = nn.MSELoss(size_average=True)
     train_model = build_torch_model(conf)
 
     optimizer = opt.Adam(train_model.parameters(), lr=lr)
     scheduler = opt.lr_scheduler.ExponentialLR(optimizer, lr_decay)
- 
+
     model_path = get_model_path(conf)
     makedirs_process_safe(os.path.dirname(model_path))
 
@@ -293,29 +299,32 @@ def train(conf, shot_list_train, shot_list_validate, loader):
     LOGGER.info(f"{num_epochs - 1 - e} epochs left to go")
     while e < num_epochs - 1:
         LOGGER.info(f"Epoch {e}/{num_epochs}")
-        (step, ave_loss, curr_loss, num_so_far, effective_epochs) = train_epoch(
+        (step, ave_loss, curr_loss, num_so_far,
+         effective_epochs) = train_epoch(
             train_model, train_data_gen, optimizer, scheduler, loss_fn
         )
-        
+
         e = effective_epochs
         torch.save(train_model.state_dict(), model_path)
-        #FIXME no validation for now as OOM
-        #_, _, _, roc_area, loss = make_predictions_and_evaluate_gpu(
+        # FIXME no validation for now as OOM
+        # _, _, _, roc_area, loss = make_predictions_and_evaluate_gpu(
         #    conf, shot_list_validate, valid_data_generator
-        #)
+        # )
 
-        ## stop_training = False
-        #print("=========Summary======== for epoch{}".format(step))
-        #print("Training Loss numpy: {:.3e}".format(ave_loss))
-        #print("Validation Loss: {:.3e}".format(loss))
-        #print("Validation ROC: {:.4f}".format(roc_area))
+        # # stop_training = False
+        # print("=========Summary======== for epoch{}".format(step))
+        # print("Training Loss numpy: {:.3e}".format(ave_loss))
+        # print("Validation Loss: {:.3e}".format(loss))
+        # print("Validation ROC: {:.4f}".format(roc_area))
+
 
 def apply_model_to_np(model, x):
     return model(torch.from_numpy(x).float()).data.numpy()
 
-#FIXME Alexeys change
+
+# FIXME Alexeys change
 def make_predictions(conf, shot_list, generator, custom_path=None):
-    #generator = loader.inference_batch_generator_full_shot(shot_list)
+    # generator = loader.inference_batch_generator_full_shot(shot_list)
     inference_model = build_torch_model(conf)
 
     if custom_path is None:
@@ -336,11 +345,11 @@ def make_predictions(conf, shot_list, generator, custom_path=None):
 
         x = torch.from_numpy(x_).float().to(device)
         y = torch.from_numpy(y_).float().to(device)
-        #output = apply_model_to_np(inference_model, x)
+        # output = apply_model_to_np(inference_model, x)
         output = inference_model(x)
 
         for batch_idx in range(x.shape[0]):
-            #curr_length = lengths[batch_idx]
+            # curr_length = lengths[batch_idx]
             y_prime += [output[batch_idx, :, 0]]
             y_gold += [y[batch_idx, :, 0]]
             disruptive += [disr[batch_idx]]
@@ -352,8 +361,10 @@ def make_predictions(conf, shot_list, generator, custom_path=None):
             break
     return y_prime, y_gold, disruptive
 
-#FIXME ALexeys change loader --> generator
-def make_predictions_and_evaluate_gpu(conf, shot_list, generator, custom_path=None):
+
+# FIXME ALexeys change loader --> generator
+def make_predictions_and_evaluate_gpu(conf, shot_list, generator,
+                                      custom_path=None):
     y_prime, y_gold, disruptive = make_predictions(
         conf, shot_list, generator, custom_path)
     analyzer = PerformanceAnalyzer(conf=conf)

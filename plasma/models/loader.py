@@ -825,16 +825,15 @@ class Loader(object):
     def get_num_skips(length, skip):
         return 1 + (length-1)//skip
 
-    #FIXME Alexeys
+    # FIXME Alexeys
     def simple_batch_generator(self, shot_list, max_len=2048, inference=False):
-
         batch_size = self.conf['training']['batch_size']
         sig, res = self.get_signal_result_from_shot(shot_list.shots[0])
         Xbuff = np.zeros((batch_size, max_len, sig.shape[1]))
         Ybuff = np.zeros((batch_size, max_len, res.shape[1]))
 
         num_total = len(shot_list)
-        #num_batches = num_total//batch_size
+        # num_batches = num_total//batch_size
         disr = np.zeros(batch_size, dtype=bool)
 
         while True:
@@ -846,18 +845,18 @@ class Loader(object):
             for i in range(num_total):
                 shot = self.sample_shot_from_list_given_index(shot_list, i)
                 sig, res = self.get_signal_result_from_shot(shot)
-                sig = sig[-max_len:,:]
-                res = res[-max_len:,:]
-                Xbuff[i%batch_size, -sig.shape[0]:, :] = sig
-                Ybuff[i%batch_size, -res.shape[0]:, :] = res
-                disr[i%batch_size] = shot.is_disruptive_shot()
+                sig = sig[-max_len:, :]
+                res = res[-max_len:, :]
+                Xbuff[i % batch_size, -sig.shape[0]:, :] = sig
+                Ybuff[i % batch_size, -res.shape[0]:, :] = res
+                disr[i % batch_size] = shot.is_disruptive_shot()
 
                 if i % batch_size == 0:
                     num_so_far += batch_size
-
                     yield Xbuff, Ybuff, num_so_far, num_total, disr
-                    #Xbuff = np.zeros((batch_size, max_len, sig.shape[1]))
-                    #Ybuff = np.zeros((batch_size, max_len, res.shape[1]))
+                    # Xbuff = np.zeros((batch_size, max_len, sig.shape[1]))
+                    # Ybuff = np.zeros((batch_size, max_len, res.shape[1]))
+
 
 class ProcessGenerator(object):
     def __init__(self, generator):
