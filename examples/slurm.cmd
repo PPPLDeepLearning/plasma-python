@@ -27,3 +27,13 @@ rm /tigress/$USER/normalization/*
 
 export OMPI_MCA_btl="tcp,self,vader"
 srun python mpi_learn.py
+
+# single model replica PyTorch implementation of Transformer
+# (set one rank, one core, ...)
+#
+# conda activate Py3
+# module load cudnn/cuda-10.0/7.5.0
+# module load cudatoolkit/10.0
+# module load openmpi/gcc/3.1.3/64
+# export LD_LIBRARY_PATH=/usr/local/cuda-10.0/extras/CUPTI/lib64:$LD_LIBRARY_PATH
+# srun python transformer_learn.py

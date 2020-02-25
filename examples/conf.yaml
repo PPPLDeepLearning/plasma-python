@@ -58,6 +58,7 @@ model:
     loss_scale_factor: 1.0
     use_batch_norm: false
     torch: False
+    transformer: False   # requires torch: True
     shallow: False
     shallow_model:
         num_samples: 1000000 # 1000000 # the number of samples to use for training
