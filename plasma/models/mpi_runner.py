@@ -854,6 +854,7 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
     lr = conf['model']['lr']
     clipnorm = conf['model']['clipnorm']
     warmup_steps = conf['model']['warmup_steps']
+    # TODO(KGF): rename as "num_iter_minimum" or "min_steps_per_epoch"
     num_batches_minimum = conf['training']['num_batches_minimum']
 
     if 'adam' in conf['model']['optimizer']:
@@ -867,7 +868,7 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         print("Optimizer not implemented yet")
         exit(1)
 
-    g.print_unique('{} epochs left to go'.format(num_epochs - 1 - e))
+    g.print_unique('{} epochs left to go'.format(num_epochs - e))
 
     batch_generator = partial(loader.training_batch_generator_partial_reset,
                               shot_list=shot_list_train)
@@ -910,7 +911,7 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         best_so_far = np.inf
         cmp_fn = min
 
-    while e < (num_epochs - 1):
+    while e < num_epochs:
         g.write_unique('\nBegin training from epoch {:.2f}/{}'.format(
             e, num_epochs))
         if g.task_index == 0:
