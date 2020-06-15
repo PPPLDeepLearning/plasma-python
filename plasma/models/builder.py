@@ -362,6 +362,8 @@ class ModelBuilder(object):
 
     def save_model_weights(self, model, epoch):
         save_path = self.get_save_path(epoch)
+        full_model_save_path = self.get_save_path(epoch, ext='hdf5')
+        model.save(full_model_save_path, overwrite=True)
         model.save_weights(save_path, overwrite=True)
         # try:
         if _has_onnx:

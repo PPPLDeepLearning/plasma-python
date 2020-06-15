@@ -252,11 +252,12 @@ class MPIModel():
     def set_lr(self, lr):
         self.lr = lr
 
-    def save_weights(self, path, overwrite=False):
-        self.model.save_weights(path, overwrite=overwrite)
+    # KGF: Unused. model.*() called directly in builder.py
+    # def save_weights(self, path, overwrite=False):
+    #     self.model.save_weights(path, overwrite=overwrite)
 
-    def load_weights(self, path):
-        self.model.load_weights(path)
+    # def load_weights(self, path):
+    #     self.model.load_weights(path)
 
     def compile(self, optimizer, clipnorm, loss='mse'):
         # TODO(KGF): check the following import taken from runner.py
