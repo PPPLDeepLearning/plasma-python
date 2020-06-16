@@ -8,4 +8,4 @@ module load cudatoolkit
 module load cudnn
 
 module load openmpi/gcc/3.1.3/64
-module load hdf5/gcc/openmpi-1.10.2/1.10.0
+module load hdf5/gcc/openmpi-1.10.2/1.10.0 # like Adroit, this is older than version on Traverse, hdf5/gcc/openmpi-3.1.4/1.10.5
