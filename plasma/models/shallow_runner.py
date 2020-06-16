@@ -182,7 +182,7 @@ class FeatureExtractor(object):
                   sample_prob_nd=1.0):
         X, Y, disr = self.process(shot)
 
-        # cut shot ends if we are supposed to
+        # cut shot ends if we are supposed to; same procedure as normalize.py
         if self.loader.conf['data']['cut_shot_ends'] and not is_inference:
             T_min_warn = self.loader.conf['data']['T_min_warn']
             X = X[:-T_min_warn]
@@ -192,9 +192,9 @@ class FeatureExtractor(object):
         if disr:
             sample_prob = sample_prob_d
         if sample_prob < 1.0:
-            indices = np.sort(np.random.choice(np.array(range(len(Y))),
-                                               int(round(sample_prob*len(Y))),
-                                               replace=False))
+            indices = np.sort(np.random.choice(
+                np.array(range(len(Y))), int(round(sample_prob*len(Y))),
+                replace=False))
             X = X[indices]
             Y = Y[indices]
         return X, Y, disr

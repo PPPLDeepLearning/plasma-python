@@ -869,7 +869,7 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         print("Optimizer not implemented yet")
         exit(1)
 
-    g.print_unique('{} epochs left to go'.format(num_epochs - e))
+    g.print_unique('{} epoch(s) left to go'.format(num_epochs - e))
 
     batch_generator = partial(loader.training_batch_generator_partial_reset,
                               shot_list=shot_list_train)
