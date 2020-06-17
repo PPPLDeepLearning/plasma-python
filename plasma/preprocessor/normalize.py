@@ -466,6 +466,13 @@ class MinMaxNormalizer(Normalizer):
 
 
 def apply_positivity(shot):
+    # if shot.signals_dict is None:
+    #     print(shot)
+
+    # shot.valid is <class 'numpy.bool_'>; next comparison will always fail
+
+    # if shot.valid is False:
+    #     print(shot)
     for (i, sig) in enumerate(shot.signals):
         if hasattr(sig, "is_strictly_positive"):
             # backwards compatibility when this attribute didn't exist
@@ -474,3 +481,11 @@ def apply_positivity(shot):
                 # signal'.format(sig.description))
                 shot.signals_dict[sig] = np.clip(
                     shot.signals_dict[sig], 0, np.inf)
+    # KGF: if "TypeError: 'NoneType' object is not subscriptable" occurs at
+    # this line during inter-epoch inference, it typically indicates a mismatch
+    # of preprocesed_shots/signal_group_X/*.npz, causing a shot to appear in
+    # the validation and/or test set with shot.valid==False and/or missing
+    # signals_dict even after restore(). Need to trap this earlier.
+
+    # TODO(KGF): why would d3d_all preprocessed shots result in this behavior
+    # for d3d_0D training?

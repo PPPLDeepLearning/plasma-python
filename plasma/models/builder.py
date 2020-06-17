@@ -427,6 +427,8 @@ class ModelBuilder(object):
     def extract_id_and_epoch_from_filename(self, filename):
         regex = re.compile(r'-?\d+')
         numbers = [int(x) for x in regex.findall(filename)]
+        # TODO: should ignore any files that dont match our naming convention
+        # in this directory, especially since we are now writing full .hdf5 too
         if filename[-3:] == '.h5':
             assert len(numbers) == 3  # id, epoch number, and .h5 extension
             assert numbers[2] == 5  # .h5 extension
@@ -440,8 +442,9 @@ class ModelBuilder(object):
         filenames = [name for name in os.listdir(path)
                      if os.path.isfile(os.path.join(path, name))]
         epochs = []
-        for file in filenames:
-            curr_id, epoch = self.extract_id_and_epoch_from_filename(file)
+        for fname in filenames:
+            print(fname)
+            curr_id, epoch = self.extract_id_and_epoch_from_filename(fname)
             if curr_id == unique_id:
                 epochs.append(epoch)
         return epochs
