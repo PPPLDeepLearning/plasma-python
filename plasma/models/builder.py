@@ -443,7 +443,6 @@ class ModelBuilder(object):
                      if os.path.isfile(os.path.join(path, name))]
         epochs = []
         for fname in filenames:
-            print(fname)
             curr_id, epoch = self.extract_id_and_epoch_from_filename(fname)
             if curr_id == unique_id:
                 epochs.append(epoch)
