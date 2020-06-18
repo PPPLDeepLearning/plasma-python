@@ -76,7 +76,7 @@ if g.backend == 'tf' or g.backend == 'tensorflow':
     # TODO(KGF): above, builder.py (bug workaround), mpi_launch_tensorflow.py,
     # and runner.py are the only files that import tensorflow directly
 
-    from tf.keras.backend import set_session
+    from tensorflow.keras.backend import set_session
     # KGF: next 3 lines dump many TensorFlow diagnostics to stderr.
     # All MPI ranks first "Successfully opened dynamic library libcuda"
     # then, one by one: ID GPU, libcudart, libcublas, libcufft, ...
@@ -92,9 +92,9 @@ for i in range(g.num_workers):
     g.comm.Barrier()
     if i == g.task_index:
         print('[{}] importing Keras'.format(g.task_index))
-        import tf.keras.backend as K
-        from tf.keras.utils import Progbar
-        import tf.keras.callbacks as cbks
+        import tensorflow.keras.backend as K
+        from tensorflow.keras.utils import Progbar
+        import tensorflow.keras.callbacks as cbks
 
 g.flush_all_inorder()
 g.pprint_unique(conf)
@@ -254,7 +254,9 @@ class MPIModel():
     def compile(self, optimizer, clipnorm, loss='mse'):
         # TODO(KGF): check the following import taken from runner.py
         # Was not in this file, originally.
-        from tf.keras.optimizers import SGD, Adam, RMSprop, Nadam, TFOptimizer
+        from tensorflow.keras.optimizers import (
+            SGD, Adam, RMSprop, Nadam, TFOptimizer
+            )
         if optimizer == 'sgd':
             optimizer_class = SGD(lr=self.DUMMY_LR, clipnorm=clipnorm)
         elif optimizer == 'momentum_sgd':

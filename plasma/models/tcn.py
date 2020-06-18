@@ -1,7 +1,7 @@
 from typing import List, Tuple
 import tensorflow as tf
-from tf.keras import optimizers
-from tf.keras.layers import (
+from tensorflow.keras import optimizers
+from tensorflow.keras.layers import (
     Activation, Lambda, Conv1D, SpatialDropout1D, Dense, BatchNormalization,
     Input, Model, Layer
     )

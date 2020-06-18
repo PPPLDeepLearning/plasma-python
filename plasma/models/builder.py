@@ -6,7 +6,7 @@ import tensorflow as tf
 # KGF: see below synchronization--- output is launched here
 #
 # KGF: (was used only in hyper_build_model())
-from tf.keras.layers import (
+from tensorflow.keras.layers import (
     Input,
     Dense, Activation, Dropout, Lambda,
     Reshape, Flatten, Permute,  # RepeatVector
@@ -14,8 +14,8 @@ from tf.keras.layers import (
     Convolution1D, MaxPooling1D, TimeDistributed,
     Concatenate
     )
-from tf.keras.callbacks import Callback
-from tf.keras.regularizers import l2  # l1, l1_l2
+from tensorflow.keras.callbacks import Callback
+from tensorflow.keras.regularizers import l2  # l1, l1_l2
 
 import re
 import os
