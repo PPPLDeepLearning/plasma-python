@@ -3,7 +3,7 @@ import tensorflow as tf
 from tensorflow.keras import optimizers
 from tensorflow.keras.layers import (
     Activation, Lambda, Conv1D, SpatialDropout1D, Dense, BatchNormalization,
-    Input, Model, Layer
+    Input, Layer
     )
 
 
@@ -202,7 +202,7 @@ def compiled_tcn(num_feat,  # type: int
         x = Dense(num_classes)(x)
         x = Activation('softmax')(x)
         output_layer = x
-        model = Model(input_layer, output_layer)
+        model = tf.keras.Model(input_layer, output_layer)
 
         # https://github.com/keras-team/keras/pull/11373
         # It's now in Keras@master but still not available with pip.
@@ -226,7 +226,7 @@ def compiled_tcn(num_feat,  # type: int
         x = Dense(1)(x)
         x = Activation('linear')(x)
         output_layer = x
-        model = Model(input_layer, output_layer)
+        model = tf.keras.Model(input_layer, output_layer)
         model.compile(get_opt(), loss='mean_squared_error')
     print('model.x = {}'.format(input_layer.shape))
     print('model.y = {}'.format(output_layer.shape))
