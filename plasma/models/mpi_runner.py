@@ -255,7 +255,7 @@ class MPIModel():
         # TODO(KGF): check the following import taken from runner.py
         # Was not in this file, originally.
         from tensorflow.keras.optimizers import (
-            SGD, Adam, RMSprop, Nadam, TFOptimizer
+            SGD, Adam, RMSprop, Nadam
             )
         if optimizer == 'sgd':
             optimizer_class = SGD(lr=self.DUMMY_LR, clipnorm=clipnorm)
@@ -263,13 +263,16 @@ class MPIModel():
             optimizer_class = SGD(lr=self.DUMMY_LR, clipnorm=clipnorm,
                                   decay=1e-6, momentum=0.9)
         elif optimizer == 'tf_momentum_sgd':
-            optimizer_class = TFOptimizer(tf.train.MomentumOptimizer(
-                learning_rate=self.DUMMY_LR, momentum=0.9))
+            # TODO(KGF): removed TFOptimizer wrapper from here and below
+            # may not work anymore? See
+            # https://github.com/tensorflow/tensorflow/issues/22780
+            optimizer_class = tf.train.MomentumOptimizer(
+                learning_rate=self.DUMMY_LR, momentum=0.9)
         elif optimizer == 'adam':
             optimizer_class = Adam(lr=self.DUMMY_LR, clipnorm=clipnorm)
         elif optimizer == 'tf_adam':
-            optimizer_class = TFOptimizer(tf.train.AdamOptimizer(
-                learning_rate=self.DUMMY_LR))
+            optimizer_class = tf.train.AdamOptimizer(
+                learning_rate=self.DUMMY_LR)
         elif optimizer == 'rmsprop':
             optimizer_class = RMSprop(lr=self.DUMMY_LR, clipnorm=clipnorm)
         elif optimizer == 'nadam':
