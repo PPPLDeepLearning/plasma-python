@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 import plasma.global_vars as g
 # KGF: the first time Keras is ever imported via mpi_learn.py -> mpi_runner.py
-#
+# -> builder.py (here)
 import tensorflow as tf
 # KGF: see below synchronization--- output is launched here
 #
@@ -346,13 +346,13 @@ class ModelBuilder(object):
         # bug with tensorflow/Keras
         # TODO(KGF): what is this bug? this is the only direct "tensorflow"
         # import outside of mpi_runner.py and runner.py
-        if (conf['model']['backend'] == 'tf'
-                or conf['model']['backend'] == 'tensorflow'):
-            first_time = "tensorflow" not in sys.modules
-            import tensorflow as tf
-            if first_time:
-                tf.compat.v1.keras.backend.get_session().run(
-                    tf.global_variables_initializer())
+        # if (conf['model']['backend'] == 'tf'
+        #         or conf['model']['backend'] == 'tensorflow'):
+        #     first_time = "tensorflow" not in sys.modules
+        #     import tensorflow as tf
+        #     if first_time:
+        #         tf.compat.v1.keras.backend.get_session().run(
+        #             tf.global_variables_initializer())
         model.reset_states()
         return model
 
