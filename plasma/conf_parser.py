@@ -55,6 +55,7 @@ def parameters(input_file):
             h = myhash_signals(sig.all_signals_max_tol.values())*2
         else:
             h = myhash_signals(sig.all_signals.values())
+
         params['paths']['global_normalizer_path'] = (
             output_path
             + '/normalization/normalization_signal_group_{}.npz'.format(h))

@@ -1,23 +1,21 @@
 from __future__ import division, print_function
 import plasma.global_vars as g
 # KGF: the first time Keras is ever imported via mpi_learn.py -> mpi_runner.py
-import keras.backend as K
+#
+import tensorflow as tf
 # KGF: see below synchronization--- output is launched here
-from keras.models import Model  # , Sequential
+#
 # KGF: (was used only in hyper_build_model())
-from keras.layers import Input
-from keras.layers.core import (
+from tf.keras.layers import (
+    Input,
     Dense, Activation, Dropout, Lambda,
     Reshape, Flatten, Permute,  # RepeatVector
+    LSTM, CuDNNLSTM, SimpleRNN, BatchNormalization,
+    Convolution1D, MaxPooling1D, TimeDistributed,
+    Concatenate
     )
-from keras.layers import LSTM, CuDNNLSTM, SimpleRNN, BatchNormalization
-from keras.layers.convolutional import Convolution1D
-from keras.layers.pooling import MaxPooling1D
-# from keras.utils.data_utils import get_file
-from keras.layers.wrappers import TimeDistributed
-from keras.layers.merge import Concatenate
-from keras.callbacks import Callback
-from keras.regularizers import l2  # l1, l1_l2
+from tf.keras.callbacks import Callback
+from tf.keras.regularizers import l2  # l1, l1_l2
 
 import re
 import os
@@ -275,7 +273,7 @@ class ModelBuilder(object):
                 bias_regularizer=l2(dense_regularization),
                 activity_regularizer=l2(dense_regularization))(pre_rnn)
 
-        pre_rnn_model = Model(inputs=pre_rnn_input, outputs=pre_rnn)
+        pre_rnn_model = tf.keras.Model(inputs=pre_rnn_input, outputs=pre_rnn)
         # TODO(KGF): uncomment following lines to get summary of pre-RNN model
         # from mpi4py import MPI
         # comm = MPI.COMM_WORLD
@@ -344,7 +342,7 @@ class ModelBuilder(object):
                 # x_out = TimeDistributed(Dense(100,activation='tanh')) (x_in)
                 x_out = TimeDistributed(
                     Dense(1, activation=output_activation))(x_in)
-        model = Model(inputs=x_input, outputs=x_out)
+        model = tf.keras.Model(inputs=x_input, outputs=x_out)
         # bug with tensorflow/Keras
         # TODO(KGF): what is this bug? this is the only direct "tensorflow"
         # import outside of mpi_runner.py and runner.py
@@ -353,7 +351,8 @@ class ModelBuilder(object):
             first_time = "tensorflow" not in sys.modules
             import tensorflow as tf
             if first_time:
-                K.get_session().run(tf.global_variables_initializer())
+                tf.compat.v1.keras.backend.get_session().run(
+                    tf.global_variables_initializer())
         model.reset_states()
         return model
 

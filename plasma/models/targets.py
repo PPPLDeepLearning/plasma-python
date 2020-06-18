@@ -7,8 +7,9 @@ from plasma.utils.evaluation import (
     mse_np, binary_crossentropy_np, hinge_np,
     # mae_np, squared_hinge_np,
     )
-import keras.backend as K
-from keras.losses import hinge
+import tensorflow as tf  # noqa
+import tf.keras.backend as K
+from tf.keras.losses import hinge
 
 # synchronize output from TensorFlow initialization via Keras backend
 if g.comm is not None:

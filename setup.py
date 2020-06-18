@@ -28,7 +28,6 @@ setup(name="plasma",
       # TODO(KGF): continue specifying "mininmum reqs" of deps w/o any version
       # info in this file in conjunction with specific reqs in Conda YAML?
       install_requires=[
-          'keras',
           'pathos',
           'matplotlib',
           'hyperopt',

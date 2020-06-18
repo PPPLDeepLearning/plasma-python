@@ -39,7 +39,7 @@ import numpy as np
 
 from functools import partial
 from copy import deepcopy
-import socket
+# import socket
 sys.setrecursionlimit(10000)
 
 # TODO(KGF): remove the next 3 lines?
@@ -76,7 +76,7 @@ if g.backend == 'tf' or g.backend == 'tensorflow':
     # TODO(KGF): above, builder.py (bug workaround), mpi_launch_tensorflow.py,
     # and runner.py are the only files that import tensorflow directly
 
-    from keras.backend.tensorflow_backend import set_session
+    from tf.keras.backend import set_session
     # KGF: next 3 lines dump many TensorFlow diagnostics to stderr.
     # All MPI ranks first "Successfully opened dynamic library libcuda"
     # then, one by one: ID GPU, libcudart, libcublas, libcufft, ...
@@ -87,22 +87,14 @@ if g.backend == 'tf' or g.backend == 'tensorflow':
     set_session(tf.Session(config=config))
     g.flush_all_inorder()
 else:
-    os.environ['KERAS_BACKEND'] = 'theano'
-    base_compile_dir = '{}/tmp/{}-{}'.format(
-        conf['paths']['output_path'], socket.gethostname(), g.task_index)
-    os.environ['THEANO_FLAGS'] = (
-        'device=gpu{},floatX=float32,base_compiledir={}'.format(
-            g.MY_GPU, base_compile_dir))  # ,mode=NanGuardMode'
-    # import theano
-    # import keras
+    sys.exit('Invalid Keras backend specified')
 for i in range(g.num_workers):
     g.comm.Barrier()
     if i == g.task_index:
         print('[{}] importing Keras'.format(g.task_index))
-        from keras import backend as K
-        # from keras.optimizers import *
-        from keras.utils.generic_utils import Progbar
-        import keras.callbacks as cbks
+        import tf.keras.backend as K
+        from tf.keras.utils import Progbar
+        import tf.keras.callbacks as cbks
 
 g.flush_all_inorder()
 g.pprint_unique(conf)
@@ -262,7 +254,7 @@ class MPIModel():
     def compile(self, optimizer, clipnorm, loss='mse'):
         # TODO(KGF): check the following import taken from runner.py
         # Was not in this file, originally.
-        from keras.optimizers import SGD, Adam, RMSprop, Nadam, TFOptimizer
+        from tf.keras.optimizers import SGD, Adam, RMSprop, Nadam, TFOptimizer
         if optimizer == 'sgd':
             optimizer_class = SGD(lr=self.DUMMY_LR, clipnorm=clipnorm)
         elif optimizer == 'momentum_sgd':

@@ -1,12 +1,10 @@
 from typing import List, Tuple
-import keras.backend as K
-import keras.layers
-from keras import optimizers
-from keras.engine.topology import Layer
-from keras.layers import Activation, Lambda
-from keras.layers import Conv1D, SpatialDropout1D
-from keras.layers import Dense, BatchNormalization
-from keras.models import Input, Model
+import tensorflow as tf
+from tf.keras import optimizers
+from tf.keras.layers import (
+    Activation, Lambda, Conv1D, SpatialDropout1D, Dense, BatchNormalization,
+    Input, Model, Layer
+    )
 
 
 def residual_block(x, dilation_rate, nb_filters, kernel_size, padding,
@@ -44,7 +42,7 @@ def residual_block(x, dilation_rate, nb_filters, kernel_size, padding,
 
     # 1x1 conv to match the shapes (channel dimension).
     prev_x = Conv1D(nb_filters, 1, padding='same')(prev_x)
-    res_x = keras.layers.add([prev_x, x])
+    res_x = tf.keras.layers.add([prev_x, x])
     res_x = Activation(activation)(res_x)
     return res_x, x
 
@@ -130,7 +128,7 @@ class TCN:
                     use_batch_norm=self.use_batch_norm)
                 skip_connections.append(skip_out)
         if self.use_skip_connections:
-            x = keras.layers.add(skip_connections)
+            x = tf.keras.layers.add(skip_connections)
         if not self.return_sequences:
             x = Lambda(lambda tt: tt[:, -1, :])(x)
         return x
@@ -212,12 +210,14 @@ def compiled_tcn(num_feat,  # type: int
         def accuracy(y_true, y_pred):
             # reshape in case it's in shape (num_samples, 1) instead of
             # (num_samples,)
-            if K.ndim(y_true) == K.ndim(y_pred):
-                y_true = K.squeeze(y_true, -1)
+            if tf.keras.backend.ndim(y_true) == tf.keras.backend.ndim(y_pred):
+                y_true = tf.keras.backend.squeeze(y_true, -1)
             # convert dense predictions to labels
-            y_pred_labels = K.argmax(y_pred, axis=-1)
-            y_pred_labels = K.cast(y_pred_labels, K.floatx())
-            return K.cast(K.equal(y_true, y_pred_labels), K.floatx())
+            y_pred_labels = tf.keras.backend.argmax(y_pred, axis=-1)
+            y_pred_labels = tf.keras.backend.cast(y_pred_labels,
+                                                  tf.keras.backend.floatx())
+            return tf.keras.backend.cast(tf.keras.backend.equal(y_true, y_pred_labels),
+                                         tf.keras.backend.floatx())
 
         model.compile(get_opt(), loss='sparse_categorical_crossentropy',
                       metrics=[accuracy])
