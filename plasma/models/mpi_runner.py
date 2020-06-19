@@ -19,11 +19,6 @@ import random
 This file trains a deep learning model to predict
 disruptions on time series data from plasma discharges.
 
-Dependencies:
-conf.py: configuration of model,training,paths, and data
-model_builder.py: logic to construct the ML architecture
-data_processing.py: classes to handle data processing
-
 Author: Julian Kates-Harbeck, jkatesharbeck@g.harvard.edu
 
 This work was supported by the DOE CSGF program.
@@ -94,7 +89,9 @@ for i in range(g.num_workers):
         print('[{}] importing Keras'.format(g.task_index))
         import tensorflow.keras.backend as K
         from tensorflow.keras.utils import Progbar
-        import tensorflow.keras.callbacks as cbks
+        # TODO(KGF): instead of tensorflow.keras.callbacks.CallbackList()
+        # until API added in tf-nightly in v2.2.0
+        import tensorflow.python.keras.callbacks as cbks
 
 g.flush_all_inorder()
 g.pprint_unique(conf)
@@ -1092,7 +1089,10 @@ class TensorBoard(object):
             self.writer.add_summary(summary, epoch)
             self.writer.flush()
 
-        tensors = (self.model.inputs + self.model.targets
+        # print(type(self.model))
+        # print(dir(self.model))
+        # KGF: targets attribute of Model class moved to private in tf.keras
+        tensors = (self.model.inputs + self.model._targets
                    + self.model.sample_weights)
 
         if self.model.uses_learning_phase:
