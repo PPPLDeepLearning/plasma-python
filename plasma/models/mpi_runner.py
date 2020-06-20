@@ -1089,25 +1089,50 @@ class TensorBoard(object):
             self.writer.add_summary(summary, epoch)
             self.writer.flush()
 
-        # print(type(self.model))
-        # print(dir(self.model))
         # KGF: targets attribute of Model class moved to private in tf.keras
         tensors = (self.model.inputs + self.model._targets
-                   + self.model.sample_weights)
+                   )  # + self.model.sample_weights)
+        # KGF: tf.keras results in sample_weights = None. Dont pass it
+        # since we use equal weights, anyway
 
-        if self.model.uses_learning_phase:
-            tensors += [K.learning_phase()]
+        # KGF: former external Keras API returns the following
+        # print(type(self.model.uses_learning_phase))
+        # <class 'bool'>
+        # print(self.model.uses_learning_phase)
+        # True
+        # "True if the layer has a different behavior in training mode and
+        # test mode"
+
+        # No longer necessary to check backend-dependent flag (eliminated)
+        # https://stackoverflow.com/questions/52295852/what-is-uses-learning-phase-in-keras
+        # if self.model.uses_learning_phase:
+            # print(type(K.learning_phase()))
+            # <class 'tensorflow.python.framework.ops.Tensor'>
+            # print(K.learning_phase())
+            # Tensor("keras_learning_phase:0", shape=(), dtype=bool)
+        # KGF: This indicates that TensorFlow is set to training at this point,
+        # but we zip K.learning_phase() as the key with '1' as the value below
+        # when building our feed_dict, which indicates testing (appropriate for
+        # this TensorBoard evaluation of the validation set accuracy
+        tensors += [K.learning_phase()]
 
         self.sess = K.get_session()
 
         for val_data in val_generator:
             batch_val = []
-            sh = val_data[0].shape[0]
+            # sh = val_data[0].shape[0]
+            #
+            # 3x numpy arrays matching input, targets, sample_weights tensors
+            # + 1x bool flag if any layer in model takes a train vs. test flag
             batch_val.append(val_data[0])
             batch_val.append(val_data[1])
-            batch_val.append(np.ones(sh))
-            if self.model.uses_learning_phase:
-                batch_val.append(1)
+            # batch_val.append(np.ones(sh))  # equal weights
+
+            # TODO(KGF): confirm that this flag check can be skipped. See above
+            # if self.model.uses_learning_phase:
+            batch_val.append(1)
+            # Things may break if there is no layer in model that uses this flg
+            # E.g. if all Dropout, BatchNorm layers are missing
 
             feed_dict = dict(zip(tensors, batch_val))
             result = self.sess.run([self.merged], feed_dict=feed_dict)
