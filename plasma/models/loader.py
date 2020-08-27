@@ -112,6 +112,9 @@ class Loader(object):
         sig, res = self.get_signal_result_from_shot(shot)
         length = self.conf['model']['length']
         if is_first_fill:  # cut signal to random position
+            # KGF: why random position?
+            # first w.r.t. iteration in an epoch? set by:
+            # num_steps < batch_size
             cut_idx = np.random.randint(res.shape[0]-length+1)
             sig = sig[cut_idx:]
             res = res[cut_idx:]

@@ -1,23 +1,21 @@
 from __future__ import division, print_function
 import plasma.global_vars as g
 # KGF: the first time Keras is ever imported via mpi_learn.py -> mpi_runner.py
-import keras.backend as K
+# -> builder.py (here)
+import tensorflow as tf
 # KGF: see below synchronization--- output is launched here
-from keras.models import Model  # , Sequential
+#
 # KGF: (was used only in hyper_build_model())
-from keras.layers import Input
-from keras.layers.core import (
+from tensorflow.keras.layers import (
+    Input,
     Dense, Activation, Dropout, Lambda,
     Reshape, Flatten, Permute,  # RepeatVector
+    LSTM, CuDNNLSTM, SimpleRNN, BatchNormalization,
+    Convolution1D, MaxPooling1D, TimeDistributed,
+    Concatenate
     )
-from keras.layers import LSTM, CuDNNLSTM, SimpleRNN, BatchNormalization
-from keras.layers.convolutional import Convolution1D
-from keras.layers.pooling import MaxPooling1D
-# from keras.utils.data_utils import get_file
-from keras.layers.wrappers import TimeDistributed
-from keras.layers.merge import Concatenate
-from keras.callbacks import Callback
-from keras.regularizers import l2  # l1, l1_l2
+from tensorflow.keras.callbacks import Callback
+from tensorflow.keras.regularizers import l2  # l1, l1_l2
 
 import re
 import os
@@ -275,7 +273,7 @@ class ModelBuilder(object):
                 bias_regularizer=l2(dense_regularization),
                 activity_regularizer=l2(dense_regularization))(pre_rnn)
 
-        pre_rnn_model = Model(inputs=pre_rnn_input, outputs=pre_rnn)
+        pre_rnn_model = tf.keras.Model(inputs=pre_rnn_input, outputs=pre_rnn)
         # TODO(KGF): uncomment following lines to get summary of pre-RNN model
         # from mpi4py import MPI
         # comm = MPI.COMM_WORLD
@@ -344,16 +342,17 @@ class ModelBuilder(object):
                 # x_out = TimeDistributed(Dense(100,activation='tanh')) (x_in)
                 x_out = TimeDistributed(
                     Dense(1, activation=output_activation))(x_in)
-        model = Model(inputs=x_input, outputs=x_out)
+        model = tf.keras.Model(inputs=x_input, outputs=x_out)
         # bug with tensorflow/Keras
         # TODO(KGF): what is this bug? this is the only direct "tensorflow"
         # import outside of mpi_runner.py and runner.py
-        if (conf['model']['backend'] == 'tf'
-                or conf['model']['backend'] == 'tensorflow'):
-            first_time = "tensorflow" not in sys.modules
-            import tensorflow as tf
-            if first_time:
-                K.get_session().run(tf.global_variables_initializer())
+        # if (conf['model']['backend'] == 'tf'
+        #         or conf['model']['backend'] == 'tensorflow'):
+        #     first_time = "tensorflow" not in sys.modules
+        #     import tensorflow as tf
+        #     if first_time:
+        #         tf.compat.v1.keras.backend.get_session().run(
+        #             tf.global_variables_initializer())
         model.reset_states()
         return model
 
@@ -362,6 +361,8 @@ class ModelBuilder(object):
 
     def save_model_weights(self, model, epoch):
         save_path = self.get_save_path(epoch)
+        full_model_save_path = self.get_save_path(epoch, ext='hdf5')
+        model.save(full_model_save_path, overwrite=True)
         model.save_weights(save_path, overwrite=True)
         # try:
         if _has_onnx:
@@ -425,6 +426,8 @@ class ModelBuilder(object):
     def extract_id_and_epoch_from_filename(self, filename):
         regex = re.compile(r'-?\d+')
         numbers = [int(x) for x in regex.findall(filename)]
+        # TODO: should ignore any files that dont match our naming convention
+        # in this directory, especially since we are now writing full .hdf5 too
         if filename[-3:] == '.h5':
             assert len(numbers) == 3  # id, epoch number, and .h5 extension
             assert numbers[2] == 5  # .h5 extension
@@ -438,8 +441,8 @@ class ModelBuilder(object):
         filenames = [name for name in os.listdir(path)
                      if os.path.isfile(os.path.join(path, name))]
         epochs = []
-        for file in filenames:
-            curr_id, epoch = self.extract_id_and_epoch_from_filename(file)
+        for fname in filenames:
+            curr_id, epoch = self.extract_id_and_epoch_from_filename(fname)
             if curr_id == unique_id:
                 epochs.append(epoch)
         return epochs

@@ -19,11 +19,6 @@ import random
 This file trains a deep learning model to predict
 disruptions on time series data from plasma discharges.
 
-Dependencies:
-conf.py: configuration of model,training,paths, and data
-model_builder.py: logic to construct the ML architecture
-data_processing.py: classes to handle data processing
-
 Author: Julian Kates-Harbeck, jkatesharbeck@g.harvard.edu
 
 This work was supported by the DOE CSGF program.
@@ -39,7 +34,7 @@ import numpy as np
 
 from functools import partial
 from copy import deepcopy
-import socket
+# import socket
 sys.setrecursionlimit(10000)
 
 # TODO(KGF): remove the next 3 lines?
@@ -76,7 +71,7 @@ if g.backend == 'tf' or g.backend == 'tensorflow':
     # TODO(KGF): above, builder.py (bug workaround), mpi_launch_tensorflow.py,
     # and runner.py are the only files that import tensorflow directly
 
-    from keras.backend.tensorflow_backend import set_session
+    from tensorflow.keras.backend import set_session
     # KGF: next 3 lines dump many TensorFlow diagnostics to stderr.
     # All MPI ranks first "Successfully opened dynamic library libcuda"
     # then, one by one: ID GPU, libcudart, libcublas, libcufft, ...
@@ -87,22 +82,16 @@ if g.backend == 'tf' or g.backend == 'tensorflow':
     set_session(tf.Session(config=config))
     g.flush_all_inorder()
 else:
-    os.environ['KERAS_BACKEND'] = 'theano'
-    base_compile_dir = '{}/tmp/{}-{}'.format(
-        conf['paths']['output_path'], socket.gethostname(), g.task_index)
-    os.environ['THEANO_FLAGS'] = (
-        'device=gpu{},floatX=float32,base_compiledir={}'.format(
-            g.MY_GPU, base_compile_dir))  # ,mode=NanGuardMode'
-    # import theano
-    # import keras
+    sys.exit('Invalid Keras backend specified')
 for i in range(g.num_workers):
     g.comm.Barrier()
     if i == g.task_index:
         print('[{}] importing Keras'.format(g.task_index))
-        from keras import backend as K
-        # from keras.optimizers import *
-        from keras.utils.generic_utils import Progbar
-        import keras.callbacks as cbks
+        import tensorflow.keras.backend as K
+        from tensorflow.keras.utils import Progbar
+        # TODO(KGF): instead of tensorflow.keras.callbacks.CallbackList()
+        # until API added in tf-nightly in v2.2.0
+        import tensorflow.python.keras.callbacks as cbks
 
 g.flush_all_inorder()
 g.pprint_unique(conf)
@@ -252,29 +241,35 @@ class MPIModel():
     def set_lr(self, lr):
         self.lr = lr
 
-    def save_weights(self, path, overwrite=False):
-        self.model.save_weights(path, overwrite=overwrite)
+    # KGF: Unused. model.*() called directly in builder.py
+    # def save_weights(self, path, overwrite=False):
+    #     self.model.save_weights(path, overwrite=overwrite)
 
-    def load_weights(self, path):
-        self.model.load_weights(path)
+    # def load_weights(self, path):
+    #     self.model.load_weights(path)
 
     def compile(self, optimizer, clipnorm, loss='mse'):
         # TODO(KGF): check the following import taken from runner.py
         # Was not in this file, originally.
-        from keras.optimizers import SGD, Adam, RMSprop, Nadam, TFOptimizer
+        from tensorflow.keras.optimizers import (
+            SGD, Adam, RMSprop, Nadam
+            )
         if optimizer == 'sgd':
             optimizer_class = SGD(lr=self.DUMMY_LR, clipnorm=clipnorm)
         elif optimizer == 'momentum_sgd':
             optimizer_class = SGD(lr=self.DUMMY_LR, clipnorm=clipnorm,
                                   decay=1e-6, momentum=0.9)
         elif optimizer == 'tf_momentum_sgd':
-            optimizer_class = TFOptimizer(tf.train.MomentumOptimizer(
-                learning_rate=self.DUMMY_LR, momentum=0.9))
+            # TODO(KGF): removed TFOptimizer wrapper from here and below
+            # may not work anymore? See
+            # https://github.com/tensorflow/tensorflow/issues/22780
+            optimizer_class = tf.train.MomentumOptimizer(
+                learning_rate=self.DUMMY_LR, momentum=0.9)
         elif optimizer == 'adam':
             optimizer_class = Adam(lr=self.DUMMY_LR, clipnorm=clipnorm)
         elif optimizer == 'tf_adam':
-            optimizer_class = TFOptimizer(tf.train.AdamOptimizer(
-                learning_rate=self.DUMMY_LR))
+            optimizer_class = tf.train.AdamOptimizer(
+                learning_rate=self.DUMMY_LR)
         elif optimizer == 'rmsprop':
             optimizer_class = RMSprop(lr=self.DUMMY_LR, clipnorm=clipnorm)
         elif optimizer == 'nadam':
@@ -854,6 +849,7 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
     lr = conf['model']['lr']
     clipnorm = conf['model']['clipnorm']
     warmup_steps = conf['model']['warmup_steps']
+    # TODO(KGF): rename as "num_iter_minimum" or "min_steps_per_epoch"
     num_batches_minimum = conf['training']['num_batches_minimum']
 
     if 'adam' in conf['model']['optimizer']:
@@ -867,7 +863,7 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         print("Optimizer not implemented yet")
         exit(1)
 
-    g.print_unique('{} epochs left to go'.format(num_epochs - 1 - e))
+    g.print_unique('{} epoch(s) left to go'.format(num_epochs - e))
 
     batch_generator = partial(loader.training_batch_generator_partial_reset,
                               shot_list=shot_list_train)
@@ -910,7 +906,7 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         best_so_far = np.inf
         cmp_fn = min
 
-    while e < (num_epochs - 1):
+    while e < num_epochs:
         g.write_unique('\nBegin training from epoch {:.2f}/{}'.format(
             e, num_epochs))
         if g.task_index == 0:
@@ -1093,22 +1089,50 @@ class TensorBoard(object):
             self.writer.add_summary(summary, epoch)
             self.writer.flush()
 
-        tensors = (self.model.inputs + self.model.targets
-                   + self.model.sample_weights)
+        # KGF: targets attribute of Model class moved to private in tf.keras
+        tensors = (self.model.inputs + self.model._targets
+                   )  # + self.model.sample_weights)
+        # KGF: tf.keras results in sample_weights = None. Dont pass it
+        # since we use equal weights, anyway
 
-        if self.model.uses_learning_phase:
-            tensors += [K.learning_phase()]
+        # KGF: former external Keras API returns the following
+        # print(type(self.model.uses_learning_phase))
+        # <class 'bool'>
+        # print(self.model.uses_learning_phase)
+        # True
+        # "True if the layer has a different behavior in training mode and
+        # test mode"
+
+        # No longer necessary to check backend-dependent flag (eliminated)
+        # https://stackoverflow.com/questions/52295852/what-is-uses-learning-phase-in-keras
+        # if self.model.uses_learning_phase:
+            # print(type(K.learning_phase()))
+            # <class 'tensorflow.python.framework.ops.Tensor'>
+            # print(K.learning_phase())
+            # Tensor("keras_learning_phase:0", shape=(), dtype=bool)
+        # KGF: This indicates that TensorFlow is set to training at this point,
+        # but we zip K.learning_phase() as the key with '1' as the value below
+        # when building our feed_dict, which indicates testing (appropriate for
+        # this TensorBoard evaluation of the validation set accuracy
+        tensors += [K.learning_phase()]
 
         self.sess = K.get_session()
 
         for val_data in val_generator:
             batch_val = []
-            sh = val_data[0].shape[0]
+            # sh = val_data[0].shape[0]
+            #
+            # 3x numpy arrays matching input, targets, sample_weights tensors
+            # + 1x bool flag if any layer in model takes a train vs. test flag
             batch_val.append(val_data[0])
             batch_val.append(val_data[1])
-            batch_val.append(np.ones(sh))
-            if self.model.uses_learning_phase:
-                batch_val.append(1)
+            # batch_val.append(np.ones(sh))  # equal weights
+
+            # TODO(KGF): confirm that this flag check can be skipped. See above
+            # if self.model.uses_learning_phase:
+            batch_val.append(1)
+            # Things may break if there is no layer in model that uses this flg
+            # E.g. if all Dropout, BatchNorm layers are missing
 
             feed_dict = dict(zip(tensors, batch_val))
             result = self.sess.run([self.merged], feed_dict=feed_dict)

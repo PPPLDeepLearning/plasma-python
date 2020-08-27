@@ -276,6 +276,17 @@ class Shot(object):
 
     For 0D data, each shot is modeled as a 2D Numpy array - time vs a plasma
     property.
+
+    Attributes:
+        number (int): Unique identifier of a shot.
+        t_disrupt (float): Disruption time in milliseconds (second column in
+            the shotlist input file).
+        ttd: Numpy array of doubles, time profile of the shot converted to
+            time-to-disruption values.
+        valid (bool): Flag indicating whether plasma property
+          (specifically, current) reaches a certain value during the shot.
+        is_disruptive (bool): Flag indicating whether a shot is disruptive.
+
     '''
 
     def __init__(self, number=None, machine=None, signals=None,
@@ -284,15 +295,6 @@ class Shot(object):
         '''
         Shot objects contain following attributes:
 
-         - number: integer, unique identifier of a shot
-         - t_disrupt: double, disruption time in milliseconds (second column in
-         the shotlist input file)
-
-         - ttd: Numpy array of doubles, time profile of the shot converted to
-           time-to-disruption values
-         - valid: boolean flag indicating whether plasma property
-           (specifically, current) reaches a certain value during the shot
-         - is_disruptive: boolean flag indicating whether a shot is disruptive
         '''
         self.number = number  # Shot number
         self.machine = machine  # machine on which it is defined
@@ -337,6 +339,7 @@ class Shot(object):
     def num_timesteps(self, prepath):
         self.restore(prepath)
         ts = self.ttd.shape[0]
+        # TODO(KGF): Clears ttd array and arrays in signals_dict; why do this??
         self.make_light()
         return ts
 
@@ -455,7 +458,9 @@ class Shot(object):
                 else:
                     t_max = min(t_max, np.max(t))
 
-        # make sure the shot is long enough.
+        # make sure the shot is long enough. E.g. for typical dt=0.001,
+        # T_min_warn=30, and length=128, pulse length must >= 286 ms
+        # TODO(KGF): expose this hardcoded setting and/or document
         dt = conf['data']['dt']
         if (t_max - t_min)/dt <= (2*conf['model']['length']
                                   + conf['data']['T_min_warn']):
@@ -487,25 +492,33 @@ class Shot(object):
         # resample signals
         assert len(signal_arrays) == len(time_arrays) == len(self.signals)
         assert len(signal_arrays) > 0
-        tr = 0
+        t_resampled = 0
         for (i, signal) in enumerate(self.signals):
-            tr, sigr = cut_and_resample_signal(
+            t_resampled, sigr = cut_and_resample_signal(
                 time_arrays[i], signal_arrays[i], t_min, t_max, dt,
                 conf['data']['floatx'])
             signals_dict[signal] = sigr
 
-        ttd = self.convert_to_ttd(tr, conf)
+        ttd = self.convert_to_ttd(t_resampled, conf)
         self.signals_dict = signals_dict
         self.ttd = ttd
 
-    def convert_to_ttd(self, tr, conf):
+    def convert_to_ttd(self, T, conf):
+        """
+        Reverse pulse time by computing time-to-disruption.
+
+        This is the only part of the code that uses input hyperparameter
+        T_max.
+        """
+
         T_max = conf['data']['T_max']
         dt = conf['data']['dt']
         if self.is_disruptive:
-            ttd = max(tr) - tr
+            ttd = max(T) - T
             ttd = np.clip(ttd, 0, T_max)
         else:
-            ttd = T_max*np.ones_like(tr)
+            ttd = T_max*np.ones_like(T)
+        #
         ttd = np.log10(ttd + 1.0*dt/10)
         return ttd
 

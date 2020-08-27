@@ -1,5 +1,5 @@
 from __future__ import print_function
-from keras.utils.generic_utils import Progbar
+import tqdm
 from torch.nn.utils import weight_norm
 import torch.optim as opt
 from torch.autograd import Variable
@@ -333,7 +333,7 @@ def make_predictions(conf, shot_list, loader, custom_path=None):
     disruptive = []
     num_shots = len(shot_list)
 
-    pbar = Progbar(num_shots)
+    pbar = tqdm.tqdm(total=num_shots, desc='Predictions')
     while True:
         x, y, mask, disr, lengths, num_so_far, num_total = next(generator)
         # x, y, mask = Variable(torch.from_numpy(x_).float()),
@@ -345,7 +345,7 @@ def make_predictions(conf, shot_list, loader, custom_path=None):
             y_prime += [output[batch_idx, :curr_length, 0]]
             y_gold += [y[batch_idx, :curr_length, 0]]
             disruptive += [disr[batch_idx]]
-            pbar.add(1.0)
+            pbar.update(1.0)
         if len(disruptive) >= num_shots:
             y_prime = y_prime[:num_shots]
             y_gold = y_gold[:num_shots]

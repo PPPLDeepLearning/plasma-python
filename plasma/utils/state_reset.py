@@ -7,7 +7,7 @@ def get_states(model):
         if hasattr(layer, "states"):
             layer_states = []
             for state in layer.states:
-                import keras.backend as K
+                import tensorflow.keras.backend as K
                 layer_states.append(K.get_value(state))
             all_states.append(layer_states)
     return all_states
