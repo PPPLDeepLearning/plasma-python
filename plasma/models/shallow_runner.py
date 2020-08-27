@@ -1,6 +1,8 @@
 from sklearn import svm
-from keras.utils.generic_utils import Progbar
-import keras.callbacks as cbks
+# import tensorflow as tf
+# TODO(KGF): replace Progbar with tqdm, callbacks with non-TF alternative
+from tensorflow.keras.utils import Progbar
+import tensorflow.keras.callbacks as cbks
 from sklearn.metrics import classification_report
 #  accuracy_score, auc, confusion_matrix
 import joblib

@@ -1,10 +1,10 @@
 import numpy as np
 
-# from keras import objectives
-from keras import backend as K
-from keras.losses import squared_hinge
+import tensorflow as tf
+import tensorflow.keras.backend as K
+from tensorflow.keras.losses import squared_hinge
 
-_EPSILON = K.epsilon()
+_EPSILON = tf.keras.backend.epsilon()
 
 
 def _loss_tensor(y_true, y_pred):

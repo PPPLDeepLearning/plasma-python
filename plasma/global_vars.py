@@ -7,6 +7,7 @@ task_index = 0
 num_workers = 1
 NUM_GPUS = 0
 MY_GPU = 0
+# TODO(KGF): remove this (and all?) references to Keras backend
 backend = ''
 tf_ver = None
 
