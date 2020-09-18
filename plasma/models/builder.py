@@ -360,10 +360,29 @@ class ModelBuilder(object):
         return self.build_model(False), self.build_model(True)
 
     def save_model_weights(self, model, epoch):
+        # Keras HDF5 weights only
         save_path = self.get_save_path(epoch)
-        full_model_save_path = self.get_save_path(epoch, ext='hdf5')
-        model.save(full_model_save_path, overwrite=True)
         model.save_weights(save_path, overwrite=True)
+        # Keras light-weight HDF5 format: model arch, weights, compile info
+        full_model_save_path = self.get_save_path(epoch, ext='hdf5')
+        model.save(full_model_save_path,
+                   overwrite=True,  # default
+                   include_optimizer=True,  # default
+                   save_format=None,  # default, 'h5' in r1.15. Else 'tf'
+                   signatures=None,  # applicable to 'tf' SavedModel format only
+                   )
+        # TensorFlow SavedModel format (full directory)
+        full_moodel_save_dir = full_model_save_path.rsplit('.',1)[0]
+        # TODO(KGF): model.save(..., save_format='tf') disabled in r1.15
+        # Same with tf.keras.models.save_model(..., save_format="tf").
+        # Need to use experimental API until r2.x
+        # model.save(full_model_save_dir, overwrite=True, save_format='tf')
+        tf.keras.experimental.export_saved_model(model, full_moodel_save_dir,
+                                                 custom_objects=None,
+                                                 as_text=False,
+                                                 input_signature=None,
+                                                 serving_only=False
+                                                 )
         # try:
         if _has_onnx:
             save_path = self.get_save_path(epoch, ext='onnx')
@@ -427,7 +446,8 @@ class ModelBuilder(object):
         regex = re.compile(r'-?\d+')
         numbers = [int(x) for x in regex.findall(filename)]
         # TODO: should ignore any files that dont match our naming convention
-        # in this directory, especially since we are now writing full .hdf5 too
+        # in this directory, especially since we are now writing full .hdf5 too.
+        # Will crash the program if, e.g., a .tgz file is in that directory
         if filename[-3:] == '.h5':
             assert len(numbers) == 3  # id, epoch number, and .h5 extension
             assert numbers[2] == 5  # .h5 extension
