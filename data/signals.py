@@ -15,6 +15,9 @@ def create_missing_value_filler():
 
 
 def get_tree_and_tag(path):
+    if '/' not in path:
+        return None, '\\' + path
+    
     spl = path.split('/')
     tree = spl[0]
     tag = '\\' + spl[1]
@@ -22,6 +25,9 @@ def get_tree_and_tag(path):
 
 
 def get_tree_and_tag_no_backslash(path):
+    if '/' not in path:
+        return None, path
+    
     spl = path.split('/')
     tree = spl[0]
     tag = spl[1]
