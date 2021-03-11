@@ -111,6 +111,11 @@ if not only_predict:
               shot_list_test=shot_list_test)
 g.flush_all_inorder()
 
+if conf['training']['no_validation'] and conf['training']['step_limit'] > 0:
+    sys.stdout.flush()
+    g.print_unique('SHORT TRAINING ONLY. conf.yaml (step_limit) finished without VALIDATION')
+    quit()
+
 #####################################################
 #                    TESTING                        #
 #####################################################
