@@ -10,10 +10,11 @@ from tensorflow.keras.layers import (
     Input,
     Dense, Activation, Dropout, Lambda,
     Reshape, Flatten, Permute,  # RepeatVector
-    LSTM, CuDNNLSTM, SimpleRNN, BatchNormalization,
+    LSTM, SimpleRNN, BatchNormalization,
     Convolution1D, MaxPooling1D, TimeDistributed,
     Concatenate
     )
+from tensorflow.compat.v1.keras.layers import CuDNNLSTM
 from tensorflow.keras.callbacks import Callback
 from tensorflow.keras.regularizers import l2  # l1, l1_l2
 
