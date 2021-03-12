@@ -546,9 +546,9 @@ class MPIModel():
 
         while ((self.num_so_far - self.epoch * num_total) < num_total
                or step < self.num_batches_minimum):
-           if step_limit > 0 and step > step_limit:
-               print('reached step limit')
-               break
+            if step_limit > 0 and step > step_limit:
+                print('reached step limit')
+                break
             try:
                 (batch_xs, batch_ys, batches_to_reset, num_so_far_curr,
                  num_total, is_warmup_period) = next(batch_iterator_func)
