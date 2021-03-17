@@ -71,15 +71,15 @@ if g.backend == 'tf' or g.backend == 'tensorflow':
     # TODO(KGF): above, builder.py (bug workaround), mpi_launch_tensorflow.py,
     # and runner.py are the only files that import tensorflow directly
 
-    from tensorflow.keras.backend import set_session
+    # from tensorflow.keras.backend import set_session
     # KGF: next 3 lines dump many TensorFlow diagnostics to stderr.
     # All MPI ranks first "Successfully opened dynamic library libcuda"
     # then, one by one: ID GPU, libcudart, libcublas, libcufft, ...
     # Finally, "Device interconnect StreamExecutor with strength 1 edge matrix"
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.95,
                                 allow_growth=True)
-    config = tf.ConfigProto(gpu_options=gpu_options)
-    set_session(tf.Session(config=config))
+    # config = tf.ConfigProto(gpu_options=gpu_options)
+    # set_session(tf.Session(config=config))
     g.flush_all_inorder()
 else:
     sys.exit('Invalid Keras backend specified')
@@ -1041,40 +1041,41 @@ class TensorBoard(object):
         self.write_graph = write_graph
         self.write_grads = write_grads
         self.validation_steps = validation_steps
-        self.sess = None
+        # self.sess = None
         self.model = None
 
     def set_model(self, model):
-        self.model = model
-        self.sess = K.get_session()
+        pass
+        # self.model = model
+        # # self.sess = K.get_session()
 
-        if self.histogram_freq and self.merged is None:
-            for layer in self.model.layers:
-                for weight in layer.weights:
-                    mapped_weight_name = weight.name.replace(':', '_')
-                    tf.summary.histogram(mapped_weight_name, weight)
-                    if self.write_grads:
-                        grads = self.model.optimizer.get_gradients(
-                            self.model.total_loss, weight)
+        # if self.histogram_freq and self.merged is None:
+        #     for layer in self.model.layers:
+        #         for weight in layer.weights:
+        #             mapped_weight_name = weight.name.replace(':', '_')
+        #             tf.summary.histogram(mapped_weight_name, weight)
+        #             if self.write_grads:
+        #                 grads = self.model.optimizer.get_gradients(
+        #                     self.model.total_loss, weight)
 
-                        def is_indexed_slices(grad):
-                            return type(grad).__name__ == 'IndexedSlices'
-                        grads = [grad.values if is_indexed_slices(grad) else
-                                 grad for grad in grads]
-                        for grad in grads:
-                            tf.summary.histogram(
-                                '{}_grad'.format(mapped_weight_name), grad)
+        #                 def is_indexed_slices(grad):
+        #                     return type(grad).__name__ == 'IndexedSlices'
+        #                 grads = [grad.values if is_indexed_slices(grad) else
+        #                          grad for grad in grads]
+        #                 for grad in grads:
+        #                     tf.summary.histogram(
+        #                         '{}_grad'.format(mapped_weight_name), grad)
 
-                if hasattr(layer, 'output'):
-                    tf.summary.histogram('{}_out'.format(layer.name),
-                                         layer.output)
-        self.merged = tf.summary.merge_all()
+        #         if hasattr(layer, 'output'):
+        #             tf.summary.histogram('{}_out'.format(layer.name),
+        #                                  layer.output)
+        # self.merged = tf.contrib.summary()  # tf.summary.merge_all()
 
-        if self.write_graph:
-            self.writer = tf.summary.FileWriter(self.log_dir,
-                                                self.sess.graph)
-        else:
-            self.writer = tf.summary.FileWriter(self.log_dir)
+        # if self.write_graph:
+        #     self.writer = tf.summary.FileWriter(self.log_dir,
+        #                                         self.sess.graph)
+        # else:
+        #     self.writer = tf.summary.FileWriter(self.log_dir)
 
     def on_epoch_end(self, val_generator, val_steps, epoch, logs=None):
         logs = logs or {}
@@ -1116,7 +1117,7 @@ class TensorBoard(object):
         # this TensorBoard evaluation of the validation set accuracy
         tensors += [K.learning_phase()]
 
-        self.sess = K.get_session()
+        # self.sess = K.get_session()
 
         for val_data in val_generator:
             batch_val = []
@@ -1134,8 +1135,9 @@ class TensorBoard(object):
             # Things may break if there is no layer in model that uses this flg
             # E.g. if all Dropout, BatchNorm layers are missing
 
-            feed_dict = dict(zip(tensors, batch_val))
-            result = self.sess.run([self.merged], feed_dict=feed_dict)
+            # feed_dict = dict(zip(tensors, batch_val))
+            # result = self.sess.run([self.merged], feed_dict=feed_dict)
+            result = self.merged(batch_val)
             summary_str = result[0]
             self.writer.add_summary(summary_str, int(round(epoch)))
             val_steps -= 1
