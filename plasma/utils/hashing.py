@@ -65,8 +65,13 @@ def myhash_obj(x):
     Serialize a generic Python object using dill, decode the bytes obj,
     then pass the Unicode string to the particular hash function.
     '''
+    # print(dill.dumps(x)[448:450])
+    # try:
+    #     hashable = dill.dumps(x).decode('unicode_escape')
+    # except UnicodeDecodeError:
+    #     hashable = '8a9sd09vu8a9sdaf0sdsf09diufa'
+    # return myhash(hashable)
     return myhash(dill.dumps(x).decode('unicode_escape'))
-
 
 def myhash_signals(signals):
     '''
