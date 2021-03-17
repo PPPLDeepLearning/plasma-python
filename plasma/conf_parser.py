@@ -6,6 +6,7 @@ from plasma.utils.hashing import myhash_signals
 # from data.signals import (
 #     all_signals, fully_defined_signals_1D,
 #     jet, d3d)  # nstx
+import os
 import getpass
 import yaml
 
@@ -23,10 +24,14 @@ def parameters(input_file):
     with open(input_file, 'r') as yaml_file:
         params = yaml.load(yaml_file, Loader=yaml.SafeLoader)
         params['user_name'] = getpass.getuser()
-        output_path = params['fs_path'] + "/" + params['user_name']
-        base_path = output_path
+        base_path = params['fs_path']
+        output_path = os.path.join(base_path, params['user_name'])
+        # TODO(KGF): allow for completely indpendent save/output_path vs. base_path
+        # configured in conf.yaml. don't assume username subdirectory, or pwd
+        # save_path = os.environ.get("PWD")
 
         params['paths']['base_path'] = base_path
+        params['paths']['output_path'] = output_path
         if isinstance(params['paths']['signal_prepath'], list):
             g.print_unique('Reading from multiple data folders!')
             params['paths']['signal_prepath'] = [
@@ -36,7 +41,6 @@ def parameters(input_file):
                 base_path + params['paths']['signal_prepath'])
         params['paths']['shot_list_dir'] = (
             base_path + params['paths']['shot_list_dir'])
-        params['paths']['output_path'] = output_path
         # See notes in data/signals.py for details on signal tols relative to
         # t_disrupt. The following 2x dataset definitions permit progressively
         # worse signal quality when preprocessing the shots and omitting some

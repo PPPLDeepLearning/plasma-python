@@ -758,8 +758,8 @@ class Loader(object):
 
     def get_mock_data(self):
         signals = np.linspace(0, 4*np.pi, 10000)
-        rand_idx = np.randint(6000)
-        lgth = np.randint(1000, 3000)
+        rand_idx = np.random.randint(6000)
+        lgth = np.random.randint(1000, 3000)
         signals = signals[rand_idx:rand_idx+lgth]
         # ttd[-100:] = 1
         signals = np.vstack([signals]*8)

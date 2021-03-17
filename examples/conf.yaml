@@ -135,6 +135,9 @@ training:
   use_process_generator: False
   num_batches_minimum: 20 # minimum number of batches per epoch
   ranking_difficulty_fac: 1.0 # how much to upweight incorrectly classified shots during training
+  timeline_prof: False
+  step_limit: 50
+  no_validation: True
 callbacks:
   list: ['earlystop']
   metrics: ['val_loss','val_roc','train_loss']

@@ -32,6 +32,7 @@ import time
 import datetime
 import numpy as np
 
+from tensorflow.python.client import timeline
 from functools import partial
 from copy import deepcopy
 # import socket
@@ -277,7 +278,17 @@ class MPIModel():
         else:
             print("Optimizer not implemented yet")
             exit(1)
-        self.model.compile(optimizer=optimizer_class, loss=loss)
+
+        # Timeline profiler
+        if (self.conf is not None
+                and conf['training']['timeline_prof']):
+            self.run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+            self.run_metadata= tf.RunMetadata()
+            self.model.compile(optimizer=optimizer_class, loss=loss,
+                               options=self.run_options, run_metadata=self.run_metadata)
+        else:
+            self.model.compile(optimizer=optimizer_class, loss=loss)
+
         self.ensure_equal_weights()
 
     def ensure_equal_weights(self):
@@ -516,6 +527,15 @@ class MPIModel():
         loss_averager = Averager()
         t_start = time.time()
 
+        timeline_prof = False
+        if (self.conf is not None
+                and conf['training']['timeline_prof']):
+            timeline_prof = True
+        step_limit = 0
+        if (self.conf is not None
+                and conf['training']['step_limit'] > 0):
+            step_limit = conf['training']['step_limit']
+
         batch_iterator_func = self.batch_iterator_func
         num_total = 1
         ave_loss = -1
@@ -526,6 +546,9 @@ class MPIModel():
 
         while ((self.num_so_far - self.epoch * num_total) < num_total
                or step < self.num_batches_minimum):
+            if step_limit > 0 and step > step_limit:
+                print('reached step limit')
+                break
             try:
                 (batch_xs, batch_ys, batches_to_reset, num_so_far_curr,
                  num_total, is_warmup_period) = next(batch_iterator_func)
@@ -592,6 +615,15 @@ class MPIModel():
                     + 'walltime: {:.4f} | '.format(
                         time.time() - self.start_time))
                 g.write_unique(write_str + write_str_0)
+
+                if timeline_prof:
+                    # dump profile
+                    tl = timeline.Timeline(self.run_metadata.step_stats)
+                    ctf = tl.generate_chrome_trace_format()
+                    # dump file per iteration
+                    with open('timeline_%s.json' % step, 'w') as f:
+                        f.write(ctf)
+
                 step += 1
             else:
                 g.write_unique('\r[{}] warmup phase, num so far: {}'.format(
@@ -924,6 +956,9 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         loader.verbose = False  # True during the first iteration
         if g.task_index == 0:
             specific_builder.save_model_weights(train_model, int(round(e)))
+
+        if conf['training']['no_validation']:
+            break
 
         epoch_logs = {}
         g.write_unique('Begin evaluation of epoch {:.2f}/{}\n'.format(

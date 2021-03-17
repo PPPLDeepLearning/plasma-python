@@ -10,6 +10,7 @@ MY_GPU = 0
 # TODO(KGF): remove this (and all?) references to Keras backend
 backend = ''
 tf_ver = None
+conf_file = None
 
 
 def init_MPI():

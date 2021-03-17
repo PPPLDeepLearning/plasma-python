@@ -1,11 +1,36 @@
 import plasma.global_vars as g
 g.init_MPI()
+
+import os.path
+
+
+# TODO(KGF): replace this workaround for the "from plasma.conf import conf"
+def is_valid_file(parser, arg):
+    if not (os.path.exists(arg) and os.path.isfile(arg)):
+        parser.error("The file %s does not exist!" % arg)
+    else:
+        return arg
+
+import argparse
+parser = argparse.ArgumentParser(prog='mpi_learn', description='FusionDL TensorFlow 1.x + mpi4py')
+parser.add_argument("--input_file", "-i",   # type=str,
+                    required=False, dest="conf_file",
+                    help="input YAML file for configuration", metavar="YAML_FILE",
+                    type=lambda x: is_valid_file(parser, x))
+args = parser.parse_args()
+
+g.conf_file = args.conf_file
+
+
+from plasma.conf import conf
+
 from plasma.models.mpi_runner import (
     mpi_train, mpi_make_predictions_and_evaluate
     )
+
 from plasma.preprocessor.preprocess import guarantee_preprocessed
 from plasma.models.loader import Loader
-from plasma.conf import conf
+
 '''
 #########################################################
 This file trains a deep learning model to predict
@@ -110,6 +135,11 @@ if not only_predict:
     mpi_train(conf, shot_list_train, shot_list_validate, loader,
               shot_list_test=shot_list_test)
 g.flush_all_inorder()
+
+if conf['training']['no_validation'] and conf['training']['step_limit'] > 0:
+    sys.stdout.flush()
+    g.print_unique('SHORT TRAINING ONLY. conf.yaml (step_limit) finished without VALIDATION')
+    quit()
 
 #####################################################
 #                    TESTING                        #
