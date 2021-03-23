@@ -2,6 +2,8 @@ from __future__ import print_function
 import dill
 import hashlib
 import copy
+# import pickle
+# dill.settings['protocol'] = 3
 
 
 def general_object_hash(o):
@@ -65,13 +67,24 @@ def myhash_obj(x):
     Serialize a generic Python object using dill, decode the bytes obj,
     then pass the Unicode string to the particular hash function.
     '''
-    # print(dill.dumps(x)[448:450])
-    # try:
-    #     hashable = dill.dumps(x).decode('unicode_escape')
-    # except UnicodeDecodeError:
-    #     hashable = '8a9sd09vu8a9sdaf0sdsf09diufa'
-    # return myhash(hashable)
-    return myhash(dill.dumps(x).decode('unicode_escape'))
+
+    # KGF: Python 3.8 made Pickle serialization protocol version 4 the default
+    # Dill (v0.3.3) wraps Pickle, and Pickle now returns an invalid utf-8
+    # escape code when serializing the conf dictionary and nested objs
+    # Works totally fine in Python 3.7 with protocol=3
+    # See PEP 3154
+
+    # protocol=0 in ANSI readable, and I suspect that protocol=3 produces valid utf-8,
+    # but I can't find any documentation of that.
+    # https://stackoverflow.com/questions/30469575/how-to-pickle-and-unpickle-to-portable-string-in-python-3
+    # "pickle.dumps() produces a bytes object. Expecting these arbitrary bytes to be valid
+    # UTF-8 text (the assumption you are making by trying to decode it to a string from
+    # UTF-8) is pretty optimistic."
+
+    # return myhash(pickle.dumps(x).decode('unicode_escape'))
+    # return myhash(dill.dumps(x).decode('raw_unicode_escape'))
+    return myhash(dill.dumps(x, protocol=3).decode('unicode_escape'))
+
 
 def myhash_signals(signals):
     '''
