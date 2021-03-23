@@ -9,7 +9,7 @@ if g.conf_file is not None:
     g.print_unique(f"Loading configuration from {g.conf_file}")
     conf = parameters(g.conf_file)
 elif os.path.exists(os.path.join(os.path.abspath(os.path.dirname(__file__)),
-                               '../examples/conf.yaml')):
+                                 '../examples/conf.yaml')):
     conf = parameters(os.path.join(os.path.abspath(os.path.dirname(__file__)),
                                    '../examples/conf.yaml'))
 elif os.path.exists('./conf.yaml'):

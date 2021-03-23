@@ -26,6 +26,9 @@ def parameters(input_file):
         params['user_name'] = getpass.getuser()
         base_path = params['fs_path']
         output_path = os.path.join(base_path, params['user_name'])
+        # TODO(KGF): this next line should be deleted at some pt, breaking BC
+        base_path = output_path
+        print(output_path)
         # TODO(KGF): allow for completely indpendent save/output_path vs. base_path
         # configured in conf.yaml. don't assume username subdirectory, or pwd
         # save_path = os.environ.get("PWD")
