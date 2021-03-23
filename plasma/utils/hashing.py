@@ -2,6 +2,8 @@ from __future__ import print_function
 import dill
 import hashlib
 import copy
+# import pickle
+# dill.settings['protocol'] = 3
 
 
 def general_object_hash(o):
@@ -65,7 +67,7 @@ def myhash_obj(x):
     Serialize a generic Python object using dill, decode the bytes obj,
     then pass the Unicode string to the particular hash function.
     '''
-    return myhash(dill.dumps(x).decode('unicode_escape'))
+    return myhash(dill.dumps(x, protocol=3).decode('unicode_escape'))
 
 
 def myhash_signals(signals):
