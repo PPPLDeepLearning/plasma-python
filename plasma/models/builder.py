@@ -374,17 +374,12 @@ class ModelBuilder(object):
                    signatures=None,  # applicable to 'tf' SavedModel format only
                    )
         # TensorFlow SavedModel format (full directory)
-        full_moodel_save_dir = full_model_save_path.rsplit('.',1)[0]
+        full_model_save_dir = full_model_save_path.rsplit('.', 1)[0]
         # TODO(KGF): model.save(..., save_format='tf') disabled in r1.15
         # Same with tf.keras.models.save_model(..., save_format="tf").
         # Need to use experimental API until r2.x
-        # model.save(full_model_save_dir, overwrite=True, save_format='tf')
-        tf.keras.experimental.export_saved_model(model, full_moodel_save_dir,
-                                                 custom_objects=None,
-                                                 as_text=False,
-                                                 input_signature=None,
-                                                 serving_only=False
-                                                 )
+        model.save(full_model_save_dir, overwrite=True, save_format='tf')
+
         # try:
         if _has_onnx:
             save_path = self.get_save_path(epoch, ext='onnx')
