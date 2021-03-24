@@ -907,7 +907,7 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
     mpi_model.compile(conf['model']['optimizer'], clipnorm,
                       conf['data']['target'].loss)
     tensorboard = None
-    if g.backend != "theano" and g.task_index == 0:
+    if g.task_index == 0:
         tensorboard_save_path = conf['paths']['tensorboard_save_path']
         write_grads = conf['callbacks']['write_grads']
         tensorboard = TensorBoard(log_dir=tensorboard_save_path,
@@ -1031,12 +1031,11 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
                         train_model, int(round(e)))
 
             # tensorboard
-            if g.backend != 'theano':
-                val_generator = partial(loader.training_batch_generator,
-                                        shot_list=shot_list_validate)()
-                val_steps = 1
-                tensorboard.on_epoch_end(val_generator, val_steps,
-                                         int(round(e)), epoch_logs)
+            val_generator = partial(loader.training_batch_generator,
+                                    shot_list=shot_list_validate)()
+            val_steps = 1
+            tensorboard.on_epoch_end(val_generator, val_steps,
+                                     int(round(e)), epoch_logs)
         stop_training = g.comm.bcast(stop_training, root=0)
         g.write_unique('Finished evaluation of epoch {:.2f}/{}'.format(
             e, num_epochs))
