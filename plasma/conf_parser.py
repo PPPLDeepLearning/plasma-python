@@ -25,13 +25,11 @@ def parameters(input_file):
         params = yaml.load(yaml_file, Loader=yaml.SafeLoader)
         params['user_name'] = getpass.getuser()
         base_path = params['fs_path']
-        output_path = os.path.join(base_path, params['user_name'])
-        # TODO(KGF): this next line should be deleted at some pt, breaking BC
-        base_path = output_path
-        print(output_path)
-        # TODO(KGF): allow for completely indpendent save/output_path vs. base_path
-        # configured in conf.yaml. don't assume username subdirectory, or pwd
-        # save_path = os.environ.get("PWD")
+        if params['user_subdir']:
+            base_path = os.path.join(base_path, params['user_name'])
+        output_path = params['fs_path_output']
+        if params['user_subdir_output']:
+            output_path = os.path.join(output_path, params['user_name'])
 
         params['paths']['base_path'] = base_path
         params['paths']['output_path'] = output_path
@@ -64,7 +62,7 @@ def parameters(input_file):
             h = myhash_signals(sig.all_signals.values())
 
         params['paths']['global_normalizer_path'] = (
-            output_path
+            base_path
             + '/normalization/normalization_signal_group_{}.npz'.format(h))
         if params['training']['hyperparam_tuning']:
             # params['paths']['saved_shotlist_path'] =
@@ -90,7 +88,7 @@ def parameters(input_file):
             + params['paths']['data']
             + '/shot_lists_signal_group_{}.npz'.format(h))
         params['paths']['processed_prepath'] = (
-            output_path + '/processed_shots/' + 'signal_group_{}/'.format(h))
+            base_path + '/processed_shots/' + 'signal_group_{}/'.format(h))
         # ensure shallow model has +1 -1 target.
         if params['model']['shallow'] or params['target'] == 'hinge':
             params['data']['target'] = HingeTarget

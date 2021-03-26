@@ -2,11 +2,19 @@
 # note, the YAML parser will NOT evaluate expressions in the value fields.
 # e.g. "validation_frac: 1.0/3.0" will result in str value "1.0/3.0"
 
-# will do stuff in fs_path / [username] / signal_data | shot_lists | processed shots, etc.
+# will read and write (normalization, etc.) shot data
+# in fs_path / [username] / signal_data | shot_lists | processed shots, etc.
+# (username is automatically added as first subdir if user_subdir==True)
 
-fs_path: '/tigress'
+# will output csvlog, trained model checkpoints, etc.
+# in fs_path_output / [username] / results | csv_logs | model_checkpoints | Graph, etc.
+
+fs_path: '/Users/'
+user_subdir: True
+fs_path_output: '/Users/'
+user_subdir_output: True
 target: 'hinge' # 'maxhinge' # 'maxhinge' # 'binary' # 'hinge'
-num_gpus: 4  # per node
+num_gpus: 1  # per node
 paths:
   signal_prepath: '/signal_data/' # /signal_data/jet/
   shot_list_dir: '/shot_lists/'

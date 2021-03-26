@@ -57,7 +57,10 @@ if g.backend == 'tf' or g.backend == 'tensorflow':
         os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(g.MY_GPU)
         # ,mode=NanGuardMode'
     os.environ['KERAS_BACKEND'] = 'tensorflow'  # default setting
-    g.tf_ver = parse_version(get_distribution('tensorflow').version)
+    try:
+        g.tf_ver = parse_version(get_distribution('tensorflow').version)
+    except DistributionNotFound:
+        g.tf_ver = parse_version(get_distribution('tensorflow-gpu').version)
     # compat/compat.py first committed on 2018-06-29 for Py 2 vs 3
     # (around, but not present in, the release of v1.9.0)
     # v2 compatiblity code added, then moved from compat.py in Nov and Dec 2018
