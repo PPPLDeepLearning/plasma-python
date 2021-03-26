@@ -1080,37 +1080,35 @@ class TensorBoard(object):
         self.model = None
 
     def set_model(self, model):
-        pass
-        # self.model = model
-        # # self.sess = K.get_session()
+        self.model = model
 
-        # if self.histogram_freq and self.merged is None:
-        #     for layer in self.model.layers:
-        #         for weight in layer.weights:
-        #             mapped_weight_name = weight.name.replace(':', '_')
-        #             tf.summary.histogram(mapped_weight_name, weight)
-        #             if self.write_grads:
-        #                 grads = self.model.optimizer.get_gradients(
-        #                     self.model.total_loss, weight)
+        if self.histogram_freq and self.merged is None:
+            for layer in self.model.layers:
+                for weight in layer.weights:
+                    mapped_weight_name = weight.name.replace(':', '_')
+                    tf.summary.histogram(mapped_weight_name, weight)
+                    if self.write_grads:
+                        grads = self.model.optimizer.get_gradients(
+                            self.model.total_loss, weight)
 
-        #                 def is_indexed_slices(grad):
-        #                     return type(grad).__name__ == 'IndexedSlices'
-        #                 grads = [grad.values if is_indexed_slices(grad) else
-        #                          grad for grad in grads]
-        #                 for grad in grads:
-        #                     tf.summary.histogram(
-        #                         '{}_grad'.format(mapped_weight_name), grad)
+                        def is_indexed_slices(grad):
+                            return type(grad).__name__ == 'IndexedSlices'
+                        grads = [grad.values if is_indexed_slices(grad) else
+                                 grad for grad in grads]
+                        for grad in grads:
+                            tf.summary.histogram(
+                                '{}_grad'.format(mapped_weight_name), grad)
 
-        #         if hasattr(layer, 'output'):
-        #             tf.summary.histogram('{}_out'.format(layer.name),
-        #                                  layer.output)
-        # self.merged = tf.contrib.summary()  # tf.summary.merge_all()
+                # if hasattr(layer, 'output'):
+                #     tf.summary.histogram('{}_out'.format(layer.name),
+                #                          layer.output)
+        self.merged = tf.contrib.summary()  # tf.summary.merge_all()
 
-        # if self.write_graph:
-        #     self.writer = tf.summary.FileWriter(self.log_dir,
-        #                                         self.sess.graph)
-        # else:
-        #     self.writer = tf.summary.FileWriter(self.log_dir)
+        if self.write_graph:
+            self.writer = tf.summary.FileWriter(self.log_dir,
+                                                self.sess.graph)
+        else:
+            self.writer = tf.summary.FileWriter(self.log_dir)
 
     def on_epoch_end(self, val_generator, val_steps, epoch, logs=None):
         logs = logs or {}
