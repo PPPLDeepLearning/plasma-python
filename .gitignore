@@ -117,3 +117,6 @@ ENV/
 
 # Etc
 *.local
+
+# TF Profiler output
+*.json
