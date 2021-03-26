@@ -65,10 +65,10 @@ if g.backend == 'tf' or g.backend == 'tensorflow':
     # But many TF deprecation warnings in 1.14.0, e.g.:
     # "The name tf.GPUOptions is deprecated. Please use tf.compat.v1.GPUOptions
     # instead". See tf_export.py
-    if g.tf_ver >= parse_version('1.14.0'):
-        import tensorflow.compat.v1 as tf
-    else:
-        import tensorflow as tf
+    # if g.tf_ver >= parse_version('1.14.0'):
+    #     import tensorflow.compat.v1 as tf
+    # else:
+    import tensorflow as tf
     # TODO(KGF): above, builder.py (bug workaround), mpi_launch_tensorflow.py,
     # and runner.py are the only files that import tensorflow directly
 
@@ -77,8 +77,8 @@ if g.backend == 'tf' or g.backend == 'tensorflow':
     # All MPI ranks first "Successfully opened dynamic library libcuda"
     # then, one by one: ID GPU, libcudart, libcublas, libcufft, ...
     # Finally, "Device interconnect StreamExecutor with strength 1 edge matrix"
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.95,
-                                allow_growth=True)
+    # gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.95,
+    #                             allow_growth=True)
     # config = tf.ConfigProto(gpu_options=gpu_options)
     # set_session(tf.Session(config=config))
     g.flush_all_inorder()
@@ -907,11 +907,11 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
     mpi_model.compile(conf['model']['optimizer'], clipnorm,
                       conf['data']['target'].loss)
     tensorboard = None
-    if g.backend != "theano" and g.task_index == 0:
+    if g.task_index == 0:
         tensorboard_save_path = conf['paths']['tensorboard_save_path']
         write_grads = conf['callbacks']['write_grads']
         tensorboard = TensorBoard(log_dir=tensorboard_save_path,
-                                  histogram_freq=1, write_graph=True,
+                                  histogram_freq=1, # write_graph=True,
                                   write_grads=write_grads)
         tensorboard.set_model(mpi_model.model)
         # TODO(KGF): check addition of TF model summary write added from fork
@@ -1031,12 +1031,11 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
                         train_model, int(round(e)))
 
             # tensorboard
-            if g.backend != 'theano':
-                val_generator = partial(loader.training_batch_generator,
-                                        shot_list=shot_list_validate)()
-                val_steps = 1
-                tensorboard.on_epoch_end(val_generator, val_steps,
-                                         int(round(e)), epoch_logs)
+            val_generator = partial(loader.training_batch_generator,
+                                    shot_list=shot_list_validate)()
+            val_steps = 1
+            tensorboard.on_epoch_end(val_generator, val_steps,
+                                     int(round(e)), epoch_logs)
         stop_training = g.comm.bcast(stop_training, root=0)
         g.write_unique('Finished evaluation of epoch {:.2f}/{}'.format(
             e, num_epochs))
@@ -1065,24 +1064,24 @@ def get_stop_training(callbacks):
 
 class TensorBoard(object):
     def __init__(self, log_dir='./logs', histogram_freq=0, validation_steps=0,
-                 write_graph=True, write_grads=False):
+                 # write_graph=True,
+                 write_grads=False):
         if K.backend() != 'tensorflow':
             raise RuntimeError('TensorBoard callback only works '
                                'with the TensorFlow backend.')
         self.log_dir = log_dir
         self.histogram_freq = histogram_freq
-        self.merged = None
         self.writer = None
-        self.write_graph = write_graph
+        # self.write_graph = write_graph
         self.write_grads = write_grads
         self.validation_steps = validation_steps
-        # self.sess = None
         self.model = None
 
     def set_model(self, model):
         self.model = model
 
-        if self.histogram_freq and self.merged is None:
+        # TODO(KGF): check removal of cond "&& self.merged is None"
+        if self.histogram_freq:
             for layer in self.model.layers:
                 for weight in layer.weights:
                     mapped_weight_name = weight.name.replace(':', '_')
@@ -1099,83 +1098,22 @@ class TensorBoard(object):
                             tf.summary.histogram(
                                 '{}_grad'.format(mapped_weight_name), grad)
 
-                # if hasattr(layer, 'output'):
-                #     tf.summary.histogram('{}_out'.format(layer.name),
-                #                          layer.output)
-        self.merged = tf.contrib.summary()  # tf.summary.merge_all()
+                # KGF: Skip writing layer output histograms in TF 2.x, for now?
+                if hasattr(layer, 'output'):
+                    tf.summary.histogram('{}_out'.format(layer.name),
+                                         layer.output)
 
-        if self.write_graph:
-            self.writer = tf.summary.FileWriter(self.log_dir,
-                                                self.sess.graph)
-        else:
-            self.writer = tf.summary.FileWriter(self.log_dir)
+        self.writer = tf.summary.create_file_writer(self.log_dir)
 
     def on_epoch_end(self, val_generator, val_steps, epoch, logs=None):
         logs = logs or {}
 
+        # KGF: val_roc, val_loss, train_loss
         for name, value in logs.items():
             if name in ['batch', 'size']:
                 continue
-            summary = tf.Summary()
-            summary_value = summary.value.add()
-            summary_value.simple_value = value.item()
-            summary_value.tag = name
-            self.writer.add_summary(summary, epoch)
+            tf.summary.scalar(name, value, step=epoch)
             self.writer.flush()
-
-        # KGF: targets attribute of Model class moved to private in tf.keras
-        tensors = (self.model.inputs + self.model._targets
-                   )  # + self.model.sample_weights)
-        # KGF: tf.keras results in sample_weights = None. Dont pass it
-        # since we use equal weights, anyway
-
-        # KGF: former external Keras API returns the following
-        # print(type(self.model.uses_learning_phase))
-        # <class 'bool'>
-        # print(self.model.uses_learning_phase)
-        # True
-        # "True if the layer has a different behavior in training mode and
-        # test mode"
-
-        # No longer necessary to check backend-dependent flag (eliminated)
-        # https://stackoverflow.com/questions/52295852/what-is-uses-learning-phase-in-keras
-        # if self.model.uses_learning_phase:
-            # print(type(K.learning_phase()))
-            # <class 'tensorflow.python.framework.ops.Tensor'>
-            # print(K.learning_phase())
-            # Tensor("keras_learning_phase:0", shape=(), dtype=bool)
-        # KGF: This indicates that TensorFlow is set to training at this point,
-        # but we zip K.learning_phase() as the key with '1' as the value below
-        # when building our feed_dict, which indicates testing (appropriate for
-        # this TensorBoard evaluation of the validation set accuracy
-        tensors += [K.learning_phase()]
-
-        # self.sess = K.get_session()
-
-        for val_data in val_generator:
-            batch_val = []
-            # sh = val_data[0].shape[0]
-            #
-            # 3x numpy arrays matching input, targets, sample_weights tensors
-            # + 1x bool flag if any layer in model takes a train vs. test flag
-            batch_val.append(val_data[0])
-            batch_val.append(val_data[1])
-            # batch_val.append(np.ones(sh))  # equal weights
-
-            # TODO(KGF): confirm that this flag check can be skipped. See above
-            # if self.model.uses_learning_phase:
-            batch_val.append(1)
-            # Things may break if there is no layer in model that uses this flg
-            # E.g. if all Dropout, BatchNorm layers are missing
-
-            # feed_dict = dict(zip(tensors, batch_val))
-            # result = self.sess.run([self.merged], feed_dict=feed_dict)
-            result = self.merged(batch_val)
-            summary_str = result[0]
-            self.writer.add_summary(summary_str, int(round(epoch)))
-            val_steps -= 1
-            if val_steps <= 0:
-                break
 
     def on_train_end(self):
         self.writer.close()
