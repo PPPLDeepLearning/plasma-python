@@ -17,7 +17,7 @@ def create_missing_value_filler():
 def get_tree_and_tag(path):
     if '/' not in path:
         return None, '\\' + path
-    
+
     spl = path.split('/')
     tree = spl[0]
     tag = '\\' + spl[1]
@@ -27,7 +27,7 @@ def get_tree_and_tag(path):
 def get_tree_and_tag_no_backslash(path):
     if '/' not in path:
         return None, path
-    
+
     spl = path.split('/')
     tree = spl[0]
     tag = spl[1]
@@ -454,22 +454,6 @@ fully_defined_signals_0D = {
 fully_defined_signals_1D = {
     sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if (
         sig.is_defined_on_machines(all_machines) and sig.num_channels > 1)
-}
-d3d_signals = {
-    sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if (
-        sig.is_defined_on_machine(d3d))
-}
-d3d_signals_max_tol = {
-    sig_name: sig for (sig_name, sig) in all_signals_max_tol.items() if (
-        sig.is_defined_on_machine(d3d))
-}
-d3d_signals_0D = {
-    sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if (
-        (sig.is_defined_on_machine(d3d) and sig.num_channels == 1))
-}
-d3d_signals_1D = {
-    sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if (
-        (sig.is_defined_on_machine(d3d) and sig.num_channels > 1))
 }
 
 jet_signals = {
