@@ -12,7 +12,7 @@ from plasma.utils.state_reset import reset_states
 # Keras "Using TensorFlow backend" stderr messages do not interfere in stdout
 from plasma.conf import conf
 from mpi4py import MPI
-from pkg_resources import parse_version, get_distribution
+from pkg_resources import parse_version, get_distribution, DistributionNotFound
 import random
 '''
 #########################################################
@@ -58,9 +58,9 @@ if g.backend == 'tf' or g.backend == 'tensorflow':
         # ,mode=NanGuardMode'
     os.environ['KERAS_BACKEND'] = 'tensorflow'  # default setting
     try:
-        g.tf_ver = parse_version(get_distribution('tensorflow').version)
+        g.tf_ver = parse_version(get_distribution(g.backendpackage).version)
     except DistributionNotFound:
-        g.tf_ver = parse_version(get_distribution('tensorflow-gpu').version)
+        g.tf_ver = parse_version(get_distribution('tensorflow').version)
     # compat/compat.py first committed on 2018-06-29 for Py 2 vs 3
     # (around, but not present in, the release of v1.9.0)
     # v2 compatiblity code added, then moved from compat.py in Nov and Dec 2018
@@ -86,12 +86,36 @@ if g.backend == 'tf' or g.backend == 'tensorflow':
     # set_session(tf.Session(config=config))
     g.flush_all_inorder()
 else:
-    sys.exit('Invalid Keras backend specified')
+    sys.exit('Invalid Keras backend specified !! {}'.format(g.backend))
 for i in range(g.num_workers):
     g.comm.Barrier()
     if i == g.task_index:
         print('[{}] importing Keras'.format(g.task_index))
-        import tensorflow.keras.backend as K
+        print("g.bfloat16:", g.bfloat16)
+        print("g.backendpackage", g.backendpackage)
+        # bf16
+        if g.bfloat16 == 'keras':
+            print('Running in BFloat16 Via Keras')
+            from tensorflow.keras.mixed_precision import experimental as mixed_precision
+            policy = mixed_precision.Policy('mixed_bfloat16')
+            mixed_precision.set_policy(policy)
+        elif g.bfloat16 == 'amp':
+            print('Running in BFloat16 via AutoMixedPrecisionMkl')
+            import tensorflow as tf
+            from tensorflow.core.protobuf import rewriter_config_pb2
+            from tensorflow.python.keras import backend as K
+
+            graph_options = tf.compat.v1.GraphOptions(
+                        rewrite_options=rewriter_config_pb2.RewriterConfig(
+                        auto_mixed_precision_mkl=rewriter_config_pb2.RewriterConfig.ON))
+
+            session_conf = tf.compat.v1.ConfigProto(graph_options = graph_options)
+            sess = tf.compat.v1.Session(config=session_conf)
+            K.set_session(sess)
+        else:
+            import tensorflow.keras.backend as K
+
+
         from tensorflow.keras.utils import Progbar
         # TODO(KGF): instead of tensorflow.keras.callbacks.CallbackList()
         # until API added in tf-nightly in v2.2.0

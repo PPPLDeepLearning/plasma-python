@@ -9,6 +9,8 @@ NUM_GPUS = 0
 MY_GPU = 0
 # TODO(KGF): remove this (and all?) references to Keras backend
 backend = ''
+backendpackage = ''
+bfloat16= ''
 tf_ver = None
 conf_file = None
 
@@ -22,10 +24,21 @@ def init_MPI():
 
 
 def init_GPU_backend(conf):
-    global NUM_GPUS, MY_GPU, backend
+    global NUM_GPUS, MY_GPU, backend, backendpackage, bfloat16
     NUM_GPUS = conf['num_gpus']
     MY_GPU = task_index % NUM_GPUS
     backend = conf['model']['backend']
+    try:
+        backendpackage = conf['model']['backendpackage']
+    except KeyError as ex:
+        backendpackage = backend
+    print( "backendpackage", backendpackage)
+
+    try:
+        bfloat16 = conf['model']['bfloat16']
+    except KeyError as ex:
+        bfloat16 = ''
+    print( "bfloat16", bfloat16)
 
 
 def pprint_unique(obj):

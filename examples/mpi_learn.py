@@ -1,8 +1,8 @@
 import plasma.global_vars as g
-g.init_MPI()
-
+import argparse
 import os.path
 
+g.init_MPI()
 
 # TODO(KGF): replace this workaround for the "from plasma.conf import conf"
 def is_valid_file(parser, arg):
@@ -11,7 +11,6 @@ def is_valid_file(parser, arg):
     else:
         return arg
 
-import argparse
 parser = argparse.ArgumentParser(prog='mpi_learn', description='FusionDL TensorFlow 1.x + mpi4py')
 parser.add_argument("--input_file", "-i",   # type=str,
                     required=False, dest="conf_file",
@@ -23,7 +22,6 @@ g.conf_file = args.conf_file
 
 
 from plasma.conf import conf
-
 from plasma.models.mpi_runner import (
     mpi_train, mpi_make_predictions_and_evaluate
     )
