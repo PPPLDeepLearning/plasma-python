@@ -32,7 +32,6 @@ import time
 import datetime
 import numpy as np
 
-from tensorflow.python.client import timeline
 from functools import partial
 from copy import deepcopy
 # import socket
@@ -306,15 +305,7 @@ class MPIModel():
             print("Optimizer not implemented yet")
             exit(1)
 
-        # Timeline profiler
-        if (self.conf is not None
-                and conf['training']['timeline_prof']):
-            self.run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
-            self.run_metadata= tf.RunMetadata()
-            self.model.compile(optimizer=optimizer_class, loss=loss,
-                               options=self.run_options, run_metadata=self.run_metadata)
-        else:
-            self.model.compile(optimizer=optimizer_class, loss=loss)
+        self.model.compile(optimizer=optimizer_class, loss=loss)
 
         self.ensure_equal_weights()
 
@@ -554,10 +545,6 @@ class MPIModel():
         loss_averager = Averager()
         t_start = time.time()
 
-        timeline_prof = False
-        if (self.conf is not None
-                and conf['training']['timeline_prof']):
-            timeline_prof = True
         step_limit = 0
         if (self.conf is not None
                 and conf['training']['step_limit'] > 0):
@@ -642,15 +629,6 @@ class MPIModel():
                     + 'walltime: {:.4f} | '.format(
                         time.time() - self.start_time))
                 g.write_unique(write_str + write_str_0)
-
-                if timeline_prof:
-                    # dump profile
-                    tl = timeline.Timeline(self.run_metadata.step_stats)
-                    ctf = tl.generate_chrome_trace_format()
-                    # dump file per iteration
-                    with open('timeline_%s.json' % step, 'w') as f:
-                        f.write(ctf)
-
                 step += 1
             else:
                 g.write_unique('\r[{}] warmup phase, num so far: {}'.format(
@@ -965,6 +943,9 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         best_so_far = np.inf
         cmp_fn = min
 
+    if conf['training']['timeline_prof']:
+        tf.profiler.experimental.start('./logs')
+
     while e < num_epochs:
         g.write_unique('\nBegin training from epoch {:.2f}/{}'.format(
             e, num_epochs))
@@ -1071,6 +1052,8 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         if stop_training:
             g.write_unique("Stopping training due to early stopping")
             break
+    if conf['training']['timeline_prof']:
+        tf.profiler.experimental.stop()
 
     if g.task_index == 0:
         callbacks.on_train_end()
