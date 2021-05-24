@@ -59,7 +59,7 @@ $ which mpicc
 ```
 Especially note the presence of the CUDA directory in this path. This indicates that the loaded OpenMPI library is [CUDA-aware](https://www.open-mpi.org/faq/?category=runcuda).
 
-If you `conda activate` the Anaconda environment **after** loading the OpenMPI library, your application would be built with the MPI library from Anaconda, which has worse performance on this cluster and could lead to errors. See [On Computing Well: Installing and Running ‘mpi4py’ on the Cluster](https://oncomputingwell.princeton.edu/2018/11/installing-and-running-mpi4py-on-the-cluster/) for a related discussion. 
+If you `conda activate` the Anaconda environment **after** loading the OpenMPI library, your application would be built with the MPI library from Anaconda, which has worse performance on this cluster and could lead to errors. See [mpi4py on HPC Clusters](https://researchcomputing.princeton.edu/support/knowledge-base/mpi4py) for a related discussion. 
 
 
 ## Understanding and preparing the input data
