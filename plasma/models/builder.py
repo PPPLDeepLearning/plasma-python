@@ -32,11 +32,27 @@ try:
     import keras2onnx
     import onnx
 except ImportError:  # as e:
-    _has_onnx = False
+    _has_keras2onnx = False
     # onnx = None
     # keras2onnx = None
 else:
-    _has_onnx = True
+    _has_keras2onnx = True
+
+try:
+    import tf2onnx
+    import onnx
+    # CLI: python -m tf2onnx.convert --saved-model model.97765202633820900403308121179367157713._epoch_.0 --output frnn-1D.onnx
+except ImportError:  # as e:
+    _has_tf2onnx = False
+    # onnx = None
+    # keras2onnx = None
+else:
+    _has_tf2onnx = True
+
+# TODO(KGF): both conversion tools not working with current network and TF version
+_has_tf2onnx = False
+_has_keras2onnx = False
+
 
 # Synchronize 2x stderr msg from TensorFlow initialization via Keras backend
 # "Succesfully opened dynamic library... libcudart" "Using TensorFlow backend."
@@ -288,10 +304,8 @@ class ModelBuilder(object):
         #     pre_rnn_model.summary()
         #     sys.stdout = ori
         #     fr.close()
-        # pre_rnn_model.summary()
+        pre_rnn_model.summary()
         x_input = Input(batch_shape=batch_input_shape)
-        # TODO(KGF): Ge moved this inside a new conditional in Dec 2019. check
-        # x_in = TimeDistributed(pre_rnn_model)(x_input)
         if (num_1D > 0 or (
                 'extra_dense_input' in model_conf.keys()
                 and model_conf['extra_dense_input'])):
@@ -381,8 +395,29 @@ class ModelBuilder(object):
         model.save(full_model_save_dir, overwrite=True, save_format='tf')
 
         # try:
-        if _has_onnx:
+        if _has_tf2onnx:
             save_path = self.get_save_path(epoch, ext='onnx')
+            # TODO(KGF): eliminate this repeated def of x_input shape from build_model()
+            model_conf = self.conf['model']
+            length = model_conf['length']
+            batch_size = self.conf['training']['batch_size']
+            use_signals = self.conf['paths']['use_signals']
+            num_signals = sum([sig.num_channels for sig in use_signals])
+            batch_input_shape = (batch_size, length, num_signals)
+            print(f"batch_input_shape = {batch_input_shape}")
+            # ValueError: Input 0 of node model_1/lstm/AssignVariableOp was passed float
+            # from model_1/lstm/lstm_cell/ones_like_1/ReadVariableOp/resource:0
+            # incompatible with expected resource.
+            model_proto, external_tensor_storage = tf2onnx.convert.from_keras(
+                model, input_signature=[tf.TensorSpec(batch_input_shape)],
+                opset=10, output_path=save_path)
+            # KGF: error likely due to the splitting of pre_rnn_model and rnn_model, since
+            # the latter expects a trivially-wrapped TimeDistributed(Input()) for 0D model
+        if _has_keras2onnx:
+            save_path = self.get_save_path(epoch, ext='onnx')
+            # TODO(KGF): keras2onnx broken in TF >=2.4
+            # https://github.com/onnx/keras-onnx/issues/651
+
             onnx_model = keras2onnx.convert_keras(model, model.name,
                                                   target_opset=10)
             onnx.save_model(onnx_model, save_path)
