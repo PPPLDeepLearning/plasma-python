@@ -1,5 +1,5 @@
 # TigerGPU Tutorial
-*Last updated 2019-10-24.*
+*Last updated 2021-6-3.*
 
 ## Building the package
 ### Login to TigerGPU
@@ -32,7 +32,14 @@ module load openmpi/cuda-8.0/intel-17.0/3.0.0/64
 module load intel
 module load hdf5/intel-17.0/intel-mpi/1.10.0
 ```
-As of the latest update of this document, the above modules correspond to the following versions on the TigerGPU system, given by `module list`:
+As of the latest update of this document (Summer 2021), the above modules correspond to the following versions on the TigerGPU system, given by `module list`:
+```
+Currently Loaded Modulefiles:
+  1) anaconda3/2020.7                 3) cudnn/cuda-9.2/7.6.3             5) hdf5/gcc/openmpi-1.10.2/1.10.0
+  2) cudatoolkit/10.2                 4) openmpi/cuda-11.0/gcc/4.0.4/64
+```
+
+A previous version of this document (2019) listed the below modules for the Tiger GPU system.
 ```
 Currently Loaded Modulefiles:
   1) anaconda3/2019.3                       4) openmpi/cuda-8.0/intel-17.0/3.0.0/64   7) hdf5/intel-17.0/intel-mpi/1.10.0
@@ -47,17 +54,25 @@ Next, install the `plasma-python` package:
 python setup.py install
 ```
 
-Where `my_env` should contain the Python packages as per `requirements-travis.txt` file.
+Where `my_env` should contain the Python packages as per `envs/pip-requirements-travis.txt` file.
 
 ### Common build issue: cluster's MPI library and `mpi4py`
 
 Common issue is Intel compiler mismatch in the `PATH` and what you use in the module. With the modules loaded as above,
-you should see something like this:
+you should see something like this (as of summer 2021):
+
+```
+$ which mpicc
+/usr/local/openmpi/cuda-11.0/4.0.4/gcc/x86_64/bin/mpicc
+```
+
+A previous version of this document had the below output (as of 2019).
 ```
 $ which mpicc
 /usr/local/openmpi/cuda-8.0/3.0.0/intel170/x86_64/bin/mpicc
 ```
-Especially note the presence of the CUDA directory in this path. This indicates that the loaded OpenMPI library is [CUDA-aware](https://www.open-mpi.org/faq/?category=runcuda).
+
+In both cases, especially note the presence of the CUDA directory in this path. This indicates that the loaded OpenMPI library is [CUDA-aware](https://www.open-mpi.org/faq/?category=runcuda).
 
 If you `conda activate` the Anaconda environment **after** loading the OpenMPI library, your application would be built with the MPI library from Anaconda, which has worse performance on this cluster and could lead to errors. See [mpi4py on HPC Clusters](https://researchcomputing.princeton.edu/support/knowledge-base/mpi4py) for a related discussion. 
 
@@ -78,7 +93,13 @@ ln -s /tigress/FRNN/signal_data signal_data
 All the configuration parameters are summarised in `examples/conf.yaml`. In this section, we highlight the important ones used to control the input data. 
 
 Currently, FRNN is capable of working with JET and D3D data as well as thecross-machine regime. The switch is done in the configuration file:
+```yaml
+paths:
+    ... 
+    data: 'jet_0D'
+```
 
+Older yaml files kept for archival purposes will denote this data set as follow:
 ```yaml
 paths:
     ... 
@@ -107,7 +128,7 @@ This will preprocess the data and save rescaled copies of the signals in `/tigre
 Preprocessing must be performed only once per each dataset. For example, consider the following dataset specified in the config file `examples/conf.yaml`:
 ```yaml
 paths:
-    data: jet_data_0D
+    data: jet_0D
 ```    
 Preprocessing this dataset takes about 20 minutes to preprocess in parallel and can normally be done on the cluster headnode.
 
