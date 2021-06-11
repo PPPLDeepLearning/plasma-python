@@ -118,5 +118,9 @@ ENV/
 # Etc
 *.local
 
+<<<<<<< HEAD
 # TF Profiler
+=======
+# TF Profiler output
+>>>>>>> master
 *.json

@@ -83,6 +83,7 @@ def myhash_obj(x):
 
     # return myhash(pickle.dumps(x).decode('unicode_escape'))
     # return myhash(dill.dumps(x).decode('raw_unicode_escape'))
+
     return myhash(dill.dumps(x, protocol=3).decode('unicode_escape'))
 
 
