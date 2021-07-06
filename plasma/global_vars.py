@@ -28,17 +28,18 @@ def init_GPU_backend(conf):
     NUM_GPUS = conf['num_gpus']
     MY_GPU = task_index % NUM_GPUS
     backend = conf['model']['backend']
+
+    # KGF: added via Subrata patch in April 2021 specific to tf2 branch
+    # (neither of the following options are in the default conf.yaml)
     try:
         backendpackage = conf['model']['backendpackage']
     except KeyError as ex:
         backendpackage = backend
-    print( "backendpackage", backendpackage)
 
     try:
         bfloat16 = conf['model']['bfloat16']
     except KeyError as ex:
         bfloat16 = ''
-    print( "bfloat16", bfloat16)
 
 
 def pprint_unique(obj):
