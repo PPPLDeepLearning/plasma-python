@@ -304,7 +304,8 @@ class ModelBuilder(object):
         #     pre_rnn_model.summary()
         #     sys.stdout = ori
         #     fr.close()
-        pre_rnn_model.summary()
+        if g.task_index == 0:
+            pre_rnn_model.summary()
         x_input = Input(batch_shape=batch_input_shape)
         if (num_1D > 0 or (
                 'extra_dense_input' in model_conf.keys()
