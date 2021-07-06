@@ -90,8 +90,6 @@ for i in range(g.num_workers):
     g.comm.Barrier()
     if i == g.task_index:
         print('[{}] importing Keras'.format(g.task_index))
-        print("g.bfloat16:", g.bfloat16)
-        print("g.backendpackage", g.backendpackage)
         # bf16
         if g.bfloat16 == 'keras':
             print('Running in BFloat16 Via Keras')
