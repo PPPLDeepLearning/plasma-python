@@ -11,16 +11,19 @@ dependencies:
   - scipy
   - pandas
   - flake8
-  - h5py
+  - h5py<3.0.0
   - pyparsing
   - pyyaml
-  - pytorch>1.3
-  - tensorflow>2.1.0
+  #- pytorch>1.3
+  - tensorflow>2.1.0  # limited to 2.1.3 on IBM WMLCE 1.7.0 (2020-02-12) as of mid-2021
+# WML CE 1.7.0 is built for CUDA 10.2 and requires version 440 of the NVIDIA GPU driver.
+# Which GPU device driver does Traverse have?
   - pip:
       - pathos
       - matplotlib>=2.0.2
-      - hyperopt  # TODO(KGF): remove
+      - h5py<3.0.0
+      # - hyperopt  # TODO(KGF): remove
       # - mpi4py   # must reload MPI library modules before installing via pip
-      - xgboost
-      - scikit-learn
-      - joblib
+      # - xgboost
+      # - scikit-learn
+      # - joblib
