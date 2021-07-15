@@ -784,13 +784,36 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
             y_prime += y_p
             y_gold += y
             disruptive += disr
+
+            # Create numpy block from y list which is used in MPI
+            # Pads y_prime and y_gold with zeros to make it all fit
+            max_length = g.comm.allreduce(max([max(nparray.shape) for nparray in y_prime]), MPI.MAX)
+            shpz = [y.shape for y in y_prime]
+            y_prime_numpy = np.stack([np.pad(sublist, pad_width=((0,max_length-max(sublist.shape)),(0,0))) for sublist in y_prime])
+            y_gold_numpy = np.stack([np.pad(sublist, pad_width=((0,max_length-max(sublist.shape)),(0,0))) for sublist in y_gold])
             # print_all('\nFinished with i = {}'.format(i))
 
         if (i % g.num_workers == g.num_workers - 1
                 or i == len(shot_sublists) - 1):
             g.comm.Barrier()
-            y_prime_global += concatenate_sublists(g.comm.allgather(y_prime))
-            y_gold_global += concatenate_sublists(g.comm.allgather(y_gold))
+
+            # Create numpy array to store all processors output, then aggregate and unpad using MPI gathered shape list
+            shp = y_prime_numpy.shape
+            shpzg = g.comm.allgather(shpz)
+            y_primeg = np.zeros((g.num_workers*shp[0],)+shp[1:], dtype=y_prime_numpy.dtype)
+            y_goldg  = np.zeros((g.num_workers*shp[0],)+shp[1:], dtype=y_prime_numpy.dtype)
+            y_primeg = g.comm.Allgather([y_prime_numpy, y_prime_numpy.dtype],
+                                        [y_primeg, y_primeg.dtype])
+            y_primeg = g.comm.Allgather([y_gold_numpy, y_gold_numpy.dtype],
+                                        [y_goldg, y_goldg.dtype])
+            y_primeg_list = []
+            y_goldg_list = []
+            # Unpad
+            for idx, s in enumerate(shpzg):
+                y_primeg_list.append(y_primeg[idx,0:max(s),:])
+                y_goldg_list.append(y_goldg[idx,0:max(s),:])
+            y_prime_global += concatenate_sublists(y_primeg_list)
+            y_gold_global += concatenate_sublists(y_goldg_list)
             disruptive_global += concatenate_sublists(
                 g.comm.allgather(disruptive))
             g.comm.Barrier()
