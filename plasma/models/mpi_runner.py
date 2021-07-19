@@ -772,14 +772,14 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
     for (i, shot_sublist) in enumerate(shot_sublists):
         shpz = []
         max_length = -1 # So non shot predictive workers don't have a real length
-        #g.write_all('My task index = {}, i mod num_workers = {}\n'.format(g.task_index, i%g.num_workers))
+        g.write_all('My task index = {}, i mod num_workers = {}\n'.format(g.task_index, i%g.num_workers))
         if i % g.num_workers == g.task_index:
-            #g.write_all('Creating new comm\n')
+            g.write_all('Creating new comm\n')
             color = 1
             temp_predictor_only_comm = MPI.Comm.Split(g.comm, color, i)
             freeme = True
             # Create new MPI comm to pass around rank
-            #g.write_all('Starting to load and predict subroutine\n')
+            g.write_all('Starting to load and predict subroutine\n')
             X, y, shot_lengths, disr = loader.load_as_X_y_pred(shot_sublist)
             g.write_all('X, y, lengths, disr loaded, shot_lengths shape: {} \n'.format(len(shot_lengths)))
 
@@ -789,7 +789,7 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
             y_p = loader.batch_output_to_array(y_p)
             y = loader.batch_output_to_array(y)
 
-            #g.write_all('Finished le prediction\n')
+            g.write_all('Finished le prediction\n')
 
             # cut arrays back
             y_p = [arr[:shot_lengths[j]] for (j, arr) in enumerate(y_p)]
@@ -803,12 +803,12 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
             # Pads y_prime and y_gold with zeros to make it all fit
             shpz = [y.shape for y in y_prime]
             max_length = max([max(y.shape) for y in y_p])
-            #g.write_all(' max length = {}\n'.format(max_length))
+            g.write_all(' max length = {}\n'.format(max_length))
             max_length = temp_predictor_only_comm.allreduce(max_length, MPI.MAX) 
-            #g.write_all('Calculated shpz\n')
+            g.write_all('Calculated shpz\n')
             y_prime_numpy = np.stack([np.pad(sublist, pad_width=((0,max_length-max(sublist.shape)),(0,0))) for sublist in y_prime])
             y_gold_numpy = np.stack([np.pad(sublist, pad_width=((0,max_length-max(sublist.shape)),(0,0))) for sublist in y_gold])
-            #g.write_all('First Barrier\n')
+            g.write_all('First Barrier\n')
             g.comm.Barrier()
         elif g.task_index < len(shot_sublists):
             pass
@@ -851,7 +851,7 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
                 g.write_all('y_prime_numpy.shape = {}\n'.format(y_prime_numpy.shape))
                 g.write_all('y_gold_numpy.shape = {}\n'.format(y_gold_numpy.shape))
                 g.write_all('y_prime_g.shape = {}\n'.format(y_primeg.shape))
-                # Todo send flattened and then unflatten
+                # Todo send flattened and then unflatten - DOES FLATTENING, GATHERING, AND THEN RESHAPING SCREW WITH ORDERING?
                 temp_predictor_only_comm.Allgather(y_prime_numpy.flatten(), y_primeg_flattend)
                 temp_predictor_only_comm.Allgather(y_gold_numpy.flatten(), y_goldg_flattend)
             # Process 0 broadcast y_primeg adn y_goldg to all processors, including ones
@@ -861,19 +861,25 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
             g.write_all('Broadcasting y_primeg and y_goldg to every\n')
             g.comm.Bcast(y_primeg_flattend, root=0)
             g.comm.Bcast(y_goldg_flattend, root=0) 
-            g.write_all('All gathered initialized golbals\n')
-            y_primeg = y_primeg_flattend.reshape(y_primeg.shape)
-            y_goldg  = y_goldg_flattend.reshape(y_goldg.shape)
+            g.write_all('All gathered initialized golbals len1={}, len2={}\n'.format(len(y_primeg_flattend), len(y_goldg_flattend)))
+            y_primeg_flattend = np.split(y_primeg_flattend, len(shot_sublists))
+            y_goldg_flattend = np.split(y_goldg_flattend, len(shot_sublists))
+            y_primeg = [y.reshape((128, max_length, 1)) for y in y_primeg_flattend]
+            y_goldg = [y.reshape((128, max_length, 1)) for y in y_goldg_flattend]
+            g.write_all('primeg length: {}\n'.format(len(y_primeg)))
+            y_primeg = np.concatenate(y_primeg, axis=0)
+            g.write_all('primeg shape after stack: {}\n'.format(y_primeg.shape))
+            y_goldg  = np.concatenate(y_goldg, axis=0)
             y_primeg_list = []
             y_goldg_list = []
             # Unpad
-            g.write_all('unpadding\n'.format(len(shpzg),shpzg[0]))
+            g.write_all('unpadding len(shpzg)={}, shpzg[0]={}\n'.format(len(shpzg),shpzg[0]))
             # need to have subgroups gather a broadcast y_prmeg (maybe do above)
             for idx, s in enumerate(shpzg):
-                y_primeg_list.append(y_primeg[idx,0:int(s),:].squeeze())
-                y_goldg_list.append(y_goldg[idx,0:int(s),:].squeeze())
-            y_prime_global += concatenate_sublists(y_primeg_list)
-            y_gold_global += concatenate_sublists(y_goldg_list)
+                trim = lambda nparry, s: nparry#(0:int(s),:)
+                y_primeg[idx] = trim(y_primeg[idx],s)
+                y_goldg[idx] = trim(y_goldg[idx], s)
+
             disruptive_global += concatenate_sublists(
                 g.comm.allgather(disruptive))
             g.comm.Barrier()
@@ -888,12 +894,14 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
             temp_predictor_only_comm.Free()
             freeme = False
 
-    y_prime_global = y_prime_global[:len(shot_list)]
-    y_gold_global = y_gold_global[:len(shot_list)]
+    #y_prime_global = y_prime_global[:len(shot_list)]
+    y_primeg = y_primeg[:len(shot_list)]
+    #y_gold_global = y_gold_global[:len(shot_list)]
+    y_goldg = y_goldg[:len(shot_list)]
     disruptive_global = disruptive_global[:len(shot_list)]
     loader.set_inference_mode(False)
 
-    return y_prime_global, y_gold_global, disruptive_global
+    return y_primeg, y_goldg, disruptive_global
 
 
 def mpi_make_predictions_and_evaluate(conf, shot_list, loader,
@@ -901,6 +909,11 @@ def mpi_make_predictions_and_evaluate(conf, shot_list, loader,
     y_prime, y_gold, disruptive = mpi_make_predictions(
         conf, shot_list, loader, custom_path)
     analyzer = PerformanceAnalyzer(conf=conf)
+    g.write_all('Afterwards y_prime length = {}\n'.format(len(y_prime)))
+    g.write_all('Afterwards y_prime[0] shape = {}\n'.format(y_prime[0].shape))
+    g.write_all('Afterwards y_gold length = {}\n'.format(len(y_gold)))
+    g.write_all('Afterwards y_gold[0] shape = {}\n'.format(y_gold[0].shape))
+    g.write_all('Afterwards distruptive length = {}\n'.format(len(disruptive)))
     roc_area = analyzer.get_roc_area(y_prime, y_gold, disruptive)
     shot_list.set_weights(
         analyzer.get_shot_difficulty(y_prime, y_gold, disruptive))
