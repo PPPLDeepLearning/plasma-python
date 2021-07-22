@@ -849,9 +849,15 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
             # Need to send an unequal sized array I think
             if color == 1:
                 g.write_all('y_prime_numpy.shape = {}\n'.format(y_prime_numpy.shape))
+                g.write_all('y_prime_numpy_flattend.shape = {}\n'.format(y_prime_numpy.flatten().shape))
                 g.write_all('y_gold_numpy.shape = {}\n'.format(y_gold_numpy.shape))
+                g.write_all('y_gold_numpy_flattend.shape = {}\n'.format(y_gold_numpy.flatten().shape))
                 g.write_all('y_prime_g.shape = {}\n'.format(y_primeg.shape))
-                # Todo send flattened and then unflatten - DOES FLATTENING, GATHERING, AND THEN RESHAPING SCREW WITH ORDERING?
+                g.write_all('y_primeg_flattend.shape = {}\n'.format(y_primeg_flattend.shape))
+                g.write_all('y_goldg_flattend.shape = {}\n'.format(y_goldg_flattend.shape))
+                # Ensure that numpy arrays have correct dimensions before gathering them
+                assert len(shot_sublists)*max(y_prime_numpy.flatten().shape) == max(y_primeg_flattend.shape)
+                assert len(shot_sublists)*max(y_gold_numpy.flatten().shape) == max(y_goldg_flattend.shape)
                 temp_predictor_only_comm.Allgather(y_prime_numpy.flatten(), y_primeg_flattend)
                 temp_predictor_only_comm.Allgather(y_gold_numpy.flatten(), y_goldg_flattend)
             # Process 0 broadcast y_primeg adn y_goldg to all processors, including ones
