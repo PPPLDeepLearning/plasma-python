@@ -837,13 +837,11 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
             g.write_unique(str(shpzg)+'\n')
             g.write_all('gotting shapez\n')
             # Todo: Figure out if empty shots are added to fit batch length
-            y_primeg = np.zeros((9*128,max_length,1), dtype=conf['data']['floatx'])
-            y_goldg  = np.zeros((9*128,max_length,1), dtype=conf['data']['floatx'])
+            y_primeg = np.zeros((len(shot_sublists)*conf['model']['pred_batch_size'],max_length,1), dtype=conf['data']['floatx'])
+            y_goldg  = np.zeros((len(shot_sublists)*conf['model']['pred_batch_size'],max_length,1), dtype=conf['data']['floatx'])
             y_primeg_flattend = np.zeros(y_primeg.flatten().shape)
             y_goldg_flattend  = np.zeros(y_goldg.flatten().shape)
             g.write_all('initialized golbals\n')
-            if conf['data']['floatx'] == 'float32':
-                dtype_mpi = MPI.FLOAT
             # TODO (IMD) Support more floating point types
             # ValueError: message: cannot infer count, number of entries 10652818 is not a multiple of required number of blocks 9
             # Need to send an unequal sized array I think
