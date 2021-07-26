@@ -12,6 +12,19 @@ Note, `-XC` is optional; it is only necessary if you are planning on performing 
 
 ### Sample installation on Traverse
 
+Add the following flag to your environment. 
+
+```bash
+export LD_PRELOAD=/usr/lib64/libpmix.so.2
+```
+
+The recommended way is to edit your `~/.bashrc` and then reload the environment as follows:
+
+```bash
+source ~/.bashrc
+```
+
+
 Next, check out the source code from github:
 ```
 git clone https://github.com/PPPLDeepLearning/plasma-python
@@ -23,7 +36,7 @@ After that, create an isolated Anaconda environment and load CUDA drivers, an MP
 ```
 #cd plasma-python
 module load anaconda3
-conda create --name my_env python=3.6
+conda create --name my_env --file envs/requirements-traverse.yaml python=3.6
 conda activate my_env
 
 source ../envs/traverse.cmd
@@ -52,6 +65,38 @@ Where `my_env` should contain the Python packages as per `envs/pip-requirements-
 
 ### Common runtime issue: when to load environment and when to call `sbatch`
 When queueing jobs on Traverse or running slurm managed scripts, *DO NOT* load your anaconda environment before doing so. This will cause a module loading issue. It is *highly* suggested that you build `plasma-python` in one terminal witht the anaconda environment loaded and run it in another without the anaconda environment loaded to avoid this issue
+
+### Commond build issue: creating anaconda environment fails
+On Traverse, pytoch has been observed to not install correctly. Quick fix is to not intall it by commenting out the line 17 in `envs/requirements-traverse.yaml`
+
+```
+  7 dependencies:
+  8   - python>=3.6.8
+  9   - cython
+ 10   - pip
+ 11   - scipy
+ 12   - pandas
+ 13   - flake8
+ 14   - h5py<3.0.0
+ 15   - pyparsing
+ 16   - pyyaml
+ 17   #- pytorch>1.3
+```
+
+### Commond build issue: `xgboost` not installing
+On Traverse, `xgboost` doesn't seem to build right. Just ignore it for now by editing `setup.py` (comment line 35). Rebuild as above.
+
+```
+ 30       install_requires=[
+ 31           'pathos',
+ 32           'matplotlib',
+ 33           'hyperopt',
+ 34           'mpi4py',
+ 35           #'xgboost',
+ 36           'scikit-learn',
+ 37           'joblib',
+ 38           ],
+```
 
 ### Common build issue: cluster's MPI library and `mpi4py`
 
