@@ -564,80 +564,80 @@ class MPIModel():
         while ((self.num_so_far - self.epoch * num_total) < num_total
                or step < self.num_batches_minimum):
             # TODO(KGF): this is still not correctly tracing the steps on CPU
-            with tf.profiler.experimental.Trace('train', step_num=step, _r=1):
-                if step_limit > 0 and step > step_limit:
-                    print('reached step limit')
-                    break
-                try:
-                    (batch_xs, batch_ys, batches_to_reset, num_so_far_curr,
-                     num_total, is_warmup_period) = next(batch_iterator_func)
-                except StopIteration:
-                    g.print_unique("Resetting batch iterator.")
-                    self.num_so_far_accum = self.num_so_far_indiv
-                    self.set_batch_iterator_func()
-                    batch_iterator_func = self.batch_iterator_func
-                    (batch_xs, batch_ys, batches_to_reset, num_so_far_curr,
-                     num_total, is_warmup_period) = next(batch_iterator_func)
-                self.num_so_far_indiv = self.num_so_far_accum + num_so_far_curr
+            #with tf.profiler.experimental.Trace('train', step_num=step, _r=1):
+            if step_limit > 0 and step > step_limit:
+                print('reached step limit')
+                break
+            try:
+                (batch_xs, batch_ys, batches_to_reset, num_so_far_curr,
+                 num_total, is_warmup_period) = next(batch_iterator_func)
+            except StopIteration:
+                g.print_unique("Resetting batch iterator.")
+                self.num_so_far_accum = self.num_so_far_indiv
+                self.set_batch_iterator_func()
+                batch_iterator_func = self.batch_iterator_func
+                (batch_xs, batch_ys, batches_to_reset, num_so_far_curr,
+                 num_total, is_warmup_period) = next(batch_iterator_func)
+            self.num_so_far_indiv = self.num_so_far_accum + num_so_far_curr
 
-                # if batches_to_reset:
-                # self.model.reset_states(batches_to_reset)
+            # if batches_to_reset:
+            # self.model.reset_states(batches_to_reset)
 
-                warmup_phase = (step < self.warmup_steps and self.epoch == 0)
-                num_replicas = 1 if warmup_phase else self.num_replicas
+            warmup_phase = (step < self.warmup_steps and self.epoch == 0)
+            num_replicas = 1 if warmup_phase else self.num_replicas
 
-                self.num_so_far = self.mpi_sum_scalars(
-                    self.num_so_far_indiv, num_replicas)
+            self.num_so_far = self.mpi_sum_scalars(
+                self.num_so_far_indiv, num_replicas)
 
-                # run the model once to force compilation. Don't actually use these
-                # values.
-                if first_run:
-                    first_run = False
-                    t0_comp = time.time()
-                    #   print('input_dimension:',batch_xs.shape)
-                    #   print('output_dimension:',batch_ys.shape)
-                    _, _ = self.train_on_batch_and_get_deltas(
-                        batch_xs, batch_ys, verbose)
-                    self.comm.Barrier()
-                    sys.stdout.flush()
-                    # TODO(KGF): check line feed/carriage returns around this
-                    g.print_unique('\nCompilation finished in {:.2f}s'.format(
-                        time.time() - t0_comp))
-                    t_start = time.time()
-                    sys.stdout.flush()
-
-                if np.any(batches_to_reset):
-                    reset_states(self.model, batches_to_reset)
-                if ('noise' in self.conf['training'].keys()
-                        and self.conf['training']['noise'] is not False):
-                    batch_xs = self.add_noise(batch_xs)
-                t0 = time.time()
-                deltas, loss = self.train_on_batch_and_get_deltas(
+            # run the model once to force compilation. Don't actually use these
+            # values.
+            if first_run:
+                first_run = False
+                t0_comp = time.time()
+                #   print('input_dimension:',batch_xs.shape)
+                #   print('output_dimension:',batch_ys.shape)
+                _, _ = self.train_on_batch_and_get_deltas(
                     batch_xs, batch_ys, verbose)
-                t1 = time.time()
-                if not is_warmup_period:
-                    self.set_new_weights(deltas, num_replicas)
-                    t2 = time.time()
-                    write_str_0 = self.calculate_speed(t0, t1, t2, num_replicas)
-                    curr_loss = self.mpi_average_scalars(1.0*loss, num_replicas)
-                    # g.print_unique(self.model.get_weights()[0][0][:4])
-                    loss_averager.add_val(curr_loss)
-                    ave_loss = loss_averager.get_ave()
-                    eta = self.estimate_remaining_time(
-                        t0 - t_start, self.num_so_far - self.epoch*num_total,
+                self.comm.Barrier()
+                sys.stdout.flush()
+                # TODO(KGF): check line feed/carriage returns around this
+                g.print_unique('\nCompilation finished in {:.2f}s'.format(
+                    time.time() - t0_comp))
+                t_start = time.time()
+                sys.stdout.flush()
+
+            if np.any(batches_to_reset):
+                reset_states(self.model, batches_to_reset)
+            if ('noise' in self.conf['training'].keys()
+                    and self.conf['training']['noise'] is not False):
+                batch_xs = self.add_noise(batch_xs)
+            t0 = time.time()
+            deltas, loss = self.train_on_batch_and_get_deltas(
+                batch_xs, batch_ys, verbose)
+            t1 = time.time()
+            if not is_warmup_period:
+                self.set_new_weights(deltas, num_replicas)
+                t2 = time.time()
+                write_str_0 = self.calculate_speed(t0, t1, t2, num_replicas)
+                curr_loss = self.mpi_average_scalars(1.0*loss, num_replicas)
+                # g.print_unique(self.model.get_weights()[0][0][:4])
+                loss_averager.add_val(curr_loss)
+                ave_loss = loss_averager.get_ave()
+                eta = self.estimate_remaining_time(
+                    t0 - t_start, self.num_so_far - self.epoch*num_total,
+                    num_total)
+                write_str = (
+                    '\r[{}] step: {} [ETA: {:.2f}s] [{:.2f}/{}], '.format(
+                        self.task_index, step, eta, 1.0*self.num_so_far,
                         num_total)
-                    write_str = (
-                        '\r[{}] step: {} [ETA: {:.2f}s] [{:.2f}/{}], '.format(
-                            self.task_index, step, eta, 1.0*self.num_so_far,
-                            num_total)
-                        + 'loss: {:.5f} [{:.5f}] | '.format(ave_loss, curr_loss)
-                        + 'walltime: {:.4f} | '.format(
-                            time.time() - self.start_time))
-                    g.write_unique(write_str + write_str_0)
-                    step += 1
-                else:
-                    g.write_unique('\r[{}] warmup phase, num so far: {}'.format(
-                        self.task_index, self.num_so_far))
+                    + 'loss: {:.5f} [{:.5f}] | '.format(ave_loss, curr_loss)
+                    + 'walltime: {:.4f} | '.format(
+                        time.time() - self.start_time))
+                g.write_unique(write_str + write_str_0)
+                step += 1
+            else:
+                g.write_unique('\r[{}] warmup phase, num so far: {}'.format(
+                    self.task_index, self.num_so_far))
 
         effective_epochs = 1.0*self.num_so_far/num_total
         epoch_previous = self.epoch
@@ -769,17 +769,36 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
 
     g.write_unique('num workers= {}\nlen(shot_sublists)={}, num_shots = {}\n'.format(g.num_workers, len(shot_sublists), len(shot_list)))
     freeme = False
+
+    # MPI loop works by predicting in batches of the 
+    # largest possible multiple of len(shot_sublists) < num_workers
+    # i.e. if there are 9 shot_sublists and 4 workers,
+    #      worker 0 will predict shot_sublist 0, 4, and 8
+    #      workers 1-3 will predict shot_sublist 1-3 and 5-7 respectively
+    # each makes their prediction on the ith iteration of the loop
+    #      (i.e. worker 0 predicts shot_sublist 0 on loop iteration i=0)
+    #      and then skips through loop iterations unless it has to predict again (i=4)
+    #      or aggregate predictions with other workers, after each worker has made a prediction
+    #      which happens every num_workers iterations in the for loop
+    #      (i.e. worker 0 will aggregate predictions with workers 1-3 at the end of i=3)
+    if g.task_index < len(shot_sublists) % g.num_workers:
+        times_i_will_predict = len(shot_sublists)//g.num_workers + 1
+    else:
+        times_i_will_predict = len(shot_sublists)//g.num_workers
+    times_predicted = 0
+    g.write_all('I shall predict {} times\n'.format(times_i_will_predict))
     for (i, shot_sublist) in enumerate(shot_sublists):
         shpz = []
         max_length = -1 # So non shot predictive workers don't have a real length
         g.write_all('My task index = {}, i mod num_workers = {}\n'.format(g.task_index, i%g.num_workers))
         if i % g.num_workers == g.task_index:
-            g.write_all('Creating new comm\n')
+            g.write_all('Creating new comm at i={}\n'.format(i))
             color = 1
+            g.comm.Barrier()
             temp_predictor_only_comm = MPI.Comm.Split(g.comm, color, i)
-            freeme = True
+            #freeme = True
             # Create new MPI comm to pass around rank
-            g.write_all('Starting to load and predict subroutine\n')
+            g.write_all('Starting to load and predict subroutine, i={}\n'.format(i))
             X, y, shot_lengths, disr = loader.load_as_X_y_pred(shot_sublist)
             g.write_all('X, y, lengths, disr loaded, shot_lengths shape: {} \n'.format(len(shot_lengths)))
 
@@ -788,7 +807,7 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
             model.reset_states()
             y_p = loader.batch_output_to_array(y_p)
             y = loader.batch_output_to_array(y)
-
+            times_predicted += 1
             g.write_all('Finished le prediction\n')
 
             # cut arrays back
@@ -808,23 +827,24 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
             g.write_all('Calculated shpz\n')
             y_prime_numpy = np.stack([np.pad(sublist, pad_width=((0,max_length-max(sublist.shape)),(0,0))) for sublist in y_prime])
             y_gold_numpy = np.stack([np.pad(sublist, pad_width=((0,max_length-max(sublist.shape)),(0,0))) for sublist in y_gold])
-            g.write_all('First Barrier\n')
-            g.comm.Barrier()
-        elif g.task_index < len(shot_sublists):
+        elif times_predicted < times_i_will_predict or \
+             (times_predicted==times_i_will_predict and \
+              i < len(shot_sublists) - (len(shot_sublists) % g.num_workers)):
+            g.write_all('skipping on i={}, I only predicted {}/{} times\n'.format(i, times_predicted, times_i_will_predict))
             pass
         else:
-            if i == 0:
-                color = 2
-                temp_predictor_only_comm = MPI.Comm.Split(g.comm, color, i)
-                freeme = True
-                g.write_all('First Barrier (other threads)\n')
-                g.comm.Barrier()
-                g.write_all('Past First Barrier (other threads)\n')
+            color = 2
+            g.write_all('New comm Barrier (other threads), i={}\n'.format(i))
+            g.comm.Barrier()
+            temp_predictor_only_comm = MPI.Comm.Split(g.comm, color, i)
+            #freeme = True
+            g.write_all('Past new comm Barrier (other threads), i={}\n'.format(i))
             
 
         if (i % g.num_workers == g.num_workers - 1
                 or i == len(shot_sublists) - 1):
 
+            freeme = True
             g.write_all('Entered second area\n')
             g.comm.Barrier()
             # Create numpy array to store all processors output, then aggregate and unpad using MPI gathered shape list
@@ -841,7 +861,7 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
             y_goldg  = np.zeros((len(shot_sublists)*conf['model']['pred_batch_size'],max_length,1), dtype=conf['data']['floatx'])
             y_primeg_flattend = np.zeros(y_primeg.flatten().shape)
             y_goldg_flattend  = np.zeros(y_goldg.flatten().shape)
-            g.write_all('initialized golbals\n')
+            g.write_all('initialized golbals, i = {}\n'.format(i))
             # TODO (IMD) Support more floating point types
             # ValueError: message: cannot infer count, number of entries 10652818 is not a multiple of required number of blocks 9
             # Need to send an unequal sized array I think
@@ -852,19 +872,25 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
                 g.write_all('y_gold_numpy_flattend.shape = {}\n'.format(y_gold_numpy.flatten().shape))
                 g.write_all('y_prime_g.shape = {}\n'.format(y_primeg.shape))
                 g.write_all('y_primeg_flattend.shape = {}\n'.format(y_primeg_flattend.shape))
-                g.write_all('y_goldg_flattend.shape = {}\n'.format(y_goldg_flattend.shape))
+                g.write_all('y_goldg_flattend.shape = {}, i={}\n'.format(y_goldg_flattend.shape,i))
                 # Ensure that numpy arrays have correct dimensions before gathering them
                 assert len(shot_sublists)*max(y_prime_numpy.flatten().shape) == max(y_primeg_flattend.shape)
                 assert len(shot_sublists)*max(y_gold_numpy.flatten().shape) == max(y_goldg_flattend.shape)
+                g.write_all('Passed asserts for i = {}\n'.format(i))
+                temp_predictor_only_comm.Barrier()
                 temp_predictor_only_comm.Allgather(y_prime_numpy.flatten(), y_primeg_flattend)
                 temp_predictor_only_comm.Allgather(y_gold_numpy.flatten(), y_goldg_flattend)
+                temp_predictor_only_comm.Barrier()
+                g.write_all('Passed Allgather color=1 for i = {}\n'.format(i))
             # Process 0 broadcast y_primeg adn y_goldg to all processors, including ones
             # not involved in calculating predictions so they can each create their own 
             # y_prime_global and y_gold_global
+            g.write_all('Waiting on Barrier before broadcast at i={}\n'.format(i))
             g.comm.Barrier()
             g.write_all('Broadcasting y_primeg and y_goldg to every\n')
             g.comm.Bcast(y_primeg_flattend, root=0)
             g.comm.Bcast(y_goldg_flattend, root=0) 
+            g.comm.Barrier()
             g.write_all('All gathered initialized golbals len1={}, len2={}\n'.format(len(y_primeg_flattend), len(y_goldg_flattend)))
             y_primeg_flattend = np.split(y_primeg_flattend, len(shot_sublists))
             y_goldg_flattend = np.split(y_goldg_flattend, len(shot_sublists))
@@ -879,6 +905,7 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
             # Unpad
             g.write_all('unpadding len(shpzg)={}, shpzg[0]={}\n'.format(len(shpzg),shpzg[0]))
             # need to have subgroups gather a broadcast y_prmeg (maybe do above)
+            # TODO
             for idx, s in enumerate(shpzg):
                 trim = lambda nparry, s: nparry#(0:int(s),:)
                 y_primeg[idx] = trim(y_primeg[idx],s)
@@ -894,9 +921,11 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
         if g.task_index == 0:
             pbar.add(1.0*len(shot_sublist))
 
-        if freeme and (g.task_index > len(shot_sublists) and i == 0):
+        if freeme:
+            g.write_all('Freeing extra comm at i={}\n'.format(i))
             temp_predictor_only_comm.Free()
             freeme = False
+            color = 2
 
     #y_prime_global = y_prime_global[:len(shot_list)]
     y_primeg = y_primeg[:len(shot_list)]
