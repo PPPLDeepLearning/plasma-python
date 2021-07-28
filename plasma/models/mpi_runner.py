@@ -786,16 +786,17 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
     else:
         times_i_will_predict = len(shot_sublists)//g.num_workers
     times_predicted = 0
+    color = 0
     g.write_all('I shall predict {} times\n'.format(times_i_will_predict))
     for (i, shot_sublist) in enumerate(shot_sublists):
         shpz = []
         max_length = -1 # So non shot predictive workers don't have a real length
         g.write_all('My task index = {}, i mod num_workers = {}\n'.format(g.task_index, i%g.num_workers))
         if i % g.num_workers == g.task_index:
-            g.write_all('Creating new comm at i={}\n'.format(i))
+            #g.write_all('Creating new comm at i={}\n'.format(i))
             color = 1
-            g.comm.Barrier()
-            temp_predictor_only_comm = MPI.Comm.Split(g.comm, color, i)
+            #g.comm.Barrier()
+            #temp_predictor_only_comm = MPI.Comm.Split(g.comm, color, i)
             #freeme = True
             # Create new MPI comm to pass around rank
             g.write_all('Starting to load and predict subroutine, i={}\n'.format(i))
@@ -818,34 +819,27 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
             y_gold += y
             disruptive += disr
 
-            # Create numpy block from y list which is used in MPI
-            # Pads y_prime and y_gold with zeros to make it all fit
-            shpz = [y.shape for y in y_prime]
-            max_length = max([max(y.shape) for y in y_p])
-            g.write_all(' max length = {}\n'.format(max_length))
-            max_length = temp_predictor_only_comm.allreduce(max_length, MPI.MAX) 
-            g.write_all('Calculated shpz\n')
-            y_prime_numpy = np.stack([np.pad(sublist, pad_width=((0,max_length-max(sublist.shape)),(0,0))) for sublist in y_prime])
-            y_gold_numpy = np.stack([np.pad(sublist, pad_width=((0,max_length-max(sublist.shape)),(0,0))) for sublist in y_gold])
-        elif times_predicted < times_i_will_predict or \
-             (times_predicted==times_i_will_predict and \
-              i < len(shot_sublists) - (len(shot_sublists) % g.num_workers)):
-            g.write_all('skipping on i={}, I only predicted {}/{} times\n'.format(i, times_predicted, times_i_will_predict))
-            pass
-        else:
-            color = 2
-            g.write_all('New comm Barrier (other threads), i={}\n'.format(i))
-            g.comm.Barrier()
-            temp_predictor_only_comm = MPI.Comm.Split(g.comm, color, i)
-            #freeme = True
-            g.write_all('Past new comm Barrier (other threads), i={}\n'.format(i))
-            
-
         if (i % g.num_workers == g.num_workers - 1
                 or i == len(shot_sublists) - 1):
-
-            freeme = True
+            # Create numpy block from y list which is used in MPI
+            # Pads y_prime and y_gold with zeros to make it all fit
+            g.write_all('In second area, my color is {}, i={}\n'.format(color,i))
+            g.comm.Barrier()
+            if color ==1:
+                shpz = [y.shape for y in y_prime]
+                max_length = max([max(y.shape) for y in y_p])
+                g.write_all(' max length = {}\n'.format(max_length))
+            g.comm.Barrier()
+            max_length = g.comm.allreduce(max_length, MPI.MAX) 
+            g.write_all('Calculated shpz\n')
+            if color == 1:
+                y_prime_numpy = np.stack([np.pad(sublist, pad_width=((0,max_length-max(sublist.shape)),(0,0))) for sublist in y_prime])
+                y_gold_numpy = np.stack([np.pad(sublist, pad_width=((0,max_length-max(sublist.shape)),(0,0))) for sublist in y_gold])
+            
             g.write_all('Entered second area\n')
+            g.comm.Barrier()
+            temp_predictor_only_comm = MPI.Comm.Split(g.comm, color, i)
+            freeme = True
             g.comm.Barrier()
             # Create numpy array to store all processors output, then aggregate and unpad using MPI gathered shape list
             g.write_all('getting shapez\n')
@@ -916,7 +910,8 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
             g.comm.Barrier()
             y_prime = []
             y_gold = []
-            disruptive = []
+            disruptive = [] 
+            color = 0
 
         if g.task_index == 0:
             pbar.add(1.0*len(shot_sublist))
