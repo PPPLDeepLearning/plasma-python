@@ -854,8 +854,12 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
             g.write_unique(str(shpzg)+'\n')
             g.write_all('gotting shapez\n')
             # Todo: Figure out if empty shots are added to fit batch length
-            y_primeg = np.zeros((len(shot_sublists)*conf['model']['pred_batch_size'],max_length,1), dtype=conf['data']['floatx'])
-            y_goldg  = np.zeros((len(shot_sublists)*conf['model']['pred_batch_size'],max_length,1), dtype=conf['data']['floatx'])
+            if color == 1:
+                num_pred = temp_predictor_only_comm.size
+            else:
+                num_pred = g.comm.size - temp_predictor_only_comm.size
+            y_primeg = np.zeros((num_pred*conf['model']['pred_batch_size'],max_length,1), dtype=conf['data']['floatx'])
+            y_goldg  = np.zeros((num_pred*conf['model']['pred_batch_size'],max_length,1), dtype=conf['data']['floatx'])
             y_primeg_flattend = np.zeros(y_primeg.flatten().shape)
             y_goldg_flattend  = np.zeros(y_goldg.flatten().shape)
             g.write_all('initialized golbals, i = {}\n'.format(i))
@@ -871,8 +875,8 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
                 g.write_all('y_primeg_flattend.shape = {}\n'.format(y_primeg_flattend.shape))
                 g.write_all('y_goldg_flattend.shape = {}, i={}\n'.format(y_goldg_flattend.shape,i))
                 # Ensure that numpy arrays have correct dimensions before gathering them
-                assert len(shot_sublists)*max(y_prime_numpy.flatten().shape) == max(y_primeg_flattend.shape)
-                assert len(shot_sublists)*max(y_gold_numpy.flatten().shape) == max(y_goldg_flattend.shape)
+                assert num_pred*max(y_prime_numpy.flatten().shape) == max(y_primeg_flattend.shape)
+                assert num_pred*max(y_gold_numpy.flatten().shape) == max(y_goldg_flattend.shape)
                 g.write_all('Passed asserts for i = {}\n'.format(i))
                 temp_predictor_only_comm.Barrier()
                 temp_predictor_only_comm.Allgather(y_prime_numpy.flatten(), y_primeg_flattend)
@@ -889,8 +893,8 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
             g.comm.Bcast(y_goldg_flattend, root=0) 
             g.comm.Barrier()
             g.write_all('All gathered initialized golbals len1={}, len2={}\n'.format(len(y_primeg_flattend), len(y_goldg_flattend)))
-            y_primeg_flattend = np.split(y_primeg_flattend, len(shot_sublists))
-            y_goldg_flattend = np.split(y_goldg_flattend, len(shot_sublists))
+            y_primeg_flattend = np.split(y_primeg_flattend, num_pred)
+            y_goldg_flattend = np.split(y_goldg_flattend, num_pred)
             y_primeg = [y.reshape((128, max_length, 1)) for y in y_primeg_flattend]
             y_goldg = [y.reshape((128, max_length, 1)) for y in y_goldg_flattend]
             g.write_all('primeg length: {}\n'.format(len(y_primeg)))
