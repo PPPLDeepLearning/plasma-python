@@ -826,7 +826,7 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
             g.write_all('In second area, my color is {}, i={}\n'.format(color,i))
             g.comm.Barrier()
             if color ==1:
-                shpz = [y.shape for y in y_prime]
+                shpz = [max(y.shape) for y in y_prime]
                 max_length = max([max(y.shape) for y in y_p])
                 g.write_all(' max length = {}\n'.format(max_length))
             g.comm.Barrier()
@@ -842,11 +842,14 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
             freeme = True
             g.comm.Barrier()
             # Create numpy array to store all processors output, then aggregate and unpad using MPI gathered shape list
-            g.write_all('getting shapez\n')
+            g.write_all('getting shapez, i contribute {} shpz\n'.format(len(shpz)))
             shpzg = g.comm.allgather(shpz)
-            shpzg = [s for s in shpzg if s != [] and s != [0]]
-            shpzg = shpzg[0]
-            shpzg = [s[0] for s in shpzg]
+            import itertools
+            shpzg = list(itertools.chain(*shpzg))
+            g.comm.Barrier()
+            g.write_all('shpzg shape before preproc={}\n'.format(len(shpzg)))
+            shpzg = [s for s in shpzg if s != []]
+            g.write_all('shpzg shape after preproc={}\n'.format(len(shpzg)))
             max_length = g.comm.allreduce(max_length, MPI.MAX) 
             g.write_unique(str(shpzg)+'\n')
             g.write_all('gotting shapez\n')
@@ -894,16 +897,14 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
             y_primeg = np.concatenate(y_primeg, axis=0)
             g.write_all('primeg shape after stack: {}\n'.format(y_primeg.shape))
             y_goldg  = np.concatenate(y_goldg, axis=0)
-            y_primeg_list = []
-            y_goldg_list = []
             # Unpad
             g.write_all('unpadding len(shpzg)={}, shpzg[0]={}\n'.format(len(shpzg),shpzg[0]))
             # need to have subgroups gather a broadcast y_prmeg (maybe do above)
             # TODO
             for idx, s in enumerate(shpzg):
-                trim = lambda nparry, s: nparry#(0:int(s),:)
-                y_primeg[idx] = trim(y_primeg[idx],s)
-                y_goldg[idx] = trim(y_goldg[idx], s)
+                trim = lambda nparry, s: nparry[0:int(s),:]
+                y_prime_global.append(trim(y_primeg[idx],s))
+                y_gold_global.append(trim(y_goldg[idx], s))
 
             disruptive_global += concatenate_sublists(
                 g.comm.allgather(disruptive))
@@ -912,6 +913,7 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
             y_gold = []
             disruptive = [] 
             color = 0
+            g.write_all('y_prime_global len ={}\n'.format(len(y_prime_global)))
 
         if g.task_index == 0:
             pbar.add(1.0*len(shot_sublist))
@@ -922,14 +924,12 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
             freeme = False
             color = 2
 
-    #y_prime_global = y_prime_global[:len(shot_list)]
-    y_primeg = y_primeg[:len(shot_list)]
-    #y_gold_global = y_gold_global[:len(shot_list)]
-    y_goldg = y_goldg[:len(shot_list)]
+    y_prime_global = y_prime_global[:len(shot_list)]
+    y_gold_global = y_gold_global[:len(shot_list)]
     disruptive_global = disruptive_global[:len(shot_list)]
     loader.set_inference_mode(False)
 
-    return y_primeg, y_goldg, disruptive_global
+    return y_prime_global, y_gold_global, disruptive_global
 
 
 def mpi_make_predictions_and_evaluate(conf, shot_list, loader,
