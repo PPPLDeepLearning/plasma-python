@@ -112,11 +112,11 @@ for i in range(g.num_workers):
         else:
             import tensorflow.keras.backend as K
 
-
         from tensorflow.keras.utils import Progbar
         # TODO(KGF): instead of tensorflow.keras.callbacks.CallbackList()
         # until API added in tf-nightly in v2.2.0
-        import tensorflow.python.keras.callbacks as cbks
+        import tensorflow.keras.callbacks as cbks
+        from plasma.utils.CallbackList import CallbackList
 
 g.flush_all_inorder()
 g.pprint_unique(conf)
@@ -496,7 +496,7 @@ class MPIModel():
         #         update_freq=1,)
         #     callbacks += [tb_callback]
 
-        return cbks.CallbackList(callbacks)
+        return CallbackList(callbacks)
 
     def add_noise(self, X):
         if self.conf['training']['noise'] is True:
@@ -564,80 +564,80 @@ class MPIModel():
         while ((self.num_so_far - self.epoch * num_total) < num_total
                or step < self.num_batches_minimum):
             # TODO(KGF): this is still not correctly tracing the steps on CPU
-            with tf.profiler.experimental.Trace('train', step_num=step, _r=1):
-                if step_limit > 0 and step > step_limit:
-                    print('reached step limit')
-                    break
-                try:
-                    (batch_xs, batch_ys, batches_to_reset, num_so_far_curr,
-                     num_total, is_warmup_period) = next(batch_iterator_func)
-                except StopIteration:
-                    g.print_unique("Resetting batch iterator.")
-                    self.num_so_far_accum = self.num_so_far_indiv
-                    self.set_batch_iterator_func()
-                    batch_iterator_func = self.batch_iterator_func
-                    (batch_xs, batch_ys, batches_to_reset, num_so_far_curr,
-                     num_total, is_warmup_period) = next(batch_iterator_func)
-                self.num_so_far_indiv = self.num_so_far_accum + num_so_far_curr
+            #with tf.profiler.experimental.Trace('train', step_num=step, _r=1):
+            if step_limit > 0 and step > step_limit:
+                print('reached step limit')
+                break
+            try:
+                (batch_xs, batch_ys, batches_to_reset, num_so_far_curr,
+                 num_total, is_warmup_period) = next(batch_iterator_func)
+            except StopIteration:
+                g.print_unique("Resetting batch iterator.")
+                self.num_so_far_accum = self.num_so_far_indiv
+                self.set_batch_iterator_func()
+                batch_iterator_func = self.batch_iterator_func
+                (batch_xs, batch_ys, batches_to_reset, num_so_far_curr,
+                 num_total, is_warmup_period) = next(batch_iterator_func)
+            self.num_so_far_indiv = self.num_so_far_accum + num_so_far_curr
 
-                # if batches_to_reset:
-                # self.model.reset_states(batches_to_reset)
+            # if batches_to_reset:
+            # self.model.reset_states(batches_to_reset)
 
-                warmup_phase = (step < self.warmup_steps and self.epoch == 0)
-                num_replicas = 1 if warmup_phase else self.num_replicas
+            warmup_phase = (step < self.warmup_steps and self.epoch == 0)
+            num_replicas = 1 if warmup_phase else self.num_replicas
 
-                self.num_so_far = self.mpi_sum_scalars(
-                    self.num_so_far_indiv, num_replicas)
+            self.num_so_far = self.mpi_sum_scalars(
+                self.num_so_far_indiv, num_replicas)
 
-                # run the model once to force compilation. Don't actually use these
-                # values.
-                if first_run:
-                    first_run = False
-                    t0_comp = time.time()
-                    #   print('input_dimension:',batch_xs.shape)
-                    #   print('output_dimension:',batch_ys.shape)
-                    _, _ = self.train_on_batch_and_get_deltas(
+            # run the model once to force compilation. Don't actually use these
+            # values.
+            if first_run:
+                first_run = False
+                t0_comp = time.time()
+                #   print('input_dimension:',batch_xs.shape)
+                #   print('output_dimension:',batch_ys.shape)
+                _, _ = self.train_on_batch_and_get_deltas(
                         batch_xs, batch_ys, verbose)
-                    self.comm.Barrier()
-                    sys.stdout.flush()
-                    # TODO(KGF): check line feed/carriage returns around this
-                    g.print_unique('\nCompilation finished in {:.2f}s'.format(
-                        time.time() - t0_comp))
-                    t_start = time.time()
-                    sys.stdout.flush()
+                self.comm.Barrier()
+                sys.stdout.flush()
+                # TODO(KGF): check line feed/carriage returns around this
+                g.print_unique('\nCompilation finished in {:.2f}s'.format(
+                    time.time() - t0_comp))
+                t_start = time.time()
+                sys.stdout.flush()
 
-                if np.any(batches_to_reset):
-                    reset_states(self.model, batches_to_reset)
-                if ('noise' in self.conf['training'].keys()
-                        and self.conf['training']['noise'] is not False):
-                    batch_xs = self.add_noise(batch_xs)
-                t0 = time.time()
-                deltas, loss = self.train_on_batch_and_get_deltas(
-                    batch_xs, batch_ys, verbose)
-                t1 = time.time()
-                if not is_warmup_period:
-                    self.set_new_weights(deltas, num_replicas)
-                    t2 = time.time()
-                    write_str_0 = self.calculate_speed(t0, t1, t2, num_replicas)
-                    curr_loss = self.mpi_average_scalars(1.0*loss, num_replicas)
-                    # g.print_unique(self.model.get_weights()[0][0][:4])
-                    loss_averager.add_val(curr_loss)
-                    ave_loss = loss_averager.get_ave()
-                    eta = self.estimate_remaining_time(
-                        t0 - t_start, self.num_so_far - self.epoch*num_total,
+            if np.any(batches_to_reset):
+                reset_states(self.model, batches_to_reset)
+            if ('noise' in self.conf['training'].keys()
+                    and self.conf['training']['noise'] is not False):
+                batch_xs = self.add_noise(batch_xs)
+            t0 = time.time()
+            deltas, loss = self.train_on_batch_and_get_deltas(
+                batch_xs, batch_ys, verbose)
+            t1 = time.time()
+            if not is_warmup_period:
+                self.set_new_weights(deltas, num_replicas)
+                t2 = time.time()
+                write_str_0 = self.calculate_speed(t0, t1, t2, num_replicas)
+                curr_loss = self.mpi_average_scalars(1.0*loss, num_replicas)
+                # g.print_unique(self.model.get_weights()[0][0][:4])
+                loss_averager.add_val(curr_loss)
+                ave_loss = loss_averager.get_ave()
+                eta = self.estimate_remaining_time(
+                    t0 - t_start, self.num_so_far - self.epoch*num_total,
+                    num_total)
+                write_str = (
+                    '\r[{}] step: {} [ETA: {:.2f}s] [{:.2f}/{}], '.format(
+                        self.task_index, step, eta, 1.0*self.num_so_far,
                         num_total)
-                    write_str = (
-                        '\r[{}] step: {} [ETA: {:.2f}s] [{:.2f}/{}], '.format(
-                            self.task_index, step, eta, 1.0*self.num_so_far,
-                            num_total)
-                        + 'loss: {:.5f} [{:.5f}] | '.format(ave_loss, curr_loss)
-                        + 'walltime: {:.4f} | '.format(
-                            time.time() - self.start_time))
-                    g.write_unique(write_str + write_str_0)
-                    step += 1
-                else:
-                    g.write_unique('\r[{}] warmup phase, num so far: {}'.format(
-                        self.task_index, self.num_so_far))
+                    + 'loss: {:.5f} [{:.5f}] | '.format(ave_loss, curr_loss)
+                    + 'walltime: {:.4f} | '.format(
+                        time.time() - self.start_time))
+                g.write_unique(write_str + write_str_0)
+                step += 1
+            else:
+                g.write_unique('\r[{}] warmup phase, num so far: {}'.format(
+                    self.task_index, self.num_so_far))
 
         effective_epochs = 1.0*self.num_so_far/num_total
         epoch_previous = self.epoch

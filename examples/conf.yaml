@@ -9,12 +9,12 @@
 # will output csvlog, trained model checkpoints, etc.
 # in fs_path_output / [username] / results | csv_logs | model_checkpoints | Graph, etc.
 
-fs_path: '/Users/'
+fs_path: '/tigress/'
 user_subdir: True
-fs_path_output: '/Users/'
+fs_path_output: '/tigress/'
 user_subdir_output: True
 target: 'hinge' # 'maxhinge' # 'maxhinge' # 'binary' # 'hinge'
-num_gpus: 1  # per node
+num_gpus: 4  # per node
 paths:
   signal_prepath: '/signal_data/' # /signal_data/jet/
   shot_list_dir: '/shot_lists/'
@@ -94,7 +94,7 @@ model:
   # TODO(KGF): optimize size of RNN layers
   # size 100 slight overfitting, size 20 no overfitting. 200 is not better than 100.
   # Prediction is much better with size 100, size 20 cannot capture the data.
-  rnn_size: 200
+  rnn_size: 100
   rnn_type: 'LSTM'
   # TODO(KGF): optimize number of RNN layers
   rnn_layers: 2
@@ -144,8 +144,8 @@ training:
   num_batches_minimum: 20 # minimum number of batches per epoch
   ranking_difficulty_fac: 1.0 # how much to upweight incorrectly classified shots during training
   timeline_prof: False
-  step_limit: 50
-  no_validation: True
+  step_limit: 1000
+  no_validation: False
 callbacks:
   list: ['earlystop']
   metrics: ['val_loss','val_roc','train_loss']
