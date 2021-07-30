@@ -24,6 +24,7 @@ import os
 import sys
 import numpy as np
 from copy import deepcopy
+from packaging import version
 from plasma.utils.downloading import makedirs_process_safe
 from plasma.utils.hashing import general_object_hash
 from plasma.models.tcn import TCN
@@ -393,7 +394,10 @@ class ModelBuilder(object):
         # TODO(KGF): model.save(..., save_format='tf') disabled in r1.15
         # Same with tf.keras.models.save_model(..., save_format="tf").
         # Need to use experimental API until r2.x
-        model.save(full_model_save_dir, overwrite=True, save_format='tf')
+        if (version.parse(g.tf_ver) > version.parse('2.1.0')
+                and version.parse(g.tf_ver).minor != 1):
+            # errors out in TF 2.1.3 on Traverse (latest version on IBM WMLCE 1.7.0)
+            model.save(full_model_save_dir, overwrite=True, save_format='tf')
 
         # try:
         if _has_tf2onnx:

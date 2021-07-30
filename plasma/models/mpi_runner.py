@@ -14,6 +14,9 @@ from plasma.conf import conf
 from mpi4py import MPI
 from pkg_resources import parse_version, get_distribution, DistributionNotFound
 import random
+from packaging import version
+import contextlib
+
 '''
 #########################################################
 This file trains a deep learning model to predict
@@ -564,7 +567,12 @@ class MPIModel():
         while ((self.num_so_far - self.epoch * num_total) < num_total
                or step < self.num_batches_minimum):
             # TODO(KGF): this is still not correctly tracing the steps on CPU
-            with tf.profiler.experimental.Trace('train', step_num=step, _r=1):
+            if version.parse(g.tf_ver) >= version.parse('2.2.0'):
+                # TensorFlow profiler added in April 2020, TF 2.2.0
+                cm = tf.profiler.experimental.Trace('train', step_num=step, _r=1)
+            else:
+                cm = contextlib.nullcontext()
+            with cm:
                 if step_limit > 0 and step > step_limit:
                     print('reached step limit')
                     break
@@ -948,8 +956,8 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         best_so_far = np.inf
         cmp_fn = min
 
-    if conf['training']['timeline_prof']:
-        tf.profiler.experimental.start('./logs')
+    # if conf['training']['timeline_prof']:
+    #     tf.profiler.experimental.start('./logs')
 
     while e < num_epochs:
         g.write_unique('\nBegin training from epoch {:.2f}/{}'.format(
@@ -1057,8 +1065,8 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         if stop_training:
             g.write_unique("Stopping training due to early stopping")
             break
-    if conf['training']['timeline_prof']:
-        tf.profiler.experimental.stop()
+    # if conf['training']['timeline_prof']:
+    #     tf.profiler.experimental.stop()
 
     if g.task_index == 0:
         callbacks.on_train_end()
