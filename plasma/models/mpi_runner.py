@@ -15,6 +15,8 @@ from mpi4py import MPI
 from pkg_resources import parse_version, get_distribution, DistributionNotFound
 import random
 import itertools
+from packaging import version
+import contextlib
 '''
 #########################################################
 This file trains a deep learning model to predict
@@ -565,39 +567,60 @@ class MPIModel():
         while ((self.num_so_far - self.epoch * num_total) < num_total
                or step < self.num_batches_minimum):
             # TODO(KGF): this is still not correctly tracing the steps on CPU
-            #with tf.profiler.experimental.Trace('train', step_num=step, _r=1):
-            if step_limit > 0 and step > step_limit:
-                print('reached step limit')
-                break
-            try:
-                (batch_xs, batch_ys, batches_to_reset, num_so_far_curr,
-                 num_total, is_warmup_period) = next(batch_iterator_func)
-            except StopIteration:
-                g.print_unique("Resetting batch iterator.")
-                self.num_so_far_accum = self.num_so_far_indiv
-                self.set_batch_iterator_func()
-                batch_iterator_func = self.batch_iterator_func
-                (batch_xs, batch_ys, batches_to_reset, num_so_far_curr,
-                 num_total, is_warmup_period) = next(batch_iterator_func)
-            self.num_so_far_indiv = self.num_so_far_accum + num_so_far_curr
+            if version.parse(g.tf_ver) >= version.parse('2.2.0'):
+                # TensorFlow profiler added in April 2020, TF 2.2.0
+                cm = tf.profiler.experimental.Trace('train', step_num=step, _r=1)
+            else:
+                cm = contextlib.nullcontext()
+            with cm:
+                if step_limit > 0 and step > step_limit:
+                    print('reached step limit')
+                    break
+                try:
+                    (batch_xs, batch_ys, batches_to_reset, num_so_far_curr,
+                     num_total, is_warmup_period) = next(batch_iterator_func)
+                except StopIteration:
+                    g.print_unique("Resetting batch iterator.")
+                    self.num_so_far_accum = self.num_so_far_indiv
+                    self.set_batch_iterator_func()
+                    batch_iterator_func = self.batch_iterator_func
+                    (batch_xs, batch_ys, batches_to_reset, num_so_far_curr,
+                     num_total, is_warmup_period) = next(batch_iterator_func)
+                self.num_so_far_indiv = self.num_so_far_accum + num_so_far_curr
 
-            # if batches_to_reset:
-            # self.model.reset_states(batches_to_reset)
+                # if batches_to_reset:
+                # self.model.reset_states(batches_to_reset)
 
-            warmup_phase = (step < self.warmup_steps and self.epoch == 0)
-            num_replicas = 1 if warmup_phase else self.num_replicas
+                warmup_phase = (step < self.warmup_steps and self.epoch == 0)
+                num_replicas = 1 if warmup_phase else self.num_replicas
 
-            self.num_so_far = self.mpi_sum_scalars(
-                self.num_so_far_indiv, num_replicas)
+                self.num_so_far = self.mpi_sum_scalars(
+                    self.num_so_far_indiv, num_replicas)
 
-            # run the model once to force compilation. Don't actually use these
-            # values.
-            if first_run:
-                first_run = False
-                t0_comp = time.time()
-                #   print('input_dimension:',batch_xs.shape)
-                #   print('output_dimension:',batch_ys.shape)
-                _, _ = self.train_on_batch_and_get_deltas(
+                # run the model once to force compilation. Don't actually use these
+                # values.
+                if first_run:
+                    first_run = False
+                    t0_comp = time.time()
+                    #   print('input_dimension:',batch_xs.shape)
+                    #   print('output_dimension:',batch_ys.shape)
+                    _, _ = self.train_on_batch_and_get_deltas(
+                        batch_xs, batch_ys, verbose)
+                    self.comm.Barrier()
+                    sys.stdout.flush()
+                    # TODO(KGF): check line feed/carriage returns around this
+                    g.print_unique('\nCompilation finished in {:.2f}s'.format(
+                        time.time() - t0_comp))
+                    t_start = time.time()
+                    sys.stdout.flush()
+
+                if np.any(batches_to_reset):
+                    reset_states(self.model, batches_to_reset)
+                if ('noise' in self.conf['training'].keys()
+                        and self.conf['training']['noise'] is not False):
+                    batch_xs = self.add_noise(batch_xs)
+                t0 = time.time()
+                deltas, loss = self.train_on_batch_and_get_deltas(
                     batch_xs, batch_ys, verbose)
                 self.comm.Barrier()
                 sys.stdout.flush()
@@ -1074,8 +1097,8 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         best_so_far = np.inf
         cmp_fn = min
 
-    if conf['training']['timeline_prof']:
-        tf.profiler.experimental.start('./logs')
+    # if conf['training']['timeline_prof']:
+    #     tf.profiler.experimental.start('./logs')
 
     while e < num_epochs:
         g.write_unique('\nBegin training from epoch {:.2f}/{}'.format(
@@ -1183,8 +1206,8 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
         if stop_training:
             g.write_unique("Stopping training due to early stopping")
             break
-    if conf['training']['timeline_prof']:
-        tf.profiler.experimental.stop()
+    # if conf['training']['timeline_prof']:
+    #     tf.profiler.experimental.stop()
 
     if g.task_index == 0:
         callbacks.on_train_end()
