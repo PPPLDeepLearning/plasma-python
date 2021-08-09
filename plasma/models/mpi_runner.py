@@ -12,7 +12,6 @@ from plasma.utils.state_reset import reset_states
 # Keras "Using TensorFlow backend" stderr messages do not interfere in stdout
 from plasma.conf import conf
 from mpi4py import MPI
-from pkg_resources import parse_version, get_distribution, DistributionNotFound
 import random
 import itertools
 from packaging import version
@@ -59,10 +58,6 @@ if g.backend == 'tf' or g.backend == 'tensorflow':
         os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(g.MY_GPU)
         # ,mode=NanGuardMode'
     os.environ['KERAS_BACKEND'] = 'tensorflow'  # default setting
-    try:
-        g.tf_ver = parse_version(get_distribution(g.backendpackage).version)
-    except DistributionNotFound:
-        g.tf_ver = parse_version(get_distribution('tensorflow').version)
     # compat/compat.py first committed on 2018-06-29 for Py 2 vs 3
     # (around, but not present in, the release of v1.9.0)
     # v2 compatiblity code added, then moved from compat.py in Nov and Dec 2018
@@ -74,6 +69,7 @@ if g.backend == 'tf' or g.backend == 'tensorflow':
     #     import tensorflow.compat.v1 as tf
     # else:
     import tensorflow as tf
+    g.tf_ver = tf.__version__ # setting g.tf_ver moved after the import Summer 2021
     # TODO(KGF): above, builder.py (bug workaround), mpi_launch_tensorflow.py,
     # and runner.py are the only files that import tensorflow directly
 
@@ -950,7 +946,7 @@ def mpi_train(conf, shot_list_train, shot_list_validate, loader,
     conf['num_workers'] = g.comm.Get_size()
 
     specific_builder = builder.ModelBuilder(conf)
-    if g.tf_ver >= parse_version('1.14.0'):
+    if version.parse(g.tf_ver) >= version.parse('1.14.0'):
         # Internal TensorFlow flags, subject to change (v1.14.0+ only?)
         try:
             from tensorflow.python.util import module_wrapper as depr
