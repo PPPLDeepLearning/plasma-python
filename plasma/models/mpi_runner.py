@@ -876,8 +876,8 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
             g.comm.Barrier()
             y_primeg_flattend = np.split(y_primeg_flattend, num_pred)
             y_goldg_flattend = np.split(y_goldg_flattend, num_pred)
-            y_primeg = [y.reshape((128, max_length, 1)) for y in y_primeg_flattend]
-            y_goldg = [y.reshape((128, max_length, 1)) for y in y_goldg_flattend]
+            y_primeg = [y.reshape((conf['model']['pred_batch_size'], max_length, 1)) for y in y_primeg_flattend]
+            y_goldg = [y.reshape((conf['model']['pred_batch_size'], max_length, 1)) for y in y_goldg_flattend]
             y_primeg = np.concatenate(y_primeg, axis=0)
             y_goldg  = np.concatenate(y_goldg, axis=0)
             # Unpad each shot to its true length
