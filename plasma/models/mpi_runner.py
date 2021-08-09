@@ -836,7 +836,6 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
             if color ==1:
                 shpz = [max(y.shape) for y in y_prime]
                 max_length = max([max(y.shape) for y in y_p])
-                g.write_all(' max length = {}\n'.format(max_length))
             g.comm.Barrier()
             max_length = g.comm.allreduce(max_length, MPI.MAX) 
             if color == 1:
@@ -868,7 +867,7 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
                 temp_predictor_only_comm.Allgather(y_prime_numpy.flatten(), y_primeg_flattend)
                 temp_predictor_only_comm.Allgather(y_gold_numpy.flatten(), y_goldg_flattend)
                 temp_predictor_only_comm.Barrier()
-            # Process 0 broadcast y_primeg adn y_goldg to all processors, including ones
+            # Process 0 broadcast y_primeg and y_goldg to all processors, including ones
             # not involved in calculating predictions so they can each create their own 
             # y_prime_global and y_gold_global
             g.comm.Barrier()
@@ -912,11 +911,6 @@ def mpi_make_predictions_and_evaluate(conf, shot_list, loader,
     y_prime, y_gold, disruptive = mpi_make_predictions(
         conf, shot_list, loader, custom_path)
     analyzer = PerformanceAnalyzer(conf=conf)
-    #g.write_all('Afterwards y_prime length = {}\n'.format(len(y_prime)))
-    #g.write_all('Afterwards y_prime[0] shape = {}\n'.format(y_prime[0].shape))
-    #g.write_all('Afterwards y_gold length = {}\n'.format(len(y_gold)))
-    #g.write_all('Afterwards y_gold[0] shape = {}\n'.format(y_gold[0].shape))
-    #g.write_all('Afterwards distruptive length = {}\n'.format(len(disruptive)))
     roc_area = analyzer.get_roc_area(y_prime, y_gold, disruptive)
     shot_list.set_weights(
         analyzer.get_shot_difficulty(y_prime, y_gold, disruptive))
