@@ -828,23 +828,18 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
                 or i == len(shot_sublists) - 1):
             # Create numpy block from y list which is used in MPI
             # Pads y_prime and y_gold with zeros to maximum shot length within block being transferred
-            g.comm.Barrier()
             if color ==1:
                 shpz = [max(y.shape) for y in y_prime]
                 max_length = max([max(y.shape) for y in y_p])
-            g.comm.Barrier()
             max_length = g.comm.allreduce(max_length, MPI.MAX) 
             if color == 1:
                 y_prime_numpy = np.stack([np.pad(sublist, pad_width=((0,max_length-max(sublist.shape)),(0,0))) for sublist in y_prime])
                 y_gold_numpy = np.stack([np.pad(sublist, pad_width=((0,max_length-max(sublist.shape)),(0,0))) for sublist in y_gold])
             
-            g.comm.Barrier()
             temp_predictor_only_comm = MPI.Comm.Split(g.comm, color, i)
-            g.comm.Barrier()
             # Create numpy array to store all processors output, then aggregate and unpad using MPI gathered shape list
             shpzg = g.comm.allgather(shpz)
             shpzg = list(itertools.chain(*shpzg))
-            g.comm.Barrier()
             shpzg = [s for s in shpzg if s != []]
             max_length = g.comm.allreduce(max_length, MPI.MAX) 
             if color == 1:
@@ -869,7 +864,6 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
             g.comm.Barrier()
             g.comm.Bcast(y_primeg_flattend, root=0)
             g.comm.Bcast(y_goldg_flattend, root=0) 
-            g.comm.Barrier()
             y_primeg_flattend = np.split(y_primeg_flattend, num_pred)
             y_goldg_flattend = np.split(y_goldg_flattend, num_pred)
             y_primeg = [y.reshape((conf['model']['pred_batch_size'], max_length, 1)) for y in y_primeg_flattend]
