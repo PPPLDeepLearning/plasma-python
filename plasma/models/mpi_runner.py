@@ -13,9 +13,9 @@ from plasma.utils.state_reset import reset_states
 from plasma.conf import conf
 from mpi4py import MPI
 import random
+import itertools
 from packaging import version
 import contextlib
-
 '''
 #########################################################
 This file trains a deep learning model to predict
@@ -618,30 +618,46 @@ class MPIModel():
                 t0 = time.time()
                 deltas, loss = self.train_on_batch_and_get_deltas(
                     batch_xs, batch_ys, verbose)
-                t1 = time.time()
-                if not is_warmup_period:
-                    self.set_new_weights(deltas, num_replicas)
-                    t2 = time.time()
-                    write_str_0 = self.calculate_speed(t0, t1, t2, num_replicas)
-                    curr_loss = self.mpi_average_scalars(1.0*loss, num_replicas)
-                    # g.print_unique(self.model.get_weights()[0][0][:4])
-                    loss_averager.add_val(curr_loss)
-                    ave_loss = loss_averager.get_ave()
-                    eta = self.estimate_remaining_time(
-                        t0 - t_start, self.num_so_far - self.epoch*num_total,
+                self.comm.Barrier()
+                sys.stdout.flush()
+                # TODO(KGF): check line feed/carriage returns around this
+                g.print_unique('\nCompilation finished in {:.2f}s'.format(
+                    time.time() - t0_comp))
+                t_start = time.time()
+                sys.stdout.flush()
+
+            if np.any(batches_to_reset):
+                reset_states(self.model, batches_to_reset)
+            if ('noise' in self.conf['training'].keys()
+                    and self.conf['training']['noise'] is not False):
+                batch_xs = self.add_noise(batch_xs)
+            t0 = time.time()
+            deltas, loss = self.train_on_batch_and_get_deltas(
+                batch_xs, batch_ys, verbose)
+            t1 = time.time()
+            if not is_warmup_period:
+                self.set_new_weights(deltas, num_replicas)
+                t2 = time.time()
+                write_str_0 = self.calculate_speed(t0, t1, t2, num_replicas)
+                curr_loss = self.mpi_average_scalars(1.0*loss, num_replicas)
+                # g.print_unique(self.model.get_weights()[0][0][:4])
+                loss_averager.add_val(curr_loss)
+                ave_loss = loss_averager.get_ave()
+                eta = self.estimate_remaining_time(
+                    t0 - t_start, self.num_so_far - self.epoch*num_total,
+                    num_total)
+                write_str = (
+                    '\r[{}] step: {} [ETA: {:.2f}s] [{:.2f}/{}], '.format(
+                        self.task_index, step, eta, 1.0*self.num_so_far,
                         num_total)
-                    write_str = (
-                        '\r[{}] step: {} [ETA: {:.2f}s] [{:.2f}/{}], '.format(
-                            self.task_index, step, eta, 1.0*self.num_so_far,
-                            num_total)
-                        + 'loss: {:.5f} [{:.5f}] | '.format(ave_loss, curr_loss)
-                        + 'walltime: {:.4f} | '.format(
-                            time.time() - self.start_time))
-                    g.write_unique(write_str + write_str_0)
-                    step += 1
-                else:
-                    g.write_unique('\r[{}] warmup phase, num so far: {}'.format(
-                        self.task_index, self.num_so_far))
+                    + 'loss: {:.5f} [{:.5f}] | '.format(ave_loss, curr_loss)
+                    + 'walltime: {:.4f} | '.format(
+                        time.time() - self.start_time))
+                g.write_unique(write_str + write_str_0)
+                step += 1
+            else:
+                g.write_unique('\r[{}] warmup phase, num so far: {}'.format(
+                    self.task_index, self.num_so_far))
 
         effective_epochs = 1.0*self.num_so_far/num_total
         epoch_previous = self.epoch
@@ -771,8 +787,27 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
     if g.task_index != 0:
         loader.verbose = False
 
+    # MPI loop works by predicting in batches of the 
+    # largest possible multiple of len(shot_sublists) < num_workers
+    # i.e. if there are 9 shot_sublists and 4 workers,
+    #      worker 0 will predict shot_sublist 0, 4, and 8
+    #      workers 1-3 will predict shot_sublist 1-3 and 5-7 respectively
+    # each makes their prediction on the ith iteration of the loop
+    #      (i.e. worker 0 predicts shot_sublist 0 on loop iteration i=0)
+    #      and then skips through loop iterations unless it has to predict again (i=4)
+    #      or aggregate predictions with other workers, after each worker has made a prediction
+    #      which happens every num_workers iterations in the for loop
+    #      (i.e. worker 0 will aggregate predictions with workers 1-3 at the end of i=3)
+    # During the aggregation step, each worker is uses its color (which denotes whether it was
+    # predicting or not predicting during the last few runs of the for loop) to split the main comm
+    # The predictors (color = 1) share their predictions with first each other, and then to everyone
+    # the nonpredictors (color = 2) only recieve the global predictions from the predictors
+    color = 2
     for (i, shot_sublist) in enumerate(shot_sublists):
+        shpz = []
+        max_length = -1 # So non shot predictive workers don't have a real length
         if i % g.num_workers == g.task_index:
+            color = 1
             X, y, shot_lengths, disr = loader.load_as_X_y_pred(shot_sublist)
 
             # load data and fit on data
@@ -788,19 +823,64 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
             y_prime += y_p
             y_gold += y
             disruptive += disr
-            # print_all('\nFinished with i = {}'.format(i))
 
         if (i % g.num_workers == g.num_workers - 1
                 or i == len(shot_sublists) - 1):
+            # Create numpy block from y list which is used in MPI
+            # Pads y_prime and y_gold with zeros to maximum shot length within block being transferred
+            if color ==1:
+                shpz = [max(y.shape) for y in y_prime]
+                max_length = max([max(y.shape) for y in y_p])
+            max_length = g.comm.allreduce(max_length, MPI.MAX) 
+            if color == 1:
+                y_prime_numpy = np.stack([np.pad(sublist, pad_width=((0,max_length-max(sublist.shape)),(0,0))) for sublist in y_prime])
+                y_gold_numpy = np.stack([np.pad(sublist, pad_width=((0,max_length-max(sublist.shape)),(0,0))) for sublist in y_gold])
+            
+            temp_predictor_only_comm = MPI.Comm.Split(g.comm, color, i)
+            # Create numpy array to store all processors output, then aggregate and unpad using MPI gathered shape list
+            shpzg = g.comm.allgather(shpz)
+            shpzg = list(itertools.chain(*shpzg))
+            shpzg = [s for s in shpzg if s != []]
+            max_length = g.comm.allreduce(max_length, MPI.MAX) 
+            if color == 1:
+                num_pred = temp_predictor_only_comm.size
+            else:
+                num_pred = g.comm.size - temp_predictor_only_comm.size
+            y_primeg = np.zeros((num_pred*conf['model']['pred_batch_size'],max_length,1), dtype=conf['data']['floatx'])
+            y_goldg  = np.zeros((num_pred*conf['model']['pred_batch_size'],max_length,1), dtype=conf['data']['floatx'])
+            y_primeg_flattend = np.zeros(y_primeg.flatten().shape)
+            y_goldg_flattend  = np.zeros(y_goldg.flatten().shape)
+            if color == 1:
+                # Ensure that numpy arrays have correct dimensions before gathering them
+                assert num_pred*max(y_prime_numpy.flatten().shape) == max(y_primeg_flattend.shape)
+                assert num_pred*max(y_gold_numpy.flatten().shape) == max(y_goldg_flattend.shape)
+                temp_predictor_only_comm.Allgather(y_prime_numpy.flatten(), y_primeg_flattend)
+                temp_predictor_only_comm.Allgather(y_gold_numpy.flatten(), y_goldg_flattend)
+            # Process 0 broadcast y_primeg and y_goldg to all processors, including ones
+            # not involved in calculating predictions so they can each create their own 
+            # y_prime_global and y_gold_global
             g.comm.Barrier()
-            y_prime_global += concatenate_sublists(g.comm.allgather(y_prime))
-            y_gold_global += concatenate_sublists(g.comm.allgather(y_gold))
+            g.comm.Bcast(y_primeg_flattend, root=0)
+            g.comm.Bcast(y_goldg_flattend, root=0) 
+            y_primeg_flattend = np.split(y_primeg_flattend, num_pred)
+            y_goldg_flattend = np.split(y_goldg_flattend, num_pred)
+            y_primeg = [y.reshape((conf['model']['pred_batch_size'], max_length, 1)) for y in y_primeg_flattend]
+            y_goldg = [y.reshape((conf['model']['pred_batch_size'], max_length, 1)) for y in y_goldg_flattend]
+            y_primeg = np.concatenate(y_primeg, axis=0)
+            y_goldg  = np.concatenate(y_goldg, axis=0)
+            # Unpad each shot to its true length
+            for idx, s in enumerate(shpzg):
+                trim = lambda nparry, s: nparry[0:int(s),:]
+                y_prime_global.append(trim(y_primeg[idx],s))
+                y_gold_global.append(trim(y_goldg[idx], s))
+
             disruptive_global += concatenate_sublists(
                 g.comm.allgather(disruptive))
-            g.comm.Barrier()
             y_prime = []
             y_gold = []
-            disruptive = []
+            disruptive = [] 
+            color = 2
+            temp_predictor_only_comm.Free()
 
         if g.task_index == 0:
             pbar.add(1.0*len(shot_sublist))
