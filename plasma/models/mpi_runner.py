@@ -854,10 +854,8 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
                 # Ensure that numpy arrays have correct dimensions before gathering them
                 assert num_pred*max(y_prime_numpy.flatten().shape) == max(y_primeg_flattend.shape)
                 assert num_pred*max(y_gold_numpy.flatten().shape) == max(y_goldg_flattend.shape)
-                temp_predictor_only_comm.Barrier()
                 temp_predictor_only_comm.Allgather(y_prime_numpy.flatten(), y_primeg_flattend)
                 temp_predictor_only_comm.Allgather(y_gold_numpy.flatten(), y_goldg_flattend)
-                temp_predictor_only_comm.Barrier()
             # Process 0 broadcast y_primeg and y_goldg to all processors, including ones
             # not involved in calculating predictions so they can each create their own 
             # y_prime_global and y_gold_global
@@ -878,7 +876,6 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
 
             disruptive_global += concatenate_sublists(
                 g.comm.allgather(disruptive))
-            g.comm.Barrier()
             y_prime = []
             y_gold = []
             disruptive = [] 
