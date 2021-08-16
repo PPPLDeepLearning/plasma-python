@@ -25,4 +25,5 @@ dependencies:
       # - hyperopt  # TODO(KGF): remove
       # - mpi4py   # must reload MPI library modules before installing via pip
       # - xgboost
+      # - scikit-learn
       # - joblib
