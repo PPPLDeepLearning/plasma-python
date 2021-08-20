@@ -4,7 +4,7 @@
 
 # will do stuff in fs_path / [username] / signal_data | shot_lists | processed shots, etc.
 
-fs_path: '/global/cscratch1/sd/'
+fs_path: '/tigress'
 target: 'hinge' # 'maxhinge' # 'maxhinge' # 'binary' # 'hinge'
 num_gpus: 4  # per node
 paths:
@@ -127,7 +127,7 @@ training:
   num_shots_at_once: 200
   # large number = maximum number of epochs.
   # Early stopping will occur if loss does not decrease, after some patience # of epochs
-  num_epochs: 50
+  num_epochs: 1000
   use_mock_data: False
   data_parallel: False
   hyperparam_tuning: False
@@ -136,8 +136,8 @@ training:
   num_batches_minimum: 20 # minimum number of batches per epoch
   ranking_difficulty_fac: 1.0 # how much to upweight incorrectly classified shots during training
   timeline_prof: False
-  step_limit: 0
-  no_validation: False
+  step_limit: 50
+  no_validation: True
 callbacks:
   list: ['earlystop']
   metrics: ['val_loss','val_roc','train_loss']
