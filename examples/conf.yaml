@@ -9,17 +9,17 @@
 # will output csvlog, trained model checkpoints, etc.
 # in fs_path_output / [username] / results | csv_logs | model_checkpoints | Graph, etc.
 
-fs_path: '/tigress/'
+fs_path: '/Users/'
 user_subdir: True
-fs_path_output: '/tigress/'
+fs_path_output: '/Users/'
 user_subdir_output: True
 target: 'hinge' # 'maxhinge' # 'maxhinge' # 'binary' # 'hinge'
-num_gpus: 4  # per node
+num_gpus: 1  # per node
 paths:
-  signal_prepath: ['/signal_data/', '/signal_data_new_REAL_TIME/'] # /signal_data/jet/
+  signal_prepath: '/signal_data/' # /signal_data/jet/
   shot_list_dir: '/shot_lists/'
   tensorboard_save_path: '/Graph/'
-  data: 'd3d_2019_all_dims'
+  data: d3d_0D
   # if specific_signals: [] left empty, it will use all valid signals defined on a machine. Only use if need a custom set
   specific_signals: [] # ['q95','li','ip','betan','energy','lm','pradcore','pradedge','pradtot','pin','torquein','tmamp1','tmamp2','tmfreq1','tmfreq2','pechin','energydt','ipdirect','etemp_profile','edens_profile']
   executable: "mpi_learn.py"
@@ -94,7 +94,7 @@ model:
   # TODO(KGF): optimize size of RNN layers
   # size 100 slight overfitting, size 20 no overfitting. 200 is not better than 100.
   # Prediction is much better with size 100, size 20 cannot capture the data.
-  rnn_size: 100
+  rnn_size: 200
   rnn_type: 'LSTM'
   # TODO(KGF): optimize number of RNN layers
   rnn_layers: 2
@@ -144,8 +144,8 @@ training:
   num_batches_minimum: 20 # minimum number of batches per epoch
   ranking_difficulty_fac: 1.0 # how much to upweight incorrectly classified shots during training
   timeline_prof: False
-  step_limit: 1000
-  no_validation: False
+  step_limit: 50
+  no_validation: True
 callbacks:
   list: ['earlystop']
   metrics: ['val_loss','val_roc','train_loss']

@@ -1,24 +1,22 @@
 #!/bin/bash
-#SBATCH --job-name=FRNNTest
 #SBATCH -t 01:00:00
-#SBATCH -N 2
+#SBATCH -N 4
 #SBATCH --ntasks-per-node=4
-#SBATCH --gpus-per-node=4
 #SBATCH --ntasks-per-socket=2
 #SBATCH --gres=gpu:4
 #SBATCH -c 4
 #SBATCH --mem-per-cpu=0
-#SBATCH --reservation test
-#SBATCH --mail-user=jrodrig@stanford.edu
-#SBATCH --mail-type=ALL
 
-# Load modules
-module load anaconda3/2020.7
-conda activate FRNN
-module load cudatoolkit/11.3
-module load cudnn/cuda-11.x/8.2.0
-module load openmpi/cuda-11.0/gcc/4.0.4/64
-module load hdf5/gcc/openmpi-4.0.4/1.10.6
+# Example Slurm configuration for TigerGPU nodes (4 nodes, 16 GPUs total)
+# Each node = 2.4 GHz Xeon Broadwell E5-2680 v4 + 4x 1328 MHz P100 GPU
+
+module load anaconda3
+conda activate my_env
+module load cudatoolkit
+module load cudnn
+module load openmpi/cuda-8.0/intel-17.0/3.0.0/64
+module load intel/19.0/64/19.0.3.199
+module load hdf5/intel-17.0/intel-mpi/1.10.0
 
 # remove checkpoints for a benchmark run
 rm /tigress/$USER/model_checkpoints/*
@@ -27,4 +25,5 @@ rm /tigress/$USER/csv_logs/*
 rm /tigress/$USER/Graph/*
 rm /tigress/$USER/normalization/*
 
+export OMPI_MCA_btl="tcp,self,vader"
 srun python mpi_learn.py

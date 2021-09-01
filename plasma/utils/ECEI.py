@@ -2,7 +2,8 @@
 The module composed in this file is designed to handle the processing/handling
 and incorporation of electron cyclotron emission imaging data into the FRNN
 disruption prediction software suite. It contains snippets from the rest of
-the FRNN codebase, and therefore is partially redundant.
+the FRNN codebase, and therefore is partially redundant, particularly in the
+utility functions at the top of the file.
 Jesse A Rodriguez, 06/28/2021
 """
 
