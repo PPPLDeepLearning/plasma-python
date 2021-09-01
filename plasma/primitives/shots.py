@@ -408,8 +408,8 @@ class Shot(object):
                 for prepath in signal_prepath:
                     t, sig, valid_signal = signal.load_data(
                         prepath, self, conf['data']['floatx'])
-                if valid_signal:
-                    break
+                    if valid_signal:
+                        break
             else:
                 t, sig, valid_signal = signal.load_data(
                     signal_prepath, self, conf['data']['floatx'])

@@ -14,6 +14,7 @@ from os import listdir  # , remove
 import time
 import sys
 import os
+from pprint import pprint
 
 import numpy as np
 import pathos.multiprocessing as mp
@@ -77,6 +78,7 @@ class Preprocessor(object):
     def preprocess_from_files(self, shot_files, use_shots):
         # all shots, including invalid ones
         all_signals = self.conf['paths']['all_signals']
+        pprint(all_signals)
         shot_list = ShotList()
         shot_list.load_from_shot_list_files_objects(shot_files, all_signals)
         shot_list_picked = shot_list.random_sublist(use_shots)

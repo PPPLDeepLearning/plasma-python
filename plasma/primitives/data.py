@@ -431,6 +431,7 @@ class Signal2D(Signal):
         self.dims = dims
         self.num_channels = dims[0]*dims[1]
         self.is_ecei = is_ecei
+        self.miss_chan_threshold = miss_chan_threshold
 
 
     def get_file_path(self, prepath, machine, shot_number):
@@ -442,12 +443,14 @@ class Signal2D(Signal):
             machine: Machine object, machine that signal is defined on
             shot_number: int, shot number
         """
-        if self.is_ecei:
-            return prepath+'/'+str(shot_number)+'.hdf5'
         signal_dirname = self.get_path(machine)
         dirname = os.path.join(prepath, machine.name, signal_dirname)
-        return get_individual_shot_file(dirname, machine.name, shot_number,
-                                        raw_signal=True)
+        if self.is_ecei:
+            return get_individual_shot_file(dirname, machine.name, shot_number,\
+                                            raw_signal=True, ext = '.hdf5')
+        else:
+            return get_individual_shot_file(dirname, machine.name, shot_number,\
+                                            raw_signal=True)
 
 
     def load_data_from_hdf5_safe(self, prepath, shot):
@@ -464,8 +467,8 @@ class Signal2D(Signal):
         """
         file_path = self.get_file_path(prepath, shot.machine, shot.number)
         if not self.is_saved(prepath, shot):
-            print('Signal {}, shot {} was never downloaded [omit]'.format(
-                self.description, shot.number))
+            print('Signal {}, shot {} was never downloaded at {} [omit]'.format(
+                self.description, shot.number, file_path))
             return None, False
 
         if os.path.getsize(file_path) == 0:
@@ -498,7 +501,7 @@ class Signal2D(Signal):
                 while no_time_series:
                     chan = E.ecei_channels[idx]
                     if chan not in missing:
-                        data = np.asarray(f.get(chan))[:,0]
+                        data = (np.asarray(f.get(chan))[:,0])/1000 #units of raw data are ms
                         data = data.reshape((data.shape[0],1))
                         no_time_series = False
                     idx += 1
