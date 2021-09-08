@@ -4,7 +4,7 @@ import numpy as np
 import sys
 
 from plasma.primitives.data import (
-    Signal, ProfileSignal, ChannelSignal, Machine
+    Signal, ProfileSignal, ChannelSignal, Signal2D, Machine
     )
 
 
@@ -391,6 +391,12 @@ ipdirect = Signal("plasma current direction", ["iptdirect"], [d3d])
 ipdirectt = Signal("plasma current direction tol", ["iptdirect"], [d3d],
                    data_avail_tolerances=[0.029])
 
+ecei = Signal2D("ECEi", ['ECEI_kHz'], [d3d], (20,8),
+                is_ecei = True, miss_chan_threshold = 80)
+
+eceit = Signal2D("ECEi", ['ECEI_kHz'], [d3d], (20,8),
+                is_ecei = True, miss_chan_threshold = 159)
+
 # for downloading, modify this to preprocess shots with only a subset of
 # signals. This may produce more shots
 # since only those shots that contain all_signals contained here are used.
@@ -420,6 +426,7 @@ all_signals = {
     # 'neut_profile':neut_profile, 'q_profile':q_profile,
     # 'bootstrap_current_profile':bootstrap_current_profile,
     # 'q_psi_profile':q_psi_profile}
+    'ecei': ecei,
 }
 
 all_signals_max_tol = {
@@ -431,6 +438,11 @@ all_signals_max_tol = {
     'ipdirectt': ipdirectt, 'iptargett': iptargett,
     'iperrt': iperrt,
     'etemp_profilet': etemp_profilet, 'edens_profilet': edens_profilet,
+    'ecei': eceit,
+}
+
+ecei_test = {
+    'ecei': ecei,
 }
 
 # for actual data analysis, use:
@@ -451,6 +463,10 @@ fully_defined_signals_0D = {
     sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if (
         sig.is_defined_on_machines(all_machines) and sig.num_channels == 1)
 }
+# NOTE(JAR): The check sig.num_channels > 1 to determine if a signal is 1D will
+# now include 2D signals. Need to add something like sig.num_channels < 160 to
+# exclude ecei, for example, or come up with another Signal attribute that can
+# be used as a reliable way to distiguish between 0D, 1D, and 2D signals
 fully_defined_signals_1D = {
     sig_name: sig for (sig_name, sig) in all_signals_restricted.items() if (
         sig.is_defined_on_machines(all_machines) and sig.num_channels > 1)
