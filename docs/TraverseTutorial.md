@@ -38,7 +38,11 @@ After that, create an isolated Anaconda environment and load CUDA drivers, an MP
 module load anaconda3
 conda env create --name my_env --file envs/requirements-traverse.yaml python=3.6
 conda activate my_env
+```
 
+Go into `envs/traverse.cmd` and modify the `conda activate` command to `conda activate my_env`. Run:
+
+```
 source envs/traverse.cmd
 ```
 As of the latest update of this document (Summer 2021), the above modules correspond to the following versions on the Traverse system, given by `module list`:
