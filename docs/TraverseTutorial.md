@@ -29,6 +29,7 @@ Next, check out the source code from github:
 ```
 git clone https://github.com/PPPLDeepLearning/plasma-python
 cd plasma-python
+git checkout tf2
 ```
 
 After that, create an isolated Anaconda environment and load CUDA drivers, an MPI compiler, and the HDF5 library. The suggested libraries are included with the repository, so simple sourcing `plasma-python/envs/traverse.cmd` will load these into your path. Traverse uses a PowerPC arcitecture, which is not as widely supported with many common libraries. The `python=3.6` option below sets the python version in this anaconda environment to the older python version 3.6, which will help down the line with installing libraries. 
