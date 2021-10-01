@@ -57,7 +57,7 @@ Next, install the `plasma-python` package:
 
 ```bash
 #conda activate my_env
-python setup.py install
+python setup.py install --user
 ```
 
 ### Common runtime issue: when to load environment and when to call `sbatch`
