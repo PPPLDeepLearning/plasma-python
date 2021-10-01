@@ -1,5 +1,5 @@
 # OLCF Spock  Tutorial
-*Last updated 2021-8-19*
+*Last updated 2021-10-1*
 
 *This document is built off of the excellent how-to guide created for [Princeton's TigerGPU](./PrincetonUTutorial.md)*
 
@@ -96,10 +96,10 @@ tar -xzvf mpi4py-3.0.3.tar.gz
 cd mpi4py-3.0.3
 
 # Edit the mpi.cfg file
-`mpi.cfg`
+mpi.cfg
 ```
 
-Include the following segment in the mpi.cfg file:
+Include the following segment in the `mpi.cfg` file:
 ```
       [craympi]
       mpi_dir              = /opt/cray/pe/mpich/8.1.4/ofi/crayclang/9.1
