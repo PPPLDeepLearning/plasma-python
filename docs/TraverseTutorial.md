@@ -59,7 +59,7 @@ python setup.py install
 When queueing jobs on Traverse or running slurm managed scripts, *DO NOT* load your anaconda environment before doing so. This will cause a module loading issue. It is *highly* suggested that you build `plasma-python` in one terminal witht the anaconda environment loaded and run it in another without the anaconda environment loaded to avoid this issue
 
 ### Commond build issue: creating anaconda environment fails
-On Traverse, pytoch has been observed to not install correctly. Quick fix is to not intall it by commenting out the line 17 in `envs/requirements-traverse.yaml`
+On Traverse, pytorch has been observed to not install correctly. By default it is commented out, but if that's not the case the quick fix is to not intall it by commenting out the line 17 in `envs/requirements-traverse.yaml`
 
 ```
   7 dependencies:
@@ -144,6 +144,14 @@ paths:
 if left empty `[]` will use all valid signals defined on a machine. Only set this variable if you need a custom set of signals.
 
 Other parameters configured in the `conf.yaml` include batch size, learning rate, neural network topology and special conditions foir hyperparameter sweeps.
+
+On Traverse, the data is stored in the `tigress` filesystem. You will probably need to modify `conf.yaml` to point there by setting:
+```yaml
+fs_path: '/tigress/'
+...
+fs_path_output: '/tigress/'
+```
+
 
 ### Preprocessing the input data
 
