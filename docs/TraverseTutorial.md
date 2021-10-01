@@ -61,7 +61,7 @@ python setup.py install
 ```
 
 ### Common runtime issue: when to load environment and when to call `sbatch`
-When queueing jobs on Traverse or running slurm managed scripts, *DO NOT* load your anaconda environment before doing so. This will cause a module loading issue. It is *highly* suggested that you build `plasma-python` in one terminal witht the anaconda environment loaded and run it in another without the anaconda environment loaded to avoid this issue
+When queueing jobs on Traverse or running slurm managed scripts, *DO NOT* load your anaconda environment before doing so. This will cause a module loading issue. It is *highly* suggested that you build `plasma-python` in one terminal witht the anaconda environment loaded and run it in another without the anaconda environment loaded to avoid this issue. Alternatively, calling `module purge` before using slurm fixes this issue. 
 
 ### Commond build issue: creating anaconda environment fails
 On Traverse, pytorch has been observed to not install correctly. By default it is commented out, but if that's not the case the quick fix is to not intall it by commenting out the line 17 in `envs/requirements-traverse.yaml`
