@@ -36,10 +36,10 @@ After that, create an isolated Anaconda environment and load CUDA drivers, an MP
 ```
 #cd plasma-python
 module load anaconda3
-conda create --name my_env --file envs/requirements-traverse.yaml python=3.6
+conda env create --name my_env --file envs/requirements-traverse.yaml python=3.6
 conda activate my_env
 
-source ../envs/traverse.cmd
+source envs/traverse.cmd
 ```
 As of the latest update of this document (Summer 2021), the above modules correspond to the following versions on the Traverse system, given by `module list`:
 ```
@@ -48,20 +48,12 @@ Currently Loaded Modulefiles:
   2) cudatoolkit/10.2                 4) openmpi/cuda-11.0/gcc/4.0.4/64
 ```
 
-Next install some of the prerequisites to build `plasma-python`. 
-
-```bash
-pip install -r requirements-travis.txt
-```
-
 Next, install the `plasma-python` package:
 
 ```bash
 #conda activate my_env
 python setup.py install
 ```
-
-Where `my_env` should contain the Python packages as per `envs/pip-requirements-travis.txt` file.
 
 ### Common runtime issue: when to load environment and when to call `sbatch`
 When queueing jobs on Traverse or running slurm managed scripts, *DO NOT* load your anaconda environment before doing so. This will cause a module loading issue. It is *highly* suggested that you build `plasma-python` in one terminal witht the anaconda environment loaded and run it in another without the anaconda environment loaded to avoid this issue
