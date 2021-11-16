@@ -350,9 +350,10 @@ class ModelBuilder(object):
                                 bias_regularizer=l2(regularization),
                                 )
             if rnn_type != 'CuDNNLSTM':
-                # Dropout is unsupported in CuDNN library
-                model_kwargs['dropout'] = dropout_prob
-                model_kwargs['recurrent_dropout'] = dropout_prob
+                # Dropout (on linear transformation of recurrent state) is unsupported
+                # in cuDNN library
+                model_kwargs['recurrent_dropout'] = dropout_prob  # recurrent states
+            model_kwargs['dropout'] = dropout_prob  # input states
             for _ in range(model_conf['rnn_layers']):
                 x_in = rnn_model(rnn_size, **model_kwargs)(x_in)
                 x_in = Dropout(dropout_prob)(x_in)
