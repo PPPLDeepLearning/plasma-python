@@ -426,7 +426,9 @@ all_signals = {
     # 'neut_profile':neut_profile, 'q_profile':q_profile,
     # 'bootstrap_current_profile':bootstrap_current_profile,
     # 'q_psi_profile':q_psi_profile}
-    'ecei': ecei,
+
+    # KGF(2021-12-15): exclude ecei by default, for now:
+    # 'ecei': ecei,
 }
 
 all_signals_max_tol = {
