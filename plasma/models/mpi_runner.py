@@ -279,9 +279,9 @@ class MPIModel():
             SGD, Adam, RMSprop, Nadam
             )
         if optimizer == 'sgd':
-            optimizer_class = SGD(lr=self.DUMMY_LR, clipnorm=clipnorm)
+            optimizer_class = SGD(learning_rate=self.DUMMY_LR, clipnorm=clipnorm)
         elif optimizer == 'momentum_sgd':
-            optimizer_class = SGD(lr=self.DUMMY_LR, clipnorm=clipnorm,
+            optimizer_class = SGD(learning_rate=self.DUMMY_LR, clipnorm=clipnorm,
                                   decay=1e-6, momentum=0.9)
         elif optimizer == 'tf_momentum_sgd':
             # TODO(KGF): removed TFOptimizer wrapper from here and below
@@ -290,14 +290,14 @@ class MPIModel():
             optimizer_class = tf.train.MomentumOptimizer(
                 learning_rate=self.DUMMY_LR, momentum=0.9)
         elif optimizer == 'adam':
-            optimizer_class = Adam(lr=self.DUMMY_LR, clipnorm=clipnorm)
+            optimizer_class = Adam(learning_rate=self.DUMMY_LR, clipnorm=clipnorm)
         elif optimizer == 'tf_adam':
             optimizer_class = tf.train.AdamOptimizer(
                 learning_rate=self.DUMMY_LR)
         elif optimizer == 'rmsprop':
-            optimizer_class = RMSprop(lr=self.DUMMY_LR, clipnorm=clipnorm)
+            optimizer_class = RMSprop(learning_rate=self.DUMMY_LR, clipnorm=clipnorm)
         elif optimizer == 'nadam':
-            optimizer_class = Nadam(lr=self.DUMMY_LR, clipnorm=clipnorm)
+            optimizer_class = Nadam(learning_rate=self.DUMMY_LR, clipnorm=clipnorm)
         else:
             print("Optimizer not implemented yet")
             exit(1)
@@ -787,7 +787,7 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
     if g.task_index != 0:
         loader.verbose = False
 
-    # MPI loop works by predicting in batches of the 
+    # MPI loop works by predicting in batches of the
     # largest possible multiple of len(shot_sublists) < num_workers
     # i.e. if there are 9 shot_sublists and 4 workers,
     #      worker 0 will predict shot_sublist 0, 4, and 8
@@ -831,17 +831,17 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
             if color ==1:
                 shpz = [max(y.shape) for y in y_prime]
                 max_length = max([max(y.shape) for y in y_p])
-            max_length = g.comm.allreduce(max_length, MPI.MAX) 
+            max_length = g.comm.allreduce(max_length, MPI.MAX)
             if color == 1:
                 y_prime_numpy = np.stack([np.pad(sublist, pad_width=((0,max_length-max(sublist.shape)),(0,0))) for sublist in y_prime])
                 y_gold_numpy = np.stack([np.pad(sublist, pad_width=((0,max_length-max(sublist.shape)),(0,0))) for sublist in y_gold])
-            
+
             temp_predictor_only_comm = MPI.Comm.Split(g.comm, color, i)
             # Create numpy array to store all processors output, then aggregate and unpad using MPI gathered shape list
             shpzg = g.comm.allgather(shpz)
             shpzg = list(itertools.chain(*shpzg))
             shpzg = [s for s in shpzg if s != []]
-            max_length = g.comm.allreduce(max_length, MPI.MAX) 
+            max_length = g.comm.allreduce(max_length, MPI.MAX)
             if color == 1:
                 num_pred = temp_predictor_only_comm.size
             else:
@@ -857,11 +857,11 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
                 temp_predictor_only_comm.Allgather(y_prime_numpy.flatten(), y_primeg_flattend)
                 temp_predictor_only_comm.Allgather(y_gold_numpy.flatten(), y_goldg_flattend)
             # Process 0 broadcast y_primeg and y_goldg to all processors, including ones
-            # not involved in calculating predictions so they can each create their own 
+            # not involved in calculating predictions so they can each create their own
             # y_prime_global and y_gold_global
             g.comm.Barrier()
             g.comm.Bcast(y_primeg_flattend, root=0)
-            g.comm.Bcast(y_goldg_flattend, root=0) 
+            g.comm.Bcast(y_goldg_flattend, root=0)
             y_primeg_flattend = np.split(y_primeg_flattend, num_pred)
             y_goldg_flattend = np.split(y_goldg_flattend, num_pred)
             y_primeg = [y.reshape((conf['model']['pred_batch_size'], max_length, 1)) for y in y_primeg_flattend]
@@ -878,7 +878,7 @@ def mpi_make_predictions(conf, shot_list, loader, custom_path=None):
                 g.comm.allgather(disruptive))
             y_prime = []
             y_gold = []
-            disruptive = [] 
+            disruptive = []
             color = 2
             temp_predictor_only_comm.Free()
 
