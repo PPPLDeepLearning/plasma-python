@@ -371,19 +371,24 @@ def parameters(input_file):
                 'q_psi_profile': sig.q_psi_profile,
             }
         elif params['paths']['data'] == 'd3d_0D':
-            params['paths']['shot_files'] = [d3d_full]
+            #params['paths']['shot_files'] = [d3d_full]
+            params['paths']['shot_files'] = [d3d_full_2019]
             params['paths']['shot_files_test'] = []
             params['paths']['use_signals_dict'] = {
-                'q95': sig.q95,
+                # KGF: edits for real-time signals
+                #'q95': sig.q95,
+                'q95_EFITRT1': sig.q95_EFITRT1,
                 'li': sig.li,
                 'ip': sig.ip,
                 'lm': sig.lm,
                 'betan': sig.betan,
                 'energy': sig.energy,
                 'dens': sig.dens,
-                'pradcore': sig.pradcore,
-                'pradedge': sig.pradedge,
+                # 'pradcore': sig.pradcore,
+                # 'pradedge': sig.pradedge,
                 'pin': sig.pin,
+                # KGF: added but commented out in Ge's version
+                # 'vd': sig.vd,
                 'torquein': sig.torquein,
                 'ipdirect': sig.ipdirect,
                 'iptarget': sig.iptarget,

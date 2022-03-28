@@ -298,6 +298,16 @@ q95 = Signal(
     "q95 safety factor", ['ppf/efit/q95', "EFIT01/RESULTS.AEQDSK.Q95"],
     [jet, d3d], causal_shifts=[15, 10], normalize=False,
     data_avail_tolerances=[0.03, 0.02])
+
+q95_EFITRT1 = Signal(
+    "q95 safety factor in real time", ['ppf/efit/q95', "EFITRT1/RESULTS.AEQDSK.Q95"],
+    [jet, d3d], causal_shifts=[0, 0], normalize=False,
+    data_avail_tolerances=[0.03, 0.029])
+vd = Signal(
+    "vertical displacement change", [ "d3d/vpsdfz"],
+    [d3d], causal_shifts=[ 0], normalize=False,
+    data_avail_tolerances=[ 0.029])
+
 q95t = Signal(
     "q95 safety factor tol", ['ppf/efit/q95', "EFIT01/RESULTS.AEQDSK.Q95"],
     [jet, d3d], causal_shifts=[15, 10], normalize=False,
@@ -406,11 +416,24 @@ eceit = Signal2D("ECEi", ['ECEI_kHz'], [d3d], (20,8),
 # dataset.
 
 all_signals = {
-    'q95': q95, 'li': li, 'ip': ip, 'betan': betan, 'energy': energy, 'lm': lm,
-    'dens': dens, 'pradcore': pradcore,
-    'pradedge': pradedge, 'pradtot': pradtot, 'pin': pin,
+    'q95_EFITRT1': q95_EFITRT1,
+    #'q95': q95,
+    'li': li,
+    'ip': ip,
+    'betan': betan,
+    'energy': energy,
+    'lm': lm,
+    'dens': dens,
+    # KGF: Ge leaves these uncommented in all_signals_real_time_0D
+    #'pradcore': pradcore,
+    #'pradedge': pradedge,
+    #'pradtot': pradtot,
+    #'energydt': energydt,
+    # 'vd': vd,
+    'pin': pin,
     'torquein': torquein,
-    'energydt': energydt, 'ipdirect': ipdirect, 'iptarget': iptarget,
+    'ipdirect': ipdirect,
+    'iptarget': iptarget,
     'iperr': iperr,
     # 'tmamp1':tmamp1, 'tmamp2':tmamp2, 'tmfreq1':tmfreq1, 'tmfreq2':tmfreq2,
     # 'pechin':pechin,
@@ -420,7 +443,7 @@ all_signals = {
     # IMPORTANT: must comment-out the following line when preprocessing for
     # training on JET CW and testing on JET ILW (FRNN 0D).
     # Otherwise 1K+ CW shots are excluded due to missing profile data
-    'etemp_profile': etemp_profile, 'edens_profile': edens_profile,
+    #'etemp_profile': etemp_profile, 'edens_profile': edens_profile,
     # 'itemp_profile':itemp_profile, 'zdens_profile':zdens_profile,
     # 'trot_profile':trot_profile, 'pthm_profile':pthm_profile,
     # 'neut_profile':neut_profile, 'q_profile':q_profile,
@@ -430,6 +453,44 @@ all_signals = {
     # KGF(2021-12-15): exclude ecei by default, for now:
     # 'ecei': ecei,
 }
+
+# ---------------------
+# KGF: from Ge's 2019-2020 code
+all_signals_real_time={
+    'q95_EFITRT1': q95_EFITRT1, 'li': li, 'ip': ip, 'betan': betan, 'energy': energy, 'lm': lm,
+    'dens': dens, 'pradcore': pradcore,
+    'pradedge': pradedge, 'pradtot': pradtot, 'pin': pin,
+    'torquein': torquein,
+    'energydt': energydt, 'ipdirect': ipdirect, 'iptarget': iptarget,
+    'iperr': iperr,
+    # 'tmamp1':tmamp1, 'tmamp2':tmamp2, 'tmfreq1':tmfreq1, 'tmfreq2':tmfreq2,
+    # 'pechin':pechin,
+    # 'rho_profile_spatial':rho_profile_spatial, 'etemp':etemp,
+    'etemp_profile': etemp_profile, 'edens_profile': edens_profile,
+}
+all_signals_real_time_0D={
+    'q95_EFITRT1': q95_EFITRT1,
+    'li': li,
+    'ip': ip,
+    'betan': betan,
+    'energy': energy,
+    'lm': lm,
+    'dens': dens,
+    'pradcore': pradcore,
+    'pradedge': pradedge,
+    'pradtot': pradtot,
+    'pin': pin,
+    'torquein': torquein,
+    'vd': vd,
+    'energydt': energydt,
+    'iperr':iperr,
+    'ipdirect': ipdirect,
+    'iptarget': iptarget
+    # 'tmamp1':tmamp1, 'tmamp2':tmamp2, 'tmfreq1':tmfreq1, 'tmfreq2':tmfreq2,
+    # 'pechin':pechin,
+    # 'rho_profile_spatial':rho_profile_spatial, 'etemp':etemp,
+}
+# ---------------------
 
 all_signals_max_tol = {
     'q95t': q95t, 'lit': lit, 'ipt': ipt, 'betant': betant,
