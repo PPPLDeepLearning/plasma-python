@@ -9,14 +9,14 @@
 # will output csvlog, trained model checkpoints, etc.
 # in fs_path_output / [username] / results | csv_logs | model_checkpoints | Graph, etc.
 
-fs_path: '/Users/'
+fs_path: '/lus/theta-fs0/projects/fusiondl_aesp/'
 user_subdir: True
-fs_path_output: '/Users/'
+fs_path_output: '/lus/theta-fs0/projects/fusiondl_aesp/'
 user_subdir_output: True
 target: 'hinge' # 'maxhinge' # 'maxhinge' # 'binary' # 'hinge'
 num_gpus: 1  # per node
 paths:
-  signal_prepath: '/signal_data/' # /signal_data/jet/
+  signal_prepath: ['/signal_data/', '/signal_data_new_nov2019/'] # /signal_data/jet/
   shot_list_dir: '/shot_lists/'
   tensorboard_save_path: '/Graph/'
   data: d3d_0D
@@ -95,7 +95,7 @@ model:
   # size 100 slight overfitting, size 20 no overfitting. 200 is not better than 100.
   # Prediction is much better with size 100, size 20 cannot capture the data.
   rnn_size: 200
-  rnn_type: 'LSTM'
+  rnn_type: 'CuDNNLSTM'
   # TODO(KGF): optimize number of RNN layers
   rnn_layers: 2
   num_conv_filters: 128
@@ -114,7 +114,7 @@ model:
   # lr=1e-4 also works well if we decay a lot (i.e ~0.7 or more)
   lr: 0.00002 # 0.00001 # 0.0005 # for adam plots 0.0000001
   lr_decay: 0.97 # 0.98 # 0.9
-  stateful: True
+  stateful: False
   return_sequences: True
   dropout_prob: 0.1
   # only relevant if we want to do MPI training. The number of steps with a single replica
@@ -128,14 +128,14 @@ training:
   # used iff 1) test & 2) (train U validate) are both sampled from the same distribution/source lists of shots:
   train_frac: 0.75
   validation_frac: 0.3333333333333333
-  batch_size: 128 # 256
+  batch_size: 1024
   # THE MAX_PATCH_LENGTH WAS THE CULPRIT FOR NO TRAINING! Lower than 1000 performs very poorly
   max_patch_length: 100000
   # How many shots are we loading at once?
   num_shots_at_once: 200
   # large number = maximum number of epochs.
   # Early stopping will occur if loss does not decrease, after some patience # of epochs
-  num_epochs: 1000
+  num_epochs: 1
   use_mock_data: False
   data_parallel: False
   hyperparam_tuning: False
@@ -144,7 +144,7 @@ training:
   num_batches_minimum: 20 # minimum number of batches per epoch
   ranking_difficulty_fac: 1.0 # how much to upweight incorrectly classified shots during training
   timeline_prof: False
-  step_limit: 50
+  step_limit: 0
   no_validation: True
 callbacks:
   list: ['earlystop']
