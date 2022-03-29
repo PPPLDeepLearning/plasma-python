@@ -30,30 +30,13 @@ from plasma.utils.hashing import general_object_hash
 from plasma.models.tcn import TCN
 # TODO(KGF): consider using importlib.util.find_spec() instead (Py>3.4)
 try:
-    import keras2onnx
-    import onnx
-except ImportError:  # as e:
-    _has_keras2onnx = False
-    # onnx = None
-    # keras2onnx = None
-else:
-    _has_keras2onnx = True
-
-try:
     import tf2onnx
     import onnx
     # CLI: python -m tf2onnx.convert --saved-model model.97765202633820900403308121179367157713._epoch_.0 --output frnn-1D.onnx
 except ImportError:  # as e:
     _has_tf2onnx = False
-    # onnx = None
-    # keras2onnx = None
 else:
     _has_tf2onnx = True
-
-# TODO(KGF): both conversion tools not working with current network and TF version
-_has_tf2onnx = False
-_has_keras2onnx = False
-
 
 # Synchronize 2x stderr msg from TensorFlow initialization via Keras backend
 # "Succesfully opened dynamic library... libcudart" "Using TensorFlow backend."
@@ -419,14 +402,6 @@ class ModelBuilder(object):
                 opset=10, output_path=save_path)
             # KGF: error likely due to the splitting of pre_rnn_model and rnn_model, since
             # the latter expects a trivially-wrapped TimeDistributed(Input()) for 0D model
-        if _has_keras2onnx:
-            save_path = self.get_save_path(epoch, ext='onnx')
-            # TODO(KGF): keras2onnx broken in TF >=2.4
-            # https://github.com/onnx/keras-onnx/issues/651
-
-            onnx_model = keras2onnx.convert_keras(model, model.name,
-                                                  target_opset=10)
-            onnx.save_model(onnx_model, save_path)
         # except Exception as e:
         #     print(e)
         return
