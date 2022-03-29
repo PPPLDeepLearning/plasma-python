@@ -610,7 +610,8 @@ class MPIModel():
                     t_start = time.time()
                     sys.stdout.flush()
 
-                if np.any(batches_to_reset):
+                if np.any(batches_to_reset) and self.conf['model']['stateful']:
+                    print(f"KGF batches_to_reset = {batches_to_reset}")
                     reset_states(self.model, batches_to_reset)
                 if ('noise' in self.conf['training'].keys()
                         and self.conf['training']['noise'] is not False):
@@ -626,7 +627,7 @@ class MPIModel():
                 t_start = time.time()
                 sys.stdout.flush()
 
-            if np.any(batches_to_reset):
+            if np.any(batches_to_reset) and self.conf['model']['stateful']:
                 reset_states(self.model, batches_to_reset)
             if ('noise' in self.conf['training'].keys()
                     and self.conf['training']['noise'] is not False):
