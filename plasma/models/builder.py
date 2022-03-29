@@ -147,7 +147,18 @@ class ModelBuilder(object):
             print('Unkown Model Type, exiting.')
             exit(1)
 
+        # KGF: key line
         batch_input_shape = (batch_size, length, num_signals)
+
+        # TODO(KGF): need a more substantial redesign of conf to support stateful=False
+        # variable training batch size, since even in that case, we need
+        # conf[training][batch_size] to be fixed to form the inputs to the variable model
+
+        # For now, just reset batch_input_shape=(None, ...) at tf2onnx export time below
+        #batch_input_shape = (None, length, num_signals)
+
+
+
         # batch_shape_non_temporal = (batch_size, num_signals)
 
         indices_0d, indices_1d, num_0D, num_1D = self.get_0D_1D_indices()
@@ -288,8 +299,9 @@ class ModelBuilder(object):
         #     pre_rnn_model.summary()
         #     sys.stdout = ori
         #     fr.close()
-        if g.task_index == 0:
-            pre_rnn_model.summary()
+
+        # if g.task_index == 0:
+        #     pre_rnn_model.summary()
         x_input = Input(batch_shape=batch_input_shape)
         if (num_1D > 0 or (
                 'extra_dense_input' in model_conf.keys()
@@ -392,8 +404,8 @@ class ModelBuilder(object):
             batch_size = self.conf['training']['batch_size']
             use_signals = self.conf['paths']['use_signals']
             num_signals = sum([sig.num_channels for sig in use_signals])
-            batch_input_shape = (batch_size, length, num_signals)
-            print(f"batch_input_shape = {batch_input_shape}")
+            batch_input_shape = (None, length, num_signals)
+            ########print(f"batch_input_shape = {batch_input_shape}")
             # ValueError: Input 0 of node model_1/lstm/AssignVariableOp was passed float
             # from model_1/lstm/lstm_cell/ones_like_1/ReadVariableOp/resource:0
             # incompatible with expected resource.
