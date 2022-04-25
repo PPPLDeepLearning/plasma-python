@@ -10,6 +10,7 @@
 # Example Slurm configuration for TigerGPU nodes (4 nodes, 16 GPUs total)
 # Each node = 2.4 GHz Xeon Broadwell E5-2680 v4 + 4x 1328 MHz P100 GPU
 
+module purge
 module load anaconda3
 conda activate my_env
 module load cudatoolkit

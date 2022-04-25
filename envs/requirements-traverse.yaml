@@ -19,6 +19,7 @@ dependencies:
 # WML CE 1.7.0 is built for CUDA 10.2 and requires version 440 of the NVIDIA GPU driver.
 # Which GPU device driver does Traverse have?
   - pip:
+      - packaging
       - pathos
       - matplotlib>=2.0.2
       - h5py<3.0.0
