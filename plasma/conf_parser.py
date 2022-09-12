@@ -163,11 +163,12 @@ def parameters(input_file):
         #     'd3d data 1000 ND and D shots')
         # d3d_100 = ShotListFiles(
         #     sig.d3d, params['paths']['shot_list_dir'],
-        #     ['d3d_clear_100.txt', 'd3d_disrupt_100.txt'],
+        #    ['d3d_clear_100.txt', 'd3d_disrupt_100.txt'],
         #     'd3d data 100 ND and D shots')
         d3d_full = ShotListFiles(
             sig.d3d, params['paths']['shot_list_dir'],
-            ['d3d_clear_data_avail.txt', 'd3d_disrupt_data_avail.txt'],
+            ['d3d_clear_100.txt', 'd3d_disrupt_100.txt'],
+            #['d3d_clear_data_avail.txt', 'd3d_disrupt_data_avail.txt'],
             'd3d data since shot 125500')  # to 168555
         # superset of d3d_full added in 2019 from C. Rea:
         d3d_full_2019 = ShotListFiles(
