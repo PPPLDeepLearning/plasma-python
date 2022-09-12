@@ -14,7 +14,6 @@ from tensorflow.keras.layers import (
     Convolution1D, MaxPooling1D, TimeDistributed,
     Concatenate
     )
-CuDNNLSTM = LSTM
 # from tensorflow.compat.v1.keras.layers import CuDNNLSTM
 from tensorflow.keras.callbacks import Callback
 from tensorflow.keras.regularizers import l2  # l1, l1_l2
@@ -137,10 +136,8 @@ class ModelBuilder(object):
         if custom_batch_size is not None:
             batch_size = custom_batch_size
 
-        if rnn_type == 'LSTM':
+        if rnn_type == 'LSTM' or rnn_type == 'CuDNNLSTM' or rnn_type == 'cuDNNLSTM':
             rnn_model = LSTM
-        elif rnn_type == 'CuDNNLSTM':
-            rnn_model = CuDNNLSTM
         elif rnn_type == 'SimpleRNN':
             rnn_model = SimpleRNN
         else:
